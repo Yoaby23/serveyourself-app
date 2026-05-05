@@ -44,10 +44,10 @@
         <div id="contenedor-menu" class="space-y-10"></div>
     </main>
 
-    <div id="cart-bar" onclick="abrirCarrito()" class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-slate-900 text-white p-5 rounded-[2.5rem] shadow-2xl flex justify-between items-center hidden z-50 cart-pop cursor-pointer hover:scale-[1.02] transition-transform">
+    <div id="cart-bar" onclick="abrirCarrito()" class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-slate-900 text-white p-5 rounded-[2.5rem] shadow-2xl flex justify-between items-center hidden z-50 cart-pop cursor-pointer">
         <div class="flex items-center gap-4">
             <div class="relative">
-                <span class="bg-orange-500 w-7 h-7 rounded-full flex items-center justify-center font-black text-[11px] shadow-lg shadow-orange-500/40" id="cart-count">0</span>
+                <span class="bg-orange-500 w-7 h-7 rounded-full flex items-center justify-center font-black text-[11px]" id="cart-count">0</span>
             </div>
             <div>
                 <p class="font-black text-sm">Ver mi pedido</p>
@@ -65,20 +65,17 @@
                 <h2 class="text-2xl font-black text-slate-900">Tu Pedido</h2>
                 <button onclick="cerrarCarrito()" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold">✕</button>
             </div>
-
             <div id="lista-carrito" class="space-y-6 mb-8"></div>
-
             <div class="mb-8">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Notas adicionales</label>
                 <textarea id="order-notes" placeholder="Ej: Sin cebolla, salsas extra..." class="w-full bg-slate-50 border border-slate-100 rounded-[1.5rem] p-4 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all resize-none" rows="3"></textarea>
             </div>
-
             <div class="border-t border-slate-100 pt-6 space-y-4">
                 <div class="flex justify-between items-center">
                     <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">Total a pagar</p>
                     <p id="modal-total" class="text-3xl font-black text-slate-900">$0.00</p>
                 </div>
-                <button onclick="confirmarPedido()" class="w-full py-5 bg-orange-500 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-orange-200 hover:bg-orange-600 transition-all">CONFIRMAR PEDIDO</button>
+                <button onclick="confirmarPedido()" class="w-full py-5 bg-orange-500 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-orange-200">CONFIRMAR PEDIDO</button>
             </div>
         </div>
     </div>
@@ -104,7 +101,8 @@
                     img.src = res.avatar_url; img.classList.remove('hidden');
                 }
             }
-            const { data: productos } = await _supabase.from('products').select('*').eq('restaurant_id', resId).eq('is_available', true);
+            // TRAEMOS TODOS LOS PRODUCTOS (Sin filtrar por disponibilidad aquí para poder mostrar los agotados)
+            const { data: productos } = await _supabase.from('products').select('*').eq('restaurant_id', resId);
             renderizarProductos(productos);
         }
 
@@ -122,24 +120,35 @@
                 section.innerHTML = `
                     <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-5 ml-2">${cat}</h3>
                     <div class="grid gap-4">
-                        ${categorias[cat].map(prod => `
-                            <div class="bg-white p-4 rounded-[2.2rem] border border-slate-100 flex items-center justify-between shadow-sm">
+                        ${categorias[cat].map(prod => {
+                            const agotado = !prod.is_available;
+                            return `
+                            <div class="bg-white p-4 rounded-[2.2rem] border border-slate-100 flex items-center justify-between shadow-sm ${agotado ? 'opacity-60 grayscale-[0.5]' : ''}">
                                 <div class="flex items-center gap-4 flex-1">
                                     ${prod.image_url 
-                                        ? `<img src="${prod.image_url}" class="w-16 h-16 rounded-2xl object-cover shadow-sm">` 
+                                        ? `<img src="${prod.image_url}" class="w-16 h-16 rounded-2xl object-cover">` 
                                         : `<div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-xl">🍽️</div>`}
                                     <div>
                                         <h4 class="font-bold text-slate-900 text-sm leading-tight">${prod.name}</h4>
-                                        <p class="text-orange-500 font-black text-sm mt-1">$${parseFloat(prod.price).toFixed(2)}</p>
+                                        <p class="${agotado ? 'text-slate-400' : 'text-orange-500'} font-black text-sm mt-1">
+                                            ${agotado ? 'AGOTADO' : `$${parseFloat(prod.price).toFixed(2)}`}
+                                        </p>
                                     </div>
                                 </div>
+                                
                                 <div class="flex items-center gap-3 bg-slate-50 p-1.5 rounded-full border border-slate-100">
-                                    <button onclick="cambiarCantidad('${prod.id}', -1, '${prod.name}', ${prod.price})" class="w-8 h-8 bg-white text-slate-400 rounded-full flex items-center justify-center font-black shadow-sm">-</button>
-                                    <span id="qty-${prod.id}" class="font-black text-slate-900 text-xs min-w-[15px] text-center">0</span>
-                                    <button onclick="cambiarCantidad('${prod.id}', 1, '${prod.name}', ${prod.price})" class="w-8 h-8 bg-slate-900 text-white rounded-full flex items-center justify-center font-black shadow-md">+</button>
+                                    <button 
+                                        onclick="${agotado ? '' : `cambiarCantidad('${prod.id}', -1, '${prod.name}', ${prod.price})`}" 
+                                        class="w-8 h-8 bg-white text-slate-400 rounded-full flex items-center justify-center font-black shadow-sm ${agotado ? 'cursor-not-allowed opacity-30' : ''}">-</button>
+                                    
+                                    <span id="qty-${prod.id}" class="font-black text-slate-900 text-xs min-w-[15px] text-center">${agotado ? '0' : '0'}</span>
+                                    
+                                    <button 
+                                        onclick="${agotado ? '' : `cambiarCantidad('${prod.id}', 1, '${prod.name}', ${prod.price})`}" 
+                                        class="w-8 h-8 ${agotado ? 'bg-slate-300' : 'bg-slate-900'} text-white rounded-full flex items-center justify-center font-black ${agotado ? 'cursor-not-allowed' : 'shadow-md'}">+</button>
                                 </div>
                             </div>
-                        `).join('')}
+                        `}).join('')}
                     </div>
                 `;
                 contenedor.appendChild(section);
@@ -172,17 +181,10 @@
                 cartBar.classList.remove('hidden');
                 document.getElementById('cart-count').innerText = totalItems;
                 document.getElementById('cart-total').innerText = `$${precioTotal.toFixed(2)}`;
-            } else {
-                cartBar.classList.add('hidden');
-                cerrarCarrito();
-            }
+            } else { cartBar.classList.add('hidden'); cerrarCarrito(); }
         }
 
-        function abrirCarrito() {
-            actualizarModalCarrito();
-            document.getElementById('modal-carrito').classList.remove('hidden');
-        }
-
+        function abrirCarrito() { actualizarModalCarrito(); document.getElementById('modal-carrito').classList.remove('hidden'); }
         function cerrarCarrito() { document.getElementById('modal-carrito').classList.add('hidden'); }
 
         function actualizarModalCarrito() {
@@ -200,7 +202,7 @@
                         <span class="text-orange-500 font-bold text-xs">$${item.price.toFixed(2)} x ${item.qty}</span>
                     </div>
                     <div class="flex items-center gap-3 bg-slate-50 p-1 rounded-full border border-slate-100">
-                         <button onclick="cambiarCantidad('${item.id}', -1, '${item.nombre}', ${item.price})" class="w-7 h-7 bg-white text-slate-400 rounded-full flex items-center justify-center font-black shadow-sm">-</button>
+                         <button onclick="cambiarCantidad('${item.id}', -1, '${item.nombre}', ${item.price})" class="w-7 h-7 bg-white text-slate-400 rounded-full flex items-center justify-center font-black">-</button>
                          <span class="font-black text-slate-900 text-xs">${item.qty}</span>
                          <button onclick="cambiarCantidad('${item.id}', 1, '${item.nombre}', ${item.price})" class="w-7 h-7 bg-slate-900 text-white rounded-full flex items-center justify-center font-black">+</button>
                     </div>
@@ -213,7 +215,7 @@
         function confirmarPedido() {
             const notas = document.getElementById('order-notes').value;
             if (carrito.length === 0) return;
-            alert(`¡Pedido confirmado!\nTotal: ${document.getElementById('modal-total').innerText}\nNotas: ${notas || 'Ninguna'}`);
+            alert(`¡Pedido confirmado!\nNotas: ${notas || 'Ninguna'}`);
         }
 
         cargarPagina();
