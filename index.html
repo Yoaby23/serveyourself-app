@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>serveyourself | Pickup & Delivery</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --orange-main: #F97316; }
+        .bg-orange-main { background-color: var(--orange-main); }
+        .text-orange-main { color: var(--orange-main); }
+    </style>
+</head>
+<body class="bg-white text-gray-900 font-sans">
+    <div id="app">
+        <nav class="p-5 flex justify-between items-center border-b border-gray-100">
+            <div class="flex items-center gap-2">
+                <div class="w-10 h-10 bg-orange-main rounded-xl flex items-center justify-center shadow-lg">
+                    <span class="text-white font-bold text-xl">S</span>
+                </div>
+                <h1 class="text-xl font-black">serve<span class="text-orange-main">yourself</span></h1>
+            </div>
+        </nav>
+
+        <main class="max-w-md mx-auto p-6" id="main-content">
+            <div class="text-center py-10">
+                <h2 class="text-3xl font-extrabold mb-6">Bienvenido</h2>
+                <p class="text-gray-500 mb-8">Selecciona cómo quieres ingresar:</p>
+                <div class="grid gap-4">
+                    <button onclick="renderAuth('cliente')" class="bg-orange-main text-white font-bold py-4 rounded-2xl shadow-orange-200 shadow-lg hover:bg-orange-600 transition">
+                        Soy Cliente
+                    </button>
+                    <button onclick="renderAuth('negocio')" class="border-2 border-gray-200 text-gray-700 font-bold py-4 rounded-2xl hover:border-orange-500 transition">
+                        Soy Negocio
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+</body>
+</html>
