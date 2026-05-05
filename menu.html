@@ -8,18 +8,57 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800;900&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        /* Animación suave para el menú */
+        .fade-in-down { animation: fadeInDown 0.2s ease-out forwards; }
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen pb-28 relative">
 
-    <nav class="bg-white/80 backdrop-blur-md p-4 sticky top-0 z-50 flex justify-between items-center border-b border-slate-100">
-        <div class="flex items-center gap-2 cursor-pointer" onclick="window.location.href='index.html'">
-            <span class="text-slate-400 font-bold hover:text-orange-500 transition-colors">← Volver</span>
+    <nav class="bg-white/90 backdrop-blur-md p-4 sticky top-0 z-50 border-b border-slate-100">
+        <div class="flex justify-between items-center relative max-w-md mx-auto">
+            
+            <div class="w-10"></div>
+
+            <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2 cursor-pointer pointer-events-none">
+                <h1 class="text-lg font-black tracking-tighter text-slate-900">serve<span class="text-orange-500">yourself</span></h1>
+            </div>
+
+            <div class="relative">
+                <button onclick="toggleUserMenu()" class="w-10 h-10 bg-slate-100 text-slate-700 hover:bg-orange-100 hover:text-orange-500 rounded-full flex items-center justify-center font-black transition-colors ring-2 ring-transparent focus:ring-orange-200">
+                    C
+                </button>
+
+                <div id="user-menu" class="hidden absolute top-14 right-0 w-56 bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden fade-in-down">
+                    <div class="p-4 border-b border-slate-50 bg-slate-50/50">
+                        <p class="text-sm font-black text-slate-900">Carlos Cliente</p>
+                        <p class="text-xs font-medium text-slate-500">carlos@email.com</p>
+                    </div>
+                    <div class="flex flex-col py-2">
+                        <button class="text-left px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors flex items-center gap-2">
+                            📄 Historial de pedidos
+                        </button>
+                        <button class="text-left px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors flex items-center gap-2">
+                            💳 Tarjetas guardadas
+                        </button>
+                        <button class="text-left px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors flex items-center gap-2">
+                            ⚙️ Actualizar mis datos
+                        </button>
+                    </div>
+                    <div class="p-2 bg-slate-50 border-t border-slate-100">
+                        <a href="index.html" class="block text-center w-full py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-colors">
+                            Cerrar sesión
+                        </a>
+                    </div>
+                </div>
+            </div>
+
         </div>
-        <div class="flex items-center gap-2">
-            <h1 class="text-lg font-black tracking-tighter text-slate-900">serve<span class="text-orange-500">yourself</span></h1>
-        </div>
-        <div class="w-8"></div> </nav>
+    </nav>
 
     <main class="max-w-md mx-auto p-4 space-y-6 mt-2">
         
@@ -64,25 +103,11 @@
                     </button>
                 </div>
 
-                <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex gap-4 items-center transition-all hover:shadow-md">
-                    <div class="w-24 h-24 bg-slate-100 rounded-2xl overflow-hidden shrink-0 bg-slate-100 flex items-center justify-center text-3xl">
-                        🥤
-                    </div>
-                    <div class="flex-1">
-                        <h4 class="font-bold text-slate-900 leading-tight">Refresco de Cola</h4>
-                        <p class="text-slate-400 text-xs mt-1 leading-snug">Lata 355ml bien fría.</p>
-                        <p class="text-slate-900 font-black mt-2 text-lg">$35 <span class="text-xs text-slate-400 font-semibold">MXN</span></p>
-                    </div>
-                    <button class="w-10 h-10 shrink-0 rounded-full bg-orange-50 text-orange-500 font-black flex items-center justify-center text-xl hover:bg-orange-500 hover:text-white transition-colors">
-                        +
-                    </button>
-                </div>
-
             </div>
         </section>
     </main>
 
-    <div class="fixed bottom-0 left-0 w-full p-4 z-50 pointer-events-none">
+    <div class="fixed bottom-0 left-0 w-full p-4 z-40 pointer-events-none">
         <div class="max-w-md mx-auto pointer-events-auto">
             <div class="bg-slate-900 text-white rounded-[2rem] p-4 flex items-center justify-between shadow-2xl shadow-slate-900/50 cursor-pointer hover:bg-black transition-colors">
                 <div class="flex items-center gap-3">
@@ -94,12 +119,28 @@
                         <p class="font-black">$205.00 MXN</p>
                     </div>
                 </div>
-                <div class="bg-orange-500 text-white px-6 py-3 rounded-full font-black uppercase text-sm tracking-wide">
+                <div class="bg-orange-500 text-white px-6 py-3 rounded-full font-black uppercase text-sm tracking-wide hover:bg-orange-400 transition-colors">
                     Pagar →
                 </div>
             </div>
         </div>
     </div>
 
+    <script>
+        function toggleUserMenu() {
+            const menu = document.getElementById('user-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        // Cerrar el menú si haces clic afuera
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('user-menu');
+            const button = event.target.closest('button[onclick="toggleUserMenu()"]');
+            
+            if (!button && !menu.contains(event.target) && !menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+            }
+        });
+    </script>
 </body>
 </html>
