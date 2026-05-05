@@ -14,10 +14,7 @@
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        /* Estilos para el switch */
         .dot { transition: all 0.3s ease-in-out; }
-        input:checked ~ .dot { transform: translateX(100%); background-color: #ffffff; }
-        input:checked ~ .block { background-color: #10b981; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen pb-20">
@@ -40,7 +37,8 @@
                         <p id="admin-email-display" class="text-xs font-medium text-slate-500">...</p>
                     </div>
                     <div class="flex flex-col py-2">
-                        <button class="text-left px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">📦 Pedidos recibidos</button>
+                        <button onclick="mostrarSeccion('pedidos')" class="text-left px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors font-black">📦 Pedidos recibidos</button>
+                        <button onclick="mostrarSeccion('productos')" class="text-left px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors font-black">🍔 Gestionar Menú</button>
                         <button onclick="window.location.href='menu.html'" class="text-left px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">🌐 Ver vista cliente</button>
                     </div>
                     <div class="p-2 bg-slate-50 border-t border-slate-100">
@@ -52,38 +50,40 @@
     </nav>
 
     <main class="max-w-md mx-auto p-6 space-y-8">
-        <div>
-            <h2 class="text-2xl font-black text-slate-900 tracking-tight">Panel de Control</h2>
-            <p class="text-slate-500 text-sm font-medium">Gestiona tu catálogo de productos.</p>
-        </div>
-
-        <section class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
-            <h3 class="font-bold text-slate-900 mb-4 flex items-center gap-2 text-sm uppercase tracking-wider">
-                <span class="text-orange-500 font-black">+</span> Añadir Producto
-            </h3>
-            <form id="add-product-form" class="space-y-4">
-                <input type="text" id="prod-name" placeholder="Nombre (ej. Pizza Margarita)" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 text-sm font-medium" required>
-                
-                <div class="flex gap-4">
-                    <input type="number" id="prod-price" placeholder="Precio" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 text-sm font-medium" required>
+        
+        <section id="view-pedidos" class="space-y-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-black text-slate-900 tracking-tight">Pedidos</h2>
+                    <p class="text-slate-500 text-sm font-medium">Ordenes de los últimos 15 días.</p>
                 </div>
-
-                <input type="text" id="prod-category" placeholder="Categoría (ej. Entradas, Bebidas)" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 text-sm font-medium" required>
-                
-                <input type="url" id="prod-img" placeholder="URL de la imagen (opcional)" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 text-sm font-medium">
-                
-                <button type="submit" id="btn-save-prod" class="w-full bg-slate-900 text-white font-black py-4 rounded-[1.5rem] shadow-lg uppercase text-xs tracking-[0.2em] hover:bg-orange-500 transition-all">
-                    Guardar en Menú
-                </button>
-            </form>
-        </section>
-
-        <section>
-            <h3 class="font-bold text-slate-900 mb-4 px-2 text-sm uppercase tracking-wider">Mi Menú Activo</h3>
-            <div id="lista-menu-admin" class="space-y-4">
-                <p class="text-center text-slate-400 text-xs py-10 animate-pulse">Cargando productos...</p>
+                <button onclick="cargarPedidos()" class="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center border border-slate-100">🔄</button>
+            </div>
+            <div id="lista-pedidos" class="space-y-4">
+                <p class="text-center text-slate-400 text-xs py-10 italic">Buscando nuevos pedidos...</p>
             </div>
         </section>
+
+        <section id="view-productos" class="hidden space-y-8">
+            <div>
+                <h2 class="text-2xl font-black text-slate-900 tracking-tight">Mi Catálogo</h2>
+                <p class="text-slate-500 text-sm font-medium">Añade o edita tus productos.</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <h3 class="font-bold text-slate-900 mb-4 text-sm uppercase tracking-wider">Añadir Producto</h3>
+                <form id="add-product-form" class="space-y-4">
+                    <input type="text" id="prod-name" placeholder="Nombre" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-medium" required>
+                    <input type="number" id="prod-price" placeholder="Precio" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-medium" required>
+                    <input type="text" id="prod-category" placeholder="Categoría" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-medium" required>
+                    <input type="url" id="prod-img" placeholder="URL imagen (opcional)" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-medium">
+                    <button type="submit" id="btn-save-prod" class="w-full bg-slate-900 text-white font-black py-4 rounded-[1.5rem] uppercase text-xs tracking-widest transition-all hover:bg-orange-500">Guardar en Menú</button>
+                </form>
+            </div>
+
+            <div id="lista-menu-admin" class="space-y-4"></div>
+        </section>
+
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -94,149 +94,129 @@
 
         let currentRestaurantId = null;
 
-        function toggleAdminMenu() {
-            document.getElementById('admin-menu').classList.toggle('hidden');
-        }
-
-        async function cerrarSesion() {
-            await _supabase.auth.signOut();
-            window.location.href = 'index.html';
+        function toggleAdminMenu() { document.getElementById('admin-menu').classList.toggle('hidden'); }
+        
+        function mostrarSeccion(seccion) {
+            document.getElementById('view-pedidos').classList.toggle('hidden', seccion !== 'pedidos');
+            document.getElementById('view-productos').classList.toggle('hidden', seccion !== 'productos');
+            toggleAdminMenu();
         }
 
         async function inicializarAdmin() {
             const { data: { user } } = await _supabase.auth.getUser();
             if (!user) { window.location.href = 'index.html'; return; }
 
-            const { data: profile, error } = await _supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', user.id)
-                .single();
+            const { data: profile } = await _supabase.from('profiles').select('*').eq('id', user.id).single();
+            if (profile.role !== 'negocio') { window.location.href = 'menu.html'; return; }
 
-            if (error || profile.role !== 'negocio') {
-                alert("Acceso denegado.");
-                window.location.href = 'menu.html';
+            currentRestaurantId = user.id;
+            document.getElementById('biz-name-display').innerText = profile.business_name;
+            document.getElementById('admin-email-display').innerText = user.email;
+
+            // Limpieza automática de pedidos antiguos (15 días)
+            const fechaLimite = new Date();
+            fechaLimite.setDate(fechaLimite.getDate() - 15);
+            await _supabase.from('orders').delete().lt('created_at', fechaLimite.toISOString());
+
+            cargarPedidos();
+            cargarProductos();
+        }
+
+        async function cargarPedidos() {
+            const container = document.getElementById('lista-pedidos');
+            const { data: orders, error } = await _supabase.from('orders')
+                .select('*').eq('restaurant_id', currentRestaurantId).order('created_at', { ascending: false });
+
+            if (error || !orders.length) {
+                container.innerHTML = `<p class="text-center text-slate-400 text-xs py-10 italic">No hay pedidos registrados.</p>`;
                 return;
             }
 
-            currentRestaurantId = user.id;
-            document.getElementById('biz-name-display').innerText = profile.business_name || "Mi Negocio";
-            document.getElementById('admin-email-display').innerText = user.email;
-
-            cargarProductos();
+            container.innerHTML = orders.map(o => `
+                <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
+                    <div class="flex justify-between items-start">
+                        <span class="text-[10px] font-black uppercase px-2 py-1 rounded-lg ${o.status === 'pendiente' ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400'}">${o.status}</span>
+                        <p class="font-black text-lg text-slate-900">$${o.total}</p>
+                    </div>
+                    <div class="space-y-2 border-y border-slate-50 py-3">
+                        ${o.items.map(i => `<div class="flex justify-between text-sm font-bold text-slate-700"><span>${i.qty}x ${i.nombre}</span></div>`).join('')}
+                    </div>
+                    ${o.notes ? `<div class="bg-slate-50 p-3 rounded-xl text-[11px] text-slate-500 italic">Nota: ${o.notes}</div>` : ''}
+                    <div class="flex gap-2 pt-2">
+                        <button onclick="cambiarEstado('${o.id}', 'listo')" class="flex-1 py-3 bg-slate-900 text-white text-[10px] font-black rounded-xl uppercase">Marcar Listo</button>
+                        <button onclick="eliminarPedido('${o.id}')" class="px-4 py-3 bg-red-50 text-red-500 rounded-xl">🗑️</button>
+                    </div>
+                    <p class="text-[9px] text-slate-300 font-bold uppercase text-right">${new Date(o.created_at).toLocaleString()}</p>
+                </div>
+            `).join('');
         }
+
+        async function cambiarEstado(id, status) {
+            await _supabase.from('orders').update({ status }).eq('id', id);
+            cargarPedidos();
+        }
+
+        async function eliminarPedido(id) {
+            if(confirm("¿Eliminar pedido del registro?")) {
+                await _supabase.from('orders').delete().eq('id', id);
+                cargarPedidos();
+            }
+        }
+
+        async function cargarProductos() {
+            const { data: prods } = await _supabase.from('products').select('*').eq('restaurant_id', currentRestaurantId).order('created_at', { ascending: false });
+            const contenedor = document.getElementById('lista-menu-admin');
+            
+            contenedor.innerHTML = prods.map(p => `
+                <div class="bg-white p-4 rounded-3xl border border-slate-100 flex items-center justify-between shadow-sm ${!p.is_available ? 'opacity-50 grayscale' : ''}">
+                    <div class="flex items-center gap-4">
+                        <img src="${p.image_url || 'https://via.placeholder.com/50'}" class="w-12 h-12 rounded-xl object-cover">
+                        <div>
+                            <h4 class="font-bold text-slate-900 text-sm">${p.name}</h4>
+                            <p class="text-orange-500 font-black text-xs">$${p.price}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only peer" ${p.is_available ? 'checked' : ''} onchange="toggleDisponibilidad('${p.id}', ${p.is_available})">
+                            <div class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-green-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                        </label>
+                        <button onclick="eliminarProducto('${p.id}')" class="text-slate-300">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.toggleDisponibilidad = async (id, actual) => {
+            await _supabase.from('products').update({ is_available: !actual }).eq('id', id);
+            cargarProductos();
+        };
+
+        window.eliminarProducto = async (id) => {
+            if (confirm("¿Borrar producto?")) {
+                await _supabase.from('products').delete().eq('id', id);
+                cargarProductos();
+            }
+        };
 
         document.getElementById('add-product-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-save-prod');
-            const name = document.getElementById('prod-name').value.trim();
-            const price = document.getElementById('prod-price').value;
-            const category = document.getElementById('prod-category').value.trim();
-            const image_url = document.getElementById('prod-img').value.trim();
-
             btn.disabled = true;
-            btn.innerText = "GUARDANDO...";
-
-            try {
-                const { error } = await _supabase
-                    .from('products')
-                    .insert([{
-                        restaurant_id: currentRestaurantId,
-                        name,
-                        price,
-                        category,
-                        image_url: image_url || null,
-                        is_available: true // Por defecto disponible
-                    }]);
-
-                if (error) throw error;
-                alert("¡Producto añadido con éxito!");
-                document.getElementById('add-product-form').reset();
-                cargarProductos();
-            } catch (err) {
-                alert("Error al guardar: " + err.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Guardar en Menú";
-            }
+            await _supabase.from('products').insert([{
+                restaurant_id: currentRestaurantId,
+                name: document.getElementById('prod-name').value,
+                price: document.getElementById('prod-price').value,
+                category: document.getElementById('prod-category').value,
+                image_url: document.getElementById('prod-img').value || null,
+                is_available: true
+            }]);
+            document.getElementById('add-product-form').reset();
+            cargarProductos();
+            btn.disabled = false;
         });
 
-        async function cargarProductos() {
-            const contenedor = document.getElementById('lista-menu-admin');
-            const { data: productos, error } = await _supabase
-                .from('products')
-                .select('*')
-                .eq('restaurant_id', currentRestaurantId)
-                .order('created_at', { ascending: false });
-
-            if (error) {
-                contenedor.innerHTML = `<p class="text-red-500 text-xs">Error al cargar el menú.</p>`;
-                return;
-            }
-
-            if (productos.length === 0) {
-                contenedor.innerHTML = `<p class="text-center text-slate-400 text-xs py-10 italic">Aún no tienes productos.</p>`;
-                return;
-            }
-
-            contenedor.innerHTML = '';
-            productos.forEach(prod => {
-                const div = document.createElement('div');
-                div.className = `bg-white p-4 rounded-3xl border border-slate-100 flex items-center justify-between shadow-sm transition-opacity ${!prod.is_available ? 'opacity-60' : ''}`;
-                div.innerHTML = `
-                    <div class="flex items-center gap-4">
-                        ${prod.image_url 
-                            ? `<img src="${prod.image_url}" class="w-12 h-12 rounded-xl object-cover">` 
-                            : `<div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-xl">🍲</div>`}
-                        <div>
-                            <h4 class="font-bold text-slate-900 text-sm">${prod.name}</h4>
-                            <p class="text-orange-500 font-black text-xs">$${prod.price} MXN</p>
-                            <span class="text-[9px] uppercase tracking-widest font-bold text-slate-400">${prod.category}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-center gap-4">
-                        <div class="flex flex-col items-center gap-1">
-                             <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" class="sr-only peer" ${prod.is_available ? 'checked' : ''} onchange="toggleDisponibilidad('${prod.id}', ${prod.is_available})">
-                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
-                            </label>
-                            <span class="text-[8px] font-black uppercase ${prod.is_available ? 'text-green-500' : 'text-slate-400'}">
-                                ${prod.is_available ? 'Activo' : 'Agotado'}
-                            </span>
-                        </div>
-
-                        <button onclick="eliminarProducto('${prod.id}')" class="p-2 text-slate-300 hover:text-red-500 transition-colors">
-                            🗑️
-                        </button>
-                    </div>
-                `;
-                contenedor.appendChild(div);
-            });
-        }
-
-        // FUNCIÓN PARA CAMBIAR ESTADO AGOTADO/EXISTENTE
-        window.toggleDisponibilidad = async (id, estadoActual) => {
-            const nuevoEstado = !estadoActual;
-            const { error } = await _supabase
-                .from('products')
-                .update({ is_available: nuevoEstado })
-                .eq('id', id);
-
-            if (error) {
-                alert("Error al actualizar estado");
-            } else {
-                cargarProductos(); // Refrescar lista
-            }
-        };
-
-        window.eliminarProducto = async (id) => {
-            if (!confirm("¿Seguro que quieres eliminar este producto?")) return;
-            const { error } = await _supabase.from('products').delete().eq('id', id);
-            if (error) alert("No se pudo eliminar.");
-            else cargarProductos();
-        };
-
+        async function cerrarSesion() { await _supabase.auth.signOut(); window.location.href = 'index.html'; }
         inicializarAdmin();
     </script>
 </body>

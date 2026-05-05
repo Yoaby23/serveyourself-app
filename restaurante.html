@@ -75,7 +75,7 @@
                     <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">Total a pagar</p>
                     <p id="modal-total" class="text-3xl font-black text-slate-900">$0.00</p>
                 </div>
-                <button onclick="confirmarPedido()" class="w-full py-5 bg-orange-500 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-orange-200">CONFIRMAR PEDIDO</button>
+                <button id="btn-confirmar" onclick="confirmarPedido()" class="w-full py-5 bg-orange-500 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-orange-200">CONFIRMAR PEDIDO</button>
             </div>
         </div>
     </div>
@@ -101,7 +101,6 @@
                     img.src = res.avatar_url; img.classList.remove('hidden');
                 }
             }
-            // TRAEMOS TODOS LOS PRODUCTOS (Sin filtrar por disponibilidad aquí para poder mostrar los agotados)
             const { data: productos } = await _supabase.from('products').select('*').eq('restaurant_id', resId);
             renderizarProductos(productos);
         }
@@ -135,17 +134,10 @@
                                         </p>
                                     </div>
                                 </div>
-                                
                                 <div class="flex items-center gap-3 bg-slate-50 p-1.5 rounded-full border border-slate-100">
-                                    <button 
-                                        onclick="${agotado ? '' : `cambiarCantidad('${prod.id}', -1, '${prod.name}', ${prod.price})`}" 
-                                        class="w-8 h-8 bg-white text-slate-400 rounded-full flex items-center justify-center font-black shadow-sm ${agotado ? 'cursor-not-allowed opacity-30' : ''}">-</button>
-                                    
-                                    <span id="qty-${prod.id}" class="font-black text-slate-900 text-xs min-w-[15px] text-center">${agotado ? '0' : '0'}</span>
-                                    
-                                    <button 
-                                        onclick="${agotado ? '' : `cambiarCantidad('${prod.id}', 1, '${prod.name}', ${prod.price})`}" 
-                                        class="w-8 h-8 ${agotado ? 'bg-slate-300' : 'bg-slate-900'} text-white rounded-full flex items-center justify-center font-black ${agotado ? 'cursor-not-allowed' : 'shadow-md'}">+</button>
+                                    <button onclick="${agotado ? '' : `cambiarCantidad('${prod.id}', -1, '${prod.name}', ${prod.price})`}" class="w-8 h-8 bg-white text-slate-400 rounded-full flex items-center justify-center font-black shadow-sm ${agotado ? 'cursor-not-allowed opacity-30' : ''}">-</button>
+                                    <span id="qty-${prod.id}" class="font-black text-slate-900 text-xs min-w-[15px] text-center">0</span>
+                                    <button onclick="${agotado ? '' : `cambiarCantidad('${prod.id}', 1, '${prod.name}', ${prod.price})`}" class="w-8 h-8 ${agotado ? 'bg-slate-300' : 'bg-slate-900'} text-white rounded-full flex items-center justify-center font-black ${agotado ? 'cursor-not-allowed' : 'shadow-md'}">+</button>
                                 </div>
                             </div>
                         `}).join('')}
@@ -157,25 +149,22 @@
 
         function cambiarCantidad(id, cambio, nombre, precio) {
             const index = carrito.findIndex(item => item.id === id);
-            const precioNum = parseFloat(precio);
             if (index !== -1) {
                 carrito[index].qty += cambio;
                 if (carrito[index].qty <= 0) carrito.splice(index, 1);
             } else if (cambio > 0) {
-                carrito.push({ id, nombre, price: precioNum, qty: 1 });
+                carrito.push({ id, nombre, price: parseFloat(precio), qty: 1 });
             }
             actualizarInterfazCarrito(id);
-            if (!document.getElementById('modal-carrito').classList.contains('hidden')) {
-                actualizarModalCarrito();
-            }
+            if (!document.getElementById('modal-carrito').classList.contains('hidden')) actualizarModalCarrito();
         }
 
         function actualizarInterfazCarrito(prodId) {
             const item = carrito.find(i => i.id === prodId);
             const qtyElement = document.getElementById(`qty-${prodId}`);
             if (qtyElement) qtyElement.innerText = item ? item.qty : 0;
-            const totalItems = carrito.reduce((acc, item) => acc + item.qty, 0);
-            const precioTotal = carrito.reduce((acc, item) => acc + (item.qty * item.price), 0);
+            const totalItems = carrito.reduce((acc, i) => acc + i.qty, 0);
+            const precioTotal = carrito.reduce((acc, i) => acc + (i.qty * i.price), 0);
             const cartBar = document.getElementById('cart-bar');
             if (totalItems > 0) {
                 cartBar.classList.remove('hidden');
@@ -205,17 +194,45 @@
                          <button onclick="cambiarCantidad('${item.id}', -1, '${item.nombre}', ${item.price})" class="w-7 h-7 bg-white text-slate-400 rounded-full flex items-center justify-center font-black">-</button>
                          <span class="font-black text-slate-900 text-xs">${item.qty}</span>
                          <button onclick="cambiarCantidad('${item.id}', 1, '${item.nombre}', ${item.price})" class="w-7 h-7 bg-slate-900 text-white rounded-full flex items-center justify-center font-black">+</button>
-                    </div>
-                `;
+                    </div>`;
                 lista.appendChild(div);
             });
             totalElement.innerText = `$${total.toFixed(2)}`;
         }
 
-        function confirmarPedido() {
-            const notas = document.getElementById('order-notes').value;
+        async function confirmarPedido() {
             if (carrito.length === 0) return;
-            alert(`¡Pedido confirmado!\nNotas: ${notas || 'Ninguna'}`);
+            const btn = document.getElementById('btn-confirmar');
+            const notas = document.getElementById('order-notes').value;
+            const totalPedido = carrito.reduce((acc, i) => acc + (i.qty * i.price), 0);
+
+            btn.disabled = true;
+            btn.innerText = "ENVIANDO...";
+
+            try {
+                const { error } = await _supabase.from('orders').insert([{
+                    restaurant_id: resId,
+                    items: carrito,
+                    total: totalPedido,
+                    notes: notas,
+                    status: 'pendiente'
+                }]);
+
+                if (error) throw error;
+
+                alert("¡Pedido enviado con éxito!");
+                carrito = [];
+                // Resetear UI de cantidades en el menú
+                document.querySelectorAll('[id^="qty-"]').forEach(el => el.innerText = '0');
+                actualizarInterfazCarrito();
+                cerrarCarrito();
+
+            } catch (err) {
+                alert("Error: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "CONFIRMAR PEDIDO";
+            }
         }
 
         cargarPagina();
