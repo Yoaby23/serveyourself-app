@@ -14,6 +14,10 @@
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        /* Estilos para el switch */
+        .dot { transition: all 0.3s ease-in-out; }
+        input:checked ~ .dot { transform: translateX(100%); background-color: #ffffff; }
+        input:checked ~ .block { background-color: #10b981; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen pb-20">
@@ -99,14 +103,9 @@
             window.location.href = 'index.html';
         }
 
-        // 1. VERIFICAR PERFIL Y CARGAR PRODUCTOS
         async function inicializarAdmin() {
             const { data: { user } } = await _supabase.auth.getUser();
-
-            if (!user) {
-                window.location.href = 'index.html';
-                return;
-            }
+            if (!user) { window.location.href = 'index.html'; return; }
 
             const { data: profile, error } = await _supabase
                 .from('profiles')
@@ -127,11 +126,9 @@
             cargarProductos();
         }
 
-        // 2. GUARDAR PRODUCTO EN SUPABASE
         document.getElementById('add-product-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-save-prod');
-            
             const name = document.getElementById('prod-name').value.trim();
             const price = document.getElementById('prod-price').value;
             const category = document.getElementById('prod-category').value.trim();
@@ -148,14 +145,14 @@
                         name,
                         price,
                         category,
-                        image_url: image_url || null
+                        image_url: image_url || null,
+                        is_available: true // Por defecto disponible
                     }]);
 
                 if (error) throw error;
-
                 alert("¡Producto añadido con éxito!");
                 document.getElementById('add-product-form').reset();
-                cargarProductos(); // Recargar lista
+                cargarProductos();
             } catch (err) {
                 alert("Error al guardar: " + err.message);
             } finally {
@@ -164,10 +161,8 @@
             }
         });
 
-        // 3. OBTENER Y MOSTRAR PRODUCTOS
         async function cargarProductos() {
             const contenedor = document.getElementById('lista-menu-admin');
-            
             const { data: productos, error } = await _supabase
                 .from('products')
                 .select('*')
@@ -180,14 +175,14 @@
             }
 
             if (productos.length === 0) {
-                contenedor.innerHTML = `<p class="text-center text-slate-400 text-xs py-10 italic">Aún no tienes productos. ¡Añade el primero!</p>`;
+                contenedor.innerHTML = `<p class="text-center text-slate-400 text-xs py-10 italic">Aún no tienes productos.</p>`;
                 return;
             }
 
             contenedor.innerHTML = '';
             productos.forEach(prod => {
                 const div = document.createElement('div');
-                div.className = "bg-white p-4 rounded-3xl border border-slate-100 flex items-center justify-between shadow-sm";
+                div.className = `bg-white p-4 rounded-3xl border border-slate-100 flex items-center justify-between shadow-sm transition-opacity ${!prod.is_available ? 'opacity-60' : ''}`;
                 div.innerHTML = `
                     <div class="flex items-center gap-4">
                         ${prod.image_url 
@@ -199,23 +194,45 @@
                             <span class="text-[9px] uppercase tracking-widest font-bold text-slate-400">${prod.category}</span>
                         </div>
                     </div>
-                    <button onclick="eliminarProducto('${prod.id}')" class="p-2 text-slate-300 hover:text-red-500 transition-colors">
-                        🗑️
-                    </button>
+                    
+                    <div class="flex items-center gap-4">
+                        <div class="flex flex-col items-center gap-1">
+                             <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer" ${prod.is_available ? 'checked' : ''} onchange="toggleDisponibilidad('${prod.id}', ${prod.is_available})">
+                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
+                            <span class="text-[8px] font-black uppercase ${prod.is_available ? 'text-green-500' : 'text-slate-400'}">
+                                ${prod.is_available ? 'Activo' : 'Agotado'}
+                            </span>
+                        </div>
+
+                        <button onclick="eliminarProducto('${prod.id}')" class="p-2 text-slate-300 hover:text-red-500 transition-colors">
+                            🗑️
+                        </button>
+                    </div>
                 `;
                 contenedor.appendChild(div);
             });
         }
 
-        // 4. ELIMINAR PRODUCTO
-        window.eliminarProducto = async (id) => {
-            if (!confirm("¿Seguro que quieres eliminar este producto?")) return;
-            
+        // FUNCIÓN PARA CAMBIAR ESTADO AGOTADO/EXISTENTE
+        window.toggleDisponibilidad = async (id, estadoActual) => {
+            const nuevoEstado = !estadoActual;
             const { error } = await _supabase
                 .from('products')
-                .delete()
+                .update({ is_available: nuevoEstado })
                 .eq('id', id);
 
+            if (error) {
+                alert("Error al actualizar estado");
+            } else {
+                cargarProductos(); // Refrescar lista
+            }
+        };
+
+        window.eliminarProducto = async (id) => {
+            if (!confirm("¿Seguro que quieres eliminar este producto?")) return;
+            const { error } = await _supabase.from('products').delete().eq('id', id);
             if (error) alert("No se pudo eliminar.");
             else cargarProductos();
         };
