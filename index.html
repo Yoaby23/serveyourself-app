@@ -85,7 +85,8 @@
 
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <script src="supabase-config.js"></script>
 
     <script>
@@ -93,11 +94,9 @@
             document.getElementById('view-main').classList.add('hidden');
             document.getElementById('view-login').classList.add('hidden');
             document.getElementById('view-roles').classList.add('hidden');
-            
             document.getElementById(viewId).classList.remove('hidden');
         }
 
-        // Lógica real de inicio de sesión
         document.getElementById('login-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -107,38 +106,32 @@
 
             btn.innerText = "CARGANDO...";
 
-            // 1. Conectar con Supabase Auth
-            const { data, error } = await supabase.auth.signInWithPassword({
+            // IMPORTANTE: Ahora usamos window.supabase que es la conexión global segura
+            const { data, error } = await window.supabase.auth.signInWithPassword({
                 email: email,
                 password: password,
             });
 
             if (error) {
-                alert("Error al iniciar sesión: Verifica tus datos.");
+                alert("Error: " + error.message);
                 btn.innerText = "ENTRAR";
                 return;
             }
 
-            // 2. Obtener el rol de la tabla profiles
             const userId = data.user.id;
-            const { data: profileData, error: profileError } = await supabase
+            const { data: profileData, error: profileError } = await window.supabase
                 .from('profiles')
                 .select('role')
                 .eq('id', userId)
                 .single();
 
             if (profileError) {
-                console.error("No se pudo obtener el perfil", profileError);
+                console.error(profileError);
                 btn.innerText = "ENTRAR";
                 return;
             }
 
-            // 3. Redirigir a la pantalla correcta
-            if (profileData.role === 'negocio') {
-                window.location.href = 'admin.html';
-            } else {
-                window.location.href = 'menu.html';
-            }
+            window.location.href = (profileData.role === 'negocio') ? 'admin.html' : 'menu.html';
         });
     </script>
 </body>
