@@ -70,7 +70,7 @@
             document.getElementById('user-menu').classList.toggle('hidden'); 
         }
 
-        // 1. Cargar datos del perfil logueado
+        // 1. Obtener datos del usuario
         async function cargarDatosUsuario() {
             const { data: { user } } = await _supabase.auth.getUser();
             if (!user) { window.location.href = 'index.html'; return; }
@@ -84,7 +84,7 @@
             }
         }
 
-        // 2. Dibujar opciones del menú según sea Cliente o Negocio
+        // 2. Renderizar menú lateral según el tipo de cuenta
         function renderMenuPorRol(role) {
             const container = document.getElementById('menu-options');
             const linkClass = "text-left px-7 py-3.5 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all flex items-center gap-3";
@@ -105,7 +105,7 @@
             container.innerHTML = html;
         }
 
-        // 3. Cargar lista de restaurantes
+        // 3. Listar Restaurantes (Alerta eliminada)
         async function cargarRestaurantes() {
             const contenedor = document.getElementById('lista-restaurantes');
             const { data: negocios, error } = await _supabase
@@ -120,20 +120,19 @@
 
             contenedor.innerHTML = '';
             
-            // Obtener hora actual en formato HH:MM:00
             const ahora = new Date();
             const horaActual = ahora.getHours().toString().padStart(2, '0') + ":" + 
                                ahora.getMinutes().toString().padStart(2, '0') + ":00";
 
             negocios.forEach(res => {
-                // Validación de horario
                 let abierto = false;
                 if (res.open_time && res.close_time) {
                     abierto = horaActual >= res.open_time && horaActual <= res.close_time;
                 }
 
                 const card = document.createElement('div');
-                card.className = `bg-white p-5 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer relative group ${!abierto ? 'opacity-70 grayscale-[0.5]' : ''}`;
+                // Estilo visual: si está cerrado se ve un poco más pálido, pero es clickable
+                card.className = `bg-white p-5 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer relative group ${!abierto ? 'opacity-70 grayscale-[0.3]' : ''}`;
                 
                 card.innerHTML = `
                     <div class="flex gap-5 items-center">
@@ -167,11 +166,8 @@
                     </div>
                 `;
 
+                // Acción al hacer clic: entra directo sin alertas
                 card.onclick = () => {
-                    if (!abierto) {
-                        const seguir = confirm("El restaurante está cerrado. ¿Deseas ver el menú de todos modos?");
-                        if (!seguir) return;
-                    }
                     window.location.href = `restaurante.html?id=${res.id}`;
                 };
 
@@ -184,7 +180,7 @@
             window.location.href = 'index.html';
         }
 
-        // Inicializar
+        // Ejecución inicial
         cargarDatosUsuario();
         cargarRestaurantes();
     </script>
