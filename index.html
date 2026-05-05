@@ -9,8 +9,6 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800;900&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        
-        /* Animación suave entre pantallas */
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -31,11 +29,9 @@
         
         <div id="view-main" class="fade-in text-center">
             <h2 class="text-4xl font-black mb-4 leading-tight text-slate-900">Pide y recoge <br><span class="text-orange-500">sin filas.</span></h2>
-            
             <div class="mb-10 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-orange-50 border-4 border-white">
                 <img src="welcome-image.png" alt="Comida lista" class="w-full">
             </div>
-
             <div class="space-y-4">
                 <button onclick="switchView('view-login')" class="w-full bg-orange-500 text-white font-black py-5 rounded-[2rem] shadow-xl shadow-orange-100 uppercase tracking-widest active:scale-95 transition-all hover:bg-orange-600">
                     INICIAR SESIÓN
@@ -48,14 +44,11 @@
 
         <div id="view-login" class="hidden fade-in bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 mt-8">
             <button onclick="switchView('view-main')" class="text-orange-500 font-bold mb-6 hover:text-orange-600">← Volver</button>
-            
             <h2 class="text-3xl font-black mb-2 text-slate-900 tracking-tight">Hola de nuevo</h2>
             <p class="text-slate-500 mb-8 font-medium">Ingresa tus datos para continuar.</p>
-
             <form id="login-form" class="space-y-4">
                 <input type="email" id="login-email" placeholder="Correo electrónico" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
                 <input type="password" id="login-password" placeholder="Contraseña" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
-                
                 <button type="submit" id="btn-login" class="w-full bg-slate-900 text-white font-black py-5 rounded-[2rem] shadow-lg mt-6 uppercase tracking-widest active:scale-95 transition-all">
                     ENTRAR
                 </button>
@@ -64,36 +57,32 @@
 
         <div id="view-roles" class="hidden fade-in mt-8">
             <button onclick="switchView('view-main')" class="text-orange-500 font-bold mb-6 px-2 hover:text-orange-600">← Volver</button>
-            
             <div class="text-center mb-8">
                 <h2 class="text-3xl font-black mb-2 text-slate-900 tracking-tight">¿Cómo usarás la app?</h2>
                 <p class="text-slate-500 font-medium">Elige tu tipo de cuenta.</p>
             </div>
-
             <div class="space-y-4">
                 <a href="registro.html?role=cliente" class="block w-full bg-white p-6 rounded-[2rem] border-2 border-slate-100 hover:border-orange-500 active:scale-95 transition-all text-left shadow-sm">
                     <h3 class="font-black text-xl text-slate-900">Quiero comprar 🍔</h3>
                     <p class="text-slate-500 text-sm mt-1">Explorar restaurantes y hacer pedidos.</p>
                 </a>
-                
                 <a href="registro.html?role=negocio" class="block w-full bg-white p-6 rounded-[2rem] border-2 border-slate-100 hover:border-orange-500 active:scale-95 transition-all text-left shadow-sm">
                     <h3 class="font-black text-xl text-slate-900">Tengo un negocio 🏪</h3>
                     <p class="text-slate-500 text-sm mt-1">Subir mi menú y recibir pedidos.</p>
                 </a>
             </div>
         </div>
-
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
-        // CONFIGURACIÓN INTEGRADA (EVITA ERROR 404)
+        // --- CONFIGURACIÓN ---
         const SUPABASE_URL = 'https://spbgledcjwtqmlqdlpyx.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY';
 
-        // Creamos la conexión globalmente
-        const _supabase = supabase.createClient(SB_URL, SB_KEY);
+        // Inicializamos el cliente después de que la librería cargó
+        const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
 
         function switchView(viewId) {
             document.getElementById('view-main').classList.add('hidden');
@@ -104,7 +93,6 @@
 
         document.getElementById('login-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             const btn = document.getElementById('btn-login');
@@ -113,7 +101,6 @@
             btn.disabled = true;
 
             try {
-                // Inicio de sesión real
                 const { data, error } = await _supabase.auth.signInWithPassword({
                     email: email,
                     password: password,
@@ -121,18 +108,15 @@
 
                 if (error) throw error;
 
-                // Consulta de rol en la tabla profiles
-                const userId = data.user.id;
-                const { data: profileData, error: profileError } = await _supabase
+                const { data: profile, error: profileError } = await _supabase
                     .from('profiles')
                     .select('role')
-                    .eq('id', userId)
+                    .eq('id', data.user.id)
                     .single();
 
                 if (profileError) throw profileError;
 
-                // Redirección exitosa
-                window.location.href = (profileData.role === 'negocio') ? 'admin.html' : 'menu.html';
+                window.location.href = (profile.role === 'negocio') ? 'admin.html' : 'menu.html';
 
             } catch (err) {
                 alert("Error: " + err.message);
