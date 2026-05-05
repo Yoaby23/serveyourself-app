@@ -8,35 +8,47 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .cart-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes pop {
+            0% { transform: scale(0.9) translateX(-50%); }
+            100% { transform: scale(1) translateX(-50%); }
+        }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen pb-24">
+<body class="bg-slate-50 min-h-screen pb-32">
 
     <nav class="p-4 sticky top-0 bg-white/80 backdrop-blur-md z-50 border-b border-slate-100">
         <div class="max-w-md mx-auto flex items-center gap-4">
-            <a href="menu.html" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-xl">←</a>
+            <a href="menu.html" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-xl hover:bg-slate-200 transition-all">←</a>
             <h1 id="res-name" class="font-black text-slate-900 truncate">Cargando menú...</h1>
         </div>
     </nav>
 
     <main class="max-w-md mx-auto p-5">
-        <div id="res-banner" class="w-full h-40 rounded-[2.5rem] bg-slate-200 mb-6 overflow-hidden relative">
+        <div id="res-banner" class="w-full h-44 rounded-[2.5rem] bg-slate-200 mb-8 overflow-hidden relative shadow-inner">
             <img id="res-logo" src="" class="w-full h-full object-cover hidden">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-6">
-                <p id="res-address" class="text-white text-xs font-bold uppercase tracking-widest opacity-90"></p>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end p-6">
+                <p id="res-address" class="text-white text-[10px] font-black uppercase tracking-[0.2em] opacity-80"></p>
             </div>
         </div>
 
-        <div id="contenedor-menu" class="space-y-8">
+        <div id="contenedor-menu" class="space-y-10">
             </div>
     </main>
 
-    <div id="cart-bar" class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-slate-900 text-white p-4 rounded-[2rem] shadow-2xl flex justify-between items-center hidden">
-        <div class="flex items-center gap-3">
-            <span class="bg-orange-500 w-8 h-8 rounded-full flex items-center justify-center font-black text-xs" id="cart-count">0</span>
-            <span class="font-bold">Ver pedido</span>
+    <div id="cart-bar" class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-slate-900 text-white p-5 rounded-[2.5rem] shadow-2xl flex justify-between items-center hidden z-50 cart-pop">
+        <div class="flex items-center gap-4">
+            <div class="relative">
+                <span class="bg-orange-500 w-7 h-7 rounded-full flex items-center justify-center font-black text-[11px] shadow-lg shadow-orange-500/40" id="cart-count">0</span>
+            </div>
+            <div>
+                <p class="font-black text-sm">Ver mi pedido</p>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Listo para ordenar</p>
+            </div>
         </div>
-        <span id="cart-total" class="font-black text-orange-400">$0.00</span>
+        <div class="text-right">
+            <span id="cart-total" class="font-black text-xl text-orange-400">$0.00</span>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -48,14 +60,16 @@
         const params = new URLSearchParams(window.location.search);
         const resId = params.get('id');
 
+        // LÓGICA DEL CARRITO
+        let carrito = [];
+
         async function cargarPagina() {
             if (!resId) { window.location.href = 'menu.html'; return; }
 
-            // 1. Cargar info del restaurante
             const { data: res } = await _supabase.from('profiles').select('*').eq('id', resId).single();
             if (res) {
                 document.getElementById('res-name').innerText = res.business_name;
-                document.getElementById('res-address').innerText = res.address || 'Ubicación no disponible';
+                document.getElementById('res-address').innerText = res.address || 'Ubicación Premium';
                 if (res.avatar_url) {
                     const img = document.getElementById('res-logo');
                     img.src = res.avatar_url;
@@ -63,24 +77,17 @@
                 }
             }
 
-            // 2. Cargar productos
-            const { data: productos } = await _supabase
-                .from('products')
-                .select('*')
-                .eq('restaurant_id', resId)
-                .order('category');
-
+            const { data: productos } = await _supabase.from('products').select('*').eq('restaurant_id', resId).eq('is_available', true);
             renderizarProductos(productos);
         }
 
         function renderizarProductos(productos) {
             const contenedor = document.getElementById('contenedor-menu');
             if (!productos || productos.length === 0) {
-                contenedor.innerHTML = `<p class="text-center text-slate-400 py-10">Este restaurante aún no tiene productos en el menú.</p>`;
+                contenedor.innerHTML = `<div class="text-center py-20"><p class="text-slate-400 font-bold italic">Menú no disponible por ahora.</p></div>`;
                 return;
             }
 
-            // Agrupar por categoría
             const categorias = {};
             productos.forEach(p => {
                 if (!categorias[p.category]) categorias[p.category] = [];
@@ -91,23 +98,67 @@
             for (const cat in categorias) {
                 const section = document.createElement('div');
                 section.innerHTML = `
-                    <h3 class="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-4 ml-2">${cat}</h3>
+                    <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-5 ml-2">${cat}</h3>
                     <div class="grid gap-4">
                         ${categorias[cat].map(prod => `
-                            <div class="bg-white p-4 rounded-[2rem] border border-slate-100 flex items-center justify-between shadow-sm active:scale-95 transition-all">
-                                <div class="flex items-center gap-4">
-                                    ${prod.image_url ? `<img src="${prod.image_url}" class="w-16 h-16 rounded-2xl object-cover">` : `<div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center">🍲</div>`}
-                                    <div>
-                                        <h4 class="font-bold text-slate-900 text-sm">${prod.name}</h4>
-                                        <p class="text-orange-500 font-black text-xs">$${prod.price} MXN</p>
+                            <div class="bg-white p-4 rounded-[2.2rem] border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+                                <div class="flex items-center gap-4 flex-1">
+                                    ${prod.image_url 
+                                        ? `<img src="${prod.image_url}" class="w-16 h-16 rounded-2xl object-cover shadow-sm">` 
+                                        : `<div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-2xl shadow-inner">🍽️</div>`}
+                                    <div class="pr-2">
+                                        <h4 class="font-bold text-slate-900 text-sm leading-tight">${prod.name}</h4>
+                                        <p class="text-orange-500 font-black text-sm mt-1">$${prod.price}</p>
                                     </div>
                                 </div>
-                                <button class="w-10 h-10 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center font-black text-xl hover:bg-orange-500 hover:text-white transition-all">+</button>
+                                <div class="flex items-center gap-3 bg-slate-50 p-1.5 rounded-full border border-slate-100">
+                                    <button onclick="cambiarCantidad('${prod.id}', -1, '${prod.name}', ${prod.price})" class="w-9 h-9 bg-white text-slate-400 rounded-full flex items-center justify-center font-black shadow-sm hover:text-red-500 transition-colors">-</button>
+                                    <span id="qty-${prod.id}" class="font-black text-slate-900 text-sm min-w-[20px] text-center">0</span>
+                                    <button onclick="cambiarCantidad('${prod.id}', 1, '${prod.name}', ${prod.price})" class="w-9 h-9 bg-slate-900 text-white rounded-full flex items-center justify-center font-black shadow-lg shadow-slate-200 hover:bg-orange-500 transition-all">+</button>
+                                </div>
                             </div>
                         `).join('')}
                     </div>
                 `;
                 contenedor.appendChild(section);
+            }
+        }
+
+        // FUNCIÓN PARA AGREGAR/QUITAR ITEMS
+        function cambiarCantidad(id, cambio, nombre, precio) {
+            const index = carrito.findIndex(item => item.id === id);
+            
+            if (index !== -1) {
+                carrito[index].qty += cambio;
+                if (carrito[index].qty <= 0) {
+                    carrito.splice(index, 1);
+                }
+            } else if (cambio > 0) {
+                carrito.push({ id, nombre, precio, qty: 1 });
+            }
+
+            actualizarInterfazCarrito(id);
+        }
+
+        function actualizarInterfazCarrito(prodId) {
+            // Actualizar número en el producto
+            const item = carrito.find(i => i.id === prodId);
+            const qtyElement = document.getElementById(`qty-${prodId}`);
+            if (qtyElement) {
+                qtyElement.innerText = item ? item.qty : 0;
+            }
+
+            // Actualizar barra flotante
+            const cartBar = document.getElementById('cart-bar');
+            const totalItems = carrito.reduce((acc, item) => acc + item.qty, 0);
+            const precioTotal = carrito.reduce((acc, item) => acc + (item.qty * item.price), 0);
+
+            if (totalItems > 0) {
+                cartBar.classList.remove('hidden');
+                document.getElementById('cart-count').innerText = totalItems;
+                document.getElementById('cart-total').innerText = `$${precioTotal.toFixed(2)}`;
+            } else {
+                cartBar.classList.add('hidden');
             }
         }
 
