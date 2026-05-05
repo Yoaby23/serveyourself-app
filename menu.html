@@ -45,12 +45,19 @@
 
     <main class="max-w-md mx-auto p-5 mt-2">
         
-        <section id="sec-explorar" class="space-y-8">
+        <section id="sec-explorar" class="space-y-6">
             <header>
                 <h2 class="text-3xl font-black text-slate-900 tracking-tight">Explorar</h2>
-                <p class="text-slate-400 text-sm font-semibold">Restaurantes listos para servirte.</p>
+                <p class="text-slate-400 text-sm font-semibold">¿Qué se te antoja hoy?</p>
             </header>
-            <div id="lista-restaurantes" class="grid gap-5">
+
+            <div class="relative group">
+                <span class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors">🔍</span>
+                <input type="text" id="search-input" oninput="debounceSearch()" placeholder="Busca comida o restaurantes..." 
+                    class="w-full p-5 pl-14 bg-white rounded-[2rem] border-none shadow-xl shadow-slate-200/40 outline-none text-sm font-bold text-slate-900 focus:ring-2 focus:ring-orange-500/20 transition-all">
+            </div>
+
+            <div id="lista-restaurantes" class="grid gap-5 pt-2">
                 </div>
         </section>
 
@@ -122,8 +129,10 @@
         const _supabase = supabase.createClient('https://spbgledcjwtqmlqdlpyx.supabase.co', 'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY');
         let currentUser = null;
         let userRole = null;
+        let searchTimer = null;
 
         function toggleUserMenu() { document.getElementById('user-menu').classList.toggle('hidden'); }
+        
         function mostrarSeccion(id) {
             document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
             document.getElementById(`sec-${id}`).classList.remove('hidden');
@@ -163,37 +172,64 @@
             const container = document.getElementById('menu-options');
             const linkClass = "text-left px-7 py-3.5 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all flex items-center gap-3";
             let html = `<button onclick="mostrarSeccion('perfil')" class="${linkClass}"><span>👤</span> Mi Perfil</button>`;
-            if (role === 'negocio') html += `<button onclick="window.location.href='admin.html'" class="${linkClass}"><span>⚙️</span> Mi Panel de Control</button>`;
-            else html += `<button onclick="mostrarSeccion('pedidos')" class="${linkClass}"><span>🛍️</span> Mis Pedidos</button>`;
+            if (role === 'negocio') html += `<button onclick="window.location.href='admin.html'" class="${linkClass}"><span>⚙</span> Mi Panel de Control</button>`;
+            else html += `<button onclick="mostrarSeccion('pedidos')" class="${linkClass}"><span>🛍</span> Mis Pedidos</button>`;
             container.innerHTML = html;
         }
 
-        async function actualizarPerfil() {
-            const btn = document.getElementById('btn-update');
-            const updates = { phone: document.getElementById('edit-phone').value, address: document.getElementById('edit-address').value };
-            if(userRole === 'negocio') {
-                updates.open_time = document.getElementById('edit-open').value;
-                updates.close_time = document.getElementById('edit-close').value;
-            }
-            btn.disabled = true;
-            try {
-                await _supabase.from('profiles').update(updates).eq('id', currentUser.id);
-                const nuevaPass = document.getElementById('edit-pass').value;
-                if (nuevaPass) await _supabase.auth.updateUser({ password: nuevaPass });
-                alert("Perfil actualizado!");
-                location.reload();
-            } catch (err) { alert(err.message); } finally { btn.disabled = false; }
+        // LÓGICA DE BÚSQUEDA
+        function debounceSearch() {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => ejecutarBusqueda(), 400);
+        }
+
+        async function ejecutarBusqueda() {
+            const query = document.getElementById('search-input').value.trim().toLowerCase();
+            if (!query) { cargarRestaurantes(); return; }
+
+            // 1. Buscar en perfiles (Negocios)
+            const { data: negociosPorNombre } = await _supabase
+                .from('profiles')
+                .select('*')
+                .eq('role', 'negocio')
+                .ilike('business_name', `%${query}%`);
+
+            // 2. Buscar en productos
+            const { data: productos } = await _supabase
+                .from('products')
+                .select('restaurant_id')
+                .ilike('name', `%${query}%`);
+
+            const idsDesdeProductos = [...new Set(productos?.map(p => p.restaurant_id) || [])];
+
+            // 3. Obtener perfiles de esos productos
+            const { data: negociosPorProducto } = idsDesdeProductos.length > 0 
+                ? await _supabase.from('profiles').select('*').in('id', idsDesdeProductos)
+                : { data: [] };
+
+            // Combinar y eliminar duplicados
+            const combinados = [...(negociosPorNombre || []), ...(negociosPorProducto || [])];
+            const unicos = Array.from(new Map(combinados.map(item => [item.id, item])).values());
+
+            renderizarLista(unicos);
         }
 
         async function cargarRestaurantes() {
-            const contenedor = document.getElementById('lista-restaurantes');
             const { data: negocios } = await _supabase.from('profiles').select('*').eq('role', 'negocio');
-            if(!negocios) return;
+            renderizarLista(negocios || []);
+        }
+
+        function renderizarLista(lista) {
+            const contenedor = document.getElementById('lista-restaurantes');
+            if (lista.length === 0) {
+                contenedor.innerHTML = '<p class="text-center py-10 text-slate-400 font-bold italic">No encontramos resultados...</p>';
+                return;
+            }
 
             const ahora = new Date();
             const horaActual = ahora.getHours().toString().padStart(2, '0') + ":" + ahora.getMinutes().toString().padStart(2, '0');
 
-            contenedor.innerHTML = negocios.map(res => {
+            contenedor.innerHTML = lista.map(res => {
                 let abierto = true;
                 if (res.open_time && res.close_time) {
                     const open = res.open_time.slice(0, 5);
@@ -227,6 +263,23 @@
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        async function actualizarPerfil() {
+            const btn = document.getElementById('btn-update');
+            const updates = { phone: document.getElementById('edit-phone').value, address: document.getElementById('edit-address').value };
+            if(userRole === 'negocio') {
+                updates.open_time = document.getElementById('edit-open').value;
+                updates.close_time = document.getElementById('edit-close').value;
+            }
+            btn.disabled = true;
+            try {
+                await _supabase.from('profiles').update(updates).eq('id', currentUser.id);
+                const nuevaPass = document.getElementById('edit-pass').value;
+                if (nuevaPass) await _supabase.auth.updateUser({ password: nuevaPass });
+                alert("Perfil actualizado!");
+                location.reload();
+            } catch (err) { alert(err.message); } finally { btn.disabled = false; }
         }
 
         async function cargarHistorialPedidos() {
