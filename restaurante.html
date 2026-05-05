@@ -10,8 +10,8 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .cart-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes pop {
-            0% { transform: scale(0.9) translateX(-50%); }
-            100% { transform: scale(1) translateX(-50%); }
+            0% { transform: scale(0.9) translateX(-50%); opacity: 0; }
+            100% { transform: scale(1) translateX(-50%); opacity: 1; }
         }
     </style>
 </head>
@@ -33,7 +33,11 @@
         </div>
 
         <div id="contenedor-menu" class="space-y-10">
+            <div class="animate-pulse space-y-4">
+                <div class="h-20 bg-slate-200 rounded-3xl"></div>
+                <div class="h-20 bg-slate-200 rounded-3xl"></div>
             </div>
+        </div>
     </main>
 
     <div id="cart-bar" class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-slate-900 text-white p-5 rounded-[2.5rem] shadow-2xl flex justify-between items-center hidden z-50 cart-pop">
@@ -60,12 +64,12 @@
         const params = new URLSearchParams(window.location.search);
         const resId = params.get('id');
 
-        // LÓGICA DEL CARRITO
         let carrito = [];
 
         async function cargarPagina() {
             if (!resId) { window.location.href = 'menu.html'; return; }
 
+            // Cargar Info del Restaurante
             const { data: res } = await _supabase.from('profiles').select('*').eq('id', resId).single();
             if (res) {
                 document.getElementById('res-name').innerText = res.business_name;
@@ -77,14 +81,19 @@
                 }
             }
 
-            const { data: productos } = await _supabase.from('products').select('*').eq('restaurant_id', resId).eq('is_available', true);
+            // Cargar Productos
+            const { data: productos } = await _supabase.from('products')
+                .select('*')
+                .eq('restaurant_id', resId)
+                .eq('is_available', true);
+            
             renderizarProductos(productos);
         }
 
         function renderizarProductos(productos) {
             const contenedor = document.getElementById('contenedor-menu');
             if (!productos || productos.length === 0) {
-                contenedor.innerHTML = `<div class="text-center py-20"><p class="text-slate-400 font-bold italic">Menú no disponible por ahora.</p></div>`;
+                contenedor.innerHTML = `<div class="text-center py-20"><p class="text-slate-400 font-bold italic">Menú no disponible.</p></div>`;
                 return;
             }
 
@@ -101,20 +110,20 @@
                     <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-5 ml-2">${cat}</h3>
                     <div class="grid gap-4">
                         ${categorias[cat].map(prod => `
-                            <div class="bg-white p-4 rounded-[2.2rem] border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+                            <div class="bg-white p-4 rounded-[2.2rem] border border-slate-100 flex items-center justify-between shadow-sm">
                                 <div class="flex items-center gap-4 flex-1">
                                     ${prod.image_url 
-                                        ? `<img src="${prod.image_url}" class="w-16 h-16 rounded-2xl object-cover shadow-sm">` 
-                                        : `<div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-2xl shadow-inner">🍽️</div>`}
-                                    <div class="pr-2">
+                                        ? `<img src="${prod.image_url}" class="w-16 h-16 rounded-2xl object-cover">` 
+                                        : `<div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-2xl">🍽️</div>`}
+                                    <div>
                                         <h4 class="font-bold text-slate-900 text-sm leading-tight">${prod.name}</h4>
-                                        <p class="text-orange-500 font-black text-sm mt-1">$${prod.price}</p>
+                                        <p class="text-orange-500 font-black text-sm mt-1">$${parseFloat(prod.price).toFixed(2)}</p>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-3 bg-slate-50 p-1.5 rounded-full border border-slate-100">
-                                    <button onclick="cambiarCantidad('${prod.id}', -1, '${prod.name}', ${prod.price})" class="w-9 h-9 bg-white text-slate-400 rounded-full flex items-center justify-center font-black shadow-sm hover:text-red-500 transition-colors">-</button>
+                                    <button onclick="cambiarCantidad('${prod.id}', -1, '${prod.name}', ${prod.price})" class="w-9 h-9 bg-white text-slate-400 rounded-full flex items-center justify-center font-black shadow-sm hover:text-red-500 transition-all">-</button>
                                     <span id="qty-${prod.id}" class="font-black text-slate-900 text-sm min-w-[20px] text-center">0</span>
-                                    <button onclick="cambiarCantidad('${prod.id}', 1, '${prod.name}', ${prod.price})" class="w-9 h-9 bg-slate-900 text-white rounded-full flex items-center justify-center font-black shadow-lg shadow-slate-200 hover:bg-orange-500 transition-all">+</button>
+                                    <button onclick="cambiarCantidad('${prod.id}', 1, '${prod.name}', ${prod.price})" class="w-9 h-9 bg-slate-900 text-white rounded-full flex items-center justify-center font-black shadow-lg hover:bg-orange-500 transition-all">+</button>
                                 </div>
                             </div>
                         `).join('')}
@@ -124,8 +133,8 @@
             }
         }
 
-        // FUNCIÓN PARA AGREGAR/QUITAR ITEMS
         function cambiarCantidad(id, cambio, nombre, precio) {
+            const precioNum = parseFloat(precio);
             const index = carrito.findIndex(item => item.id === id);
             
             if (index !== -1) {
@@ -134,21 +143,20 @@
                     carrito.splice(index, 1);
                 }
             } else if (cambio > 0) {
-                carrito.push({ id, nombre, precio, qty: 1 });
+                // Guardamos como 'price' (en inglés) para ser consistentes con la función de actualización
+                carrito.push({ id, nombre, price: precioNum, qty: 1 });
             }
 
             actualizarInterfazCarrito(id);
         }
 
         function actualizarInterfazCarrito(prodId) {
-            // Actualizar número en el producto
             const item = carrito.find(i => i.id === prodId);
             const qtyElement = document.getElementById(`qty-${prodId}`);
             if (qtyElement) {
                 qtyElement.innerText = item ? item.qty : 0;
             }
 
-            // Actualizar barra flotante
             const cartBar = document.getElementById('cart-bar');
             const totalItems = carrito.reduce((acc, item) => acc + item.qty, 0);
             const precioTotal = carrito.reduce((acc, item) => acc + (item.qty * item.price), 0);
