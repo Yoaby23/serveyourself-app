@@ -14,20 +14,26 @@
 <body class="bg-slate-50">
     <main class="max-w-md mx-auto p-6 min-h-screen flex flex-col justify-center">
         <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
-            <a href="index.html" class="text-orange-500 font-bold mb-6 inline-block">← Volver</a>
+            <a href="index.html" class="text-orange-500 font-bold mb-6 inline-block hover:opacity-75 transition-opacity">← Volver</a>
             <h2 id="form-title" class="text-3xl font-black mb-2 text-slate-900">Registro</h2>
             <p id="form-subtitle" class="text-slate-500 mb-8 font-medium">Crea tu cuenta para continuar.</p>
 
             <form id="ui-form" class="space-y-4">
-                <input type="text" id="reg-name" placeholder="Nombre completo" class="w-full p-4 bg-slate-50 rounded-2xl border outline-none focus:border-orange-500 transition-all text-sm font-medium" required>
-                <input type="email" id="reg-email" placeholder="Correo electrónico" class="w-full p-4 bg-slate-50 rounded-2xl border outline-none focus:border-orange-500 transition-all text-sm font-medium" required>
-                <input type="password" id="reg-password" placeholder="Contraseña (6+ caracteres)" class="w-full p-4 bg-slate-50 rounded-2xl border outline-none focus:border-orange-500 transition-all text-sm font-medium" required>
+                <input type="text" id="reg-name" placeholder="Nombre completo" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
+                
+                <input type="tel" id="reg-phone" placeholder="Teléfono (10 dígitos)" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
+
+                <input type="email" id="reg-email" placeholder="Correo electrónico" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
+                
+                <input type="password" id="reg-password" placeholder="Contraseña (6+ caracteres)" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
                 
                 <div id="biz-section" class="hidden space-y-4 pt-4 border-t border-slate-100 mt-4">
-                    <input type="text" id="biz-name" placeholder="Nombre de tu Negocio" class="w-full p-4 bg-slate-50 rounded-2xl border outline-none focus:border-orange-500 transition-all text-sm font-medium">
+                    <input type="text" id="biz-name" placeholder="Nombre de tu Negocio" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium">
+                    
+                    <input type="text" id="biz-address" placeholder="Dirección completa del local" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium">
                 </div>
 
-                <button type="submit" id="btn-register" class="w-full bg-orange-500 text-white font-black py-5 rounded-[2rem] shadow-lg mt-6 uppercase tracking-widest active:scale-95 transition-all">
+                <button type="submit" id="btn-register" class="w-full bg-orange-500 text-white font-black py-5 rounded-[2rem] shadow-lg shadow-orange-200 mt-6 uppercase tracking-widest active:scale-95 transition-all hover:bg-orange-600">
                     CREAR MI CUENTA
                 </button>
             </form>
@@ -36,66 +42,77 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // Configuración de Supabase
         const SUPABASE_URL = 'https://spbgledcjwtqmlqdlpyx.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // Obtener rol de la URL
         const params = new URLSearchParams(window.location.search);
         const role = params.get('role') || 'cliente';
 
+        // Ajustar interfaz si es negocio
         if (role === 'negocio') {
             document.getElementById('form-title').innerText = "Tu Negocio";
+            document.getElementById('form-subtitle').innerText = "Configura tu punto de entrega.";
             document.getElementById('biz-section').classList.remove('hidden');
+            // Hacer obligatorios los campos de negocio
+            document.getElementById('biz-name').required = true;
+            document.getElementById('biz-address').required = true;
         }
 
-    document.getElementById('ui-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('btn-register');
-    const email = document.getElementById('reg-email').value.trim();
-    const password = document.getElementById('reg-password').value;
-    const fullName = document.getElementById('reg-name').value.trim();
-    const bizName = document.getElementById('biz-name').value.trim();
-
-    btn.innerText = "CREANDO CUENTA...";
-    btn.disabled = true;
-
-    try {
-        // PASO 1: Crear el usuario en Authentication
-        const { data: authData, error: authError } = await _supabase.auth.signUp({
-            email,
-            password
-        });
-
-        if (authError) throw authError;
-
-        if (authData.user) {
-            // PASO 2: Crear el perfil en la tabla public.profiles
-            const { error: profileError } = await _supabase
-                .from('profiles')
-                .insert([{
-                    id: authData.user.id,
-                    full_name: fullName,
-                    email: email,
-                    role: role, // Asegúrate de que la variable 'role' esté definida arriba
-                    business_name: role === 'negocio' ? bizName : null
-                }]);
-
-            if (profileError) {
-                console.warn("Error al crear perfil, pero el usuario se creó:", profileError.message);
-                alert("Cuenta creada. Si hay problemas al entrar, contacta a soporte.");
-            } else {
-                alert("¡Registro completado con éxito!");
-            }
+        document.getElementById('ui-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-register');
             
-            // Redirigir según el rol
-            window.location.href = (role === 'negocio') ? 'admin.html' : 'menu.html';
-        }
-    } catch (error) {
-        alert("Error en el registro: " + error.message);
-        btn.innerText = "CREAR MI CUENTA";
-        btn.disabled = false;
-    }
-});
+            // Captura de valores
+            const email = document.getElementById('reg-email').value.trim();
+            const password = document.getElementById('reg-password').value;
+            const fullName = document.getElementById('reg-name').value.trim();
+            const phone = document.getElementById('reg-phone').value.trim();
+            const bizName = document.getElementById('biz-name').value.trim();
+            const bizAddress = document.getElementById('biz-address').value.trim();
+
+            btn.innerText = "CREANDO CUENTA...";
+            btn.disabled = true;
+
+            try {
+                // 1. Crear usuario en Authentication
+                const { data: authData, error: authError } = await _supabase.auth.signUp({
+                    email,
+                    password
+                });
+
+                if (authError) throw authError;
+
+                if (authData.user) {
+                    // 2. Crear perfil con los nuevos campos (phone y address)
+                    const { error: profileError } = await _supabase
+                        .from('profiles')
+                        .insert([{
+                            id: authData.user.id,
+                            full_name: fullName,
+                            email: email,
+                            phone: phone,
+                            role: role,
+                            business_name: role === 'negocio' ? bizName : null,
+                            address: role === 'negocio' ? bizAddress : null
+                        }]);
+
+                    if (profileError) {
+                        console.error("Error en perfil:", profileError.message);
+                        alert("Usuario creado, pero hubo un error con los datos adicionales.");
+                    }
+
+                    // Redirección directa (asumiendo que Confirm Email está en OFF)
+                    window.location.href = (role === 'negocio') ? 'admin.html' : 'menu.html';
+                }
+            } catch (error) {
+                alert("Error: " + error.message);
+                btn.innerText = "CREAR MI CUENTA";
+                btn.disabled = false;
+            }
+        });
     </script>
 </body>
 </html>
