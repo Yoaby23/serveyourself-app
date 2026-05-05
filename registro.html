@@ -5,34 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>serveyourself | Registro</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800;900&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
 </head>
 <body class="bg-slate-50">
     <main class="max-w-md mx-auto p-6 min-h-screen flex flex-col justify-center">
         
-        <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
-            <a href="./index.html" class="text-orange-500 font-bold mb-6 inline-block hover:underline">← Volver</a>
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100">
+            <a href="index.html" class="text-orange-500 font-bold mb-6 inline-block hover:text-orange-600 transition-colors">← Volver al inicio</a>
             
-            <h2 id="form-title" class="text-3xl font-black mb-2 text-slate-900 tracking-tight">Crea tu cuenta</h2>
-            <p id="form-subtitle" class="text-slate-500 mb-8">Rellena la información necesaria</p>
+            <h2 id="form-title" class="text-3xl font-black mb-2 text-slate-900 tracking-tight">Registro</h2>
+            <p id="form-subtitle" class="text-slate-500 mb-8 font-medium">Crea tu cuenta para continuar.</p>
 
-            <form id="registro-form" class="space-y-4">
-                <input type="text" id="full_name" placeholder="Nombre completo" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 transition-all" required>
-                <input type="email" id="email" placeholder="Correo electrónico" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 transition-all" required>
-                <input type="password" id="password" placeholder="Contraseña (6+ caracteres)" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 transition-all" required>
+            <form id="ui-form" class="space-y-4">
+                <input type="text" placeholder="Nombre completo" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
+                <input type="email" placeholder="Correo electrónico" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
+                <input type="password" placeholder="Contraseña (6+ caracteres)" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
                 
                 <div id="biz-section" class="hidden space-y-4 pt-4 border-t border-slate-100 mt-4">
-                    <input type="text" id="biz_name" placeholder="Nombre de tu Negocio" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 transition-all">
-                    <input type="text" id="biz_address" placeholder="Dirección del Local" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 transition-all">
+                    <input type="text" placeholder="Nombre de tu Negocio" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium">
+                    <input type="text" placeholder="Dirección para el Pickup" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium">
                 </div>
 
-                <button type="submit" class="w-full bg-orange-500 text-white font-black py-5 rounded-[2rem] shadow-lg mt-6 uppercase tracking-widest active:scale-95 transition-all">
+                <button type="submit" class="w-full bg-orange-500 text-white font-black py-5 rounded-[2rem] shadow-lg shadow-orange-100 mt-6 uppercase tracking-widest active:scale-95 transition-all hover:bg-orange-600">
                     CREAR MI CUENTA
                 </button>
             </form>
         </div>
     </main>
 
-    <script src="./app.js"></script>
+    <script>
+        // 1. Leer qué botón presionó el usuario en el inicio
+        const params = new URLSearchParams(window.location.search);
+        const role = params.get('role') || 'cliente';
+
+        // 2. Adaptar la interfaz
+        const title = document.getElementById('form-title');
+        const subtitle = document.getElementById('form-subtitle');
+        const bizSection = document.getElementById('biz-section');
+
+        if (role === 'negocio') {
+            title.innerText = "Tu Negocio";
+            subtitle.innerText = "Configura tu punto de entrega.";
+            bizSection.classList.remove('hidden');
+        } else {
+            title.innerText = "Tu Cuenta";
+            subtitle.innerText = "Pide sin filas desde hoy.";
+        }
+
+        // 3. Simular la creación de cuenta y redirigir
+        document.getElementById('ui-form').addEventListener('submit', function(e) {
+            e.preventDefault(); // Evita que la página se recargue
+            
+            // Redirigir según el rol
+            if (role === 'negocio') {
+                window.location.href = 'admin.html';
+            } else {
+                window.location.href = 'menu.html';
+            }
+        });
+    </script>
 </body>
 </html>
