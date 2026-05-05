@@ -3,61 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>serveyourself | Registro</title>
+    <title>serveyourself | Inicio</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .hidden { display: none; }
-    </style>
 </head>
-<body class="bg-white antialiased">
-
-    <nav class="flex items-center justify-between p-6 border-b border-slate-50">
-        <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.reload()">
-            <img src="logo.png" alt="S" class="w-10 h-10 object-contain">
-            <h1 class="text-xl font-black tracking-tighter text-slate-900">serve<span class="text-orange-500">yourself</span></h1>
-        </div>
+<body class="bg-white">
+    <nav class="p-6 flex items-center gap-3">
+        <img src="logo.png" alt="S" class="w-10 h-10 object-contain">
+        <h1 class="text-xl font-black tracking-tighter">serve<span class="text-orange-500">yourself</span></h1>
     </nav>
 
-    <main class="max-w-md mx-auto p-6">
+    <main class="max-w-md mx-auto p-6 text-center">
+        <h2 class="text-4xl font-black mb-4 leading-tight">Pide y recoge sin esperas <br><span class="text-orange-500">sin filas.</span></h2>
         
-        <div id="home-screen" class="text-center py-8">
-            <h2 class="text-4xl font-[800] mb-4 leading-tight tracking-tight text-slate-900">
-                Pide y recoge <br><span class="text-orange-500">sin filas.</span>
-            </h2>
-            <div class="mb-10 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-orange-50 border-4 border-white">
-                <img src="welcome-image.png" alt="Comida" class="w-full">
-            </div>
-            <div class="space-y-4">
-                <button onclick="showForm('cliente')" class="w-full bg-orange-500 text-white font-extrabold py-5 rounded-[2rem] shadow-xl shadow-orange-100 uppercase tracking-wider">SOY CLIENTE</button>
-                <button onclick="showForm('negocio')" class="w-full border-2 border-slate-100 text-slate-500 font-bold py-5 rounded-[2rem]">SOY NEGOCIO</button>
-            </div>
+        <div class="mb-10 rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white">
+            <img src="welcome-image.png" alt="Comida" class="w-full">
         </div>
 
-        <div id="auth-screen" class="hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <button onclick="window.location.reload()" class="text-orange-500 font-bold mb-6 flex items-center gap-2">← Volver</button>
-            
-            <h2 id="auth-title" class="text-3xl font-black mb-2 text-slate-900">Registro</h2>
-            <p class="text-slate-500 mb-8">Completa tus datos para continuar.</p>
-
-            <form id="auth-form" class="space-y-4">
-                <input type="text" id="full_name" placeholder="Nombre completo" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500" required>
-                <input type="email" id="email" placeholder="Correo electrónico" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500" required>
-                <input type="password" id="password" placeholder="Contraseña (6+ caracteres)" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500" required>
-                <input type="tel" id="phone" placeholder="Teléfono" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500" required>
-
-                <div id="business-fields" class="hidden space-y-4 pt-4 mt-4 border-t border-slate-100">
-                    <input type="text" id="biz_name" placeholder="Nombre del Local" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500">
-                    <input type="text" id="biz_address" placeholder="Dirección del Local" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500">
-                </div>
-
-                <button type="submit" class="w-full bg-orange-500 text-white font-black py-5 rounded-[2rem] shadow-lg mt-4 uppercase tracking-wider">REGISTRARME</button>
-            </form>
+        <div class="space-y-4">
+            <a href="registro.html?role=cliente" class="block w-full bg-orange-500 text-white font-extrabold py-5 rounded-[2rem] shadow-xl uppercase text-center">SOY CLIENTE</a>
+            <a href="registro.html?role=negocio" class="block w-full border-2 border-slate-100 text-slate-500 font-bold py-5 rounded-[2rem] text-center">SOY NEGOCIO</a>
         </div>
     </main>
-
-    <script src="app.js"></script>
 </body>
 </html>
