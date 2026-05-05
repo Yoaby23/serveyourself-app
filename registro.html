@@ -13,10 +13,8 @@
 </head>
 <body class="bg-slate-50">
     <main class="max-w-md mx-auto p-6 min-h-screen flex flex-col justify-center">
-        
         <div class="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100">
             <a href="index.html" class="text-orange-500 font-bold mb-6 inline-block hover:text-orange-600 transition-colors">← Volver al inicio</a>
-            
             <h2 id="form-title" class="text-3xl font-black mb-2 text-slate-900 tracking-tight">Registro</h2>
             <p id="form-subtitle" class="text-slate-500 mb-8 font-medium">Crea tu cuenta para continuar.</p>
 
@@ -27,10 +25,9 @@
                 
                 <div id="biz-section" class="hidden space-y-4 pt-4 border-t border-slate-100 mt-4">
                     <input type="text" id="biz-name" placeholder="Nombre de tu Negocio" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium">
-                    <input type="text" id="biz-address" placeholder="Dirección para el Pickup" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium">
                 </div>
 
-                <button type="submit" id="btn-register" class="w-full bg-orange-500 text-white font-black py-5 rounded-[2rem] shadow-lg shadow-orange-100 mt-6 uppercase tracking-widest active:scale-95 transition-all hover:bg-orange-600">
+                <button type="submit" id="btn-register" class="w-full bg-orange-500 text-white font-black py-5 rounded-[2rem] shadow-lg mt-6 uppercase tracking-widest active:scale-95 transition-all">
                     CREAR MI CUENTA
                 </button>
             </form>
@@ -38,86 +35,63 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
 
     <script>
-        // Este evento asegura que NADA se ejecute hasta que Supabase y las claves estén cargadas
-        window.addEventListener('load', () => {
-            const params = new URLSearchParams(window.location.search);
-            const role = params.get('role') || 'cliente';
+        // CONFIGURACIÓN DIRECTA (PARA EVITAR ERRORES DE CARGA)
+        const SB_URL = 'https://spbgledcjwtqmlqdlpyx.supabase.coss'; // <--- CAMBIA ESTO
+        const SB_KEY = 'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY';                    // <--- CAMBIA ESTO
+        
+        // Inicializamos Supabase inmediatamente
+        const supabase = supabase.createClient(SB_URL, SB_KEY);
 
-            const title = document.getElementById('form-title');
-            const subtitle = document.getElementById('form-subtitle');
-            const bizSection = document.getElementById('biz-section');
+        // Lógica de la página
+        const params = new URLSearchParams(window.location.search);
+        const role = params.get('role') || 'cliente';
 
-            // Adaptar interfaz según el rol
-            if (role === 'negocio') {
-                title.innerText = "Tu Negocio";
-                subtitle.innerText = "Configura tu punto de entrega.";
-                bizSection.classList.remove('hidden');
-            } else {
-                title.innerText = "Tu Cuenta";
-                subtitle.innerText = "Pide sin filas desde hoy.";
-            }
+        if (role === 'negocio') {
+            document.getElementById('form-title').innerText = "Tu Negocio";
+            document.getElementById('biz-section').classList.remove('hidden');
+        }
 
-            // Lógica de Registro Real
-            document.getElementById('ui-form').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                // VERIFICACIÓN CRÍTICA: Si window.supabase no existe, detenemos el proceso
-                if (!window.supabase) {
-                    alert("Error crítico: No se detecta la conexión con Supabase. Revisa tus claves en supabase-config.js");
-                    return;
-                }
+        document.getElementById('ui-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-register');
+            btn.innerText = "PROCESANDO...";
+            btn.disabled = true;
 
-                const email = document.getElementById('reg-email').value;
-                const password = document.getElementById('reg-password').value;
-                const fullName = document.getElementById('reg-name').value;
-                const businessName = document.getElementById('biz-name').value;
-                const businessAddress = document.getElementById('biz-address').value;
-                const btn = document.getElementById('btn-register');
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const fullName = document.getElementById('reg-name').value;
+            const bizName = document.getElementById('biz-name').value;
 
-                btn.innerText = "CREANDO CUENTA...";
-                btn.disabled = true;
+            try {
+                // 1. Registro en Auth
+                const { data: authData, error: authErr } = await supabase.auth.signUp({
+                    email, password
+                });
 
-                try {
-                    // 1. Crear usuario en Auth de Supabase
-                    const { data: authData, error: authError } = await window.supabase.auth.signUp({
+                if (authErr) throw authErr;
+
+                // 2. Registro en Profiles
+                if (authData.user) {
+                    const { error: profErr } = await supabase.from('profiles').insert([{
+                        id: authData.user.id,
+                        full_name: fullName,
                         email: email,
-                        password: password
-                    });
+                        role: role,
+                        business_name: role === 'negocio' ? bizName : null
+                    }]);
 
-                    if (authError) throw authError;
-
-                    // 2. Insertar datos en la tabla 'profiles' si el usuario se creó correctamente
-                    if (authData.user) {
-                        const { error: profileError } = await window.supabase
-                            .from('profiles')
-                            .insert([
-                                {
-                                    id: authData.user.id,
-                                    full_name: fullName,
-                                    email: email,
-                                    role: role,
-                                    business_name: role === 'negocio' ? businessName : null,
-                                    business_address: role === 'negocio' ? businessAddress : null
-                                }
-                            ]);
-
-                        if (profileError) throw profileError;
-
-                        alert("¡Cuenta creada con éxito!");
-                        
-                        // Redirigir según el rol
-                        window.location.href = (role === 'negocio') ? 'admin.html' : 'menu.html';
-                    }
-
-                } catch (error) {
-                    alert("Error: " + error.message);
-                    btn.innerText = "CREAR MI CUENTA";
-                    btn.disabled = false;
+                    if (profErr) throw profErr;
+                    
+                    alert("¡Éxito!");
+                    window.location.href = (role === 'negocio') ? 'admin.html' : 'menu.html';
                 }
-            });
+            } catch (err) {
+                alert("Error: " + err.message);
+                btn.innerText = "CREAR MI CUENTA";
+                btn.disabled = false;
+            }
         });
     </script>
 </body>
