@@ -26,7 +26,6 @@
     </nav>
 
     <main class="max-w-md mx-auto p-6 mt-4">
-        
         <div id="view-main" class="fade-in text-center">
             <h2 class="text-4xl font-black mb-4 leading-tight text-slate-900">Pide y recoge <br><span class="text-orange-500">sin filas.</span></h2>
             <div class="mb-10 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-orange-50 border-4 border-white">
@@ -42,17 +41,19 @@
             </div>
         </div>
 
-        <div id="view-login" class="hidden fade-in bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 mt-8">
-            <button onclick="switchView('view-main')" class="text-orange-500 font-bold mb-6 hover:text-orange-600">← Volver</button>
-            <h2 class="text-3xl font-black mb-2 text-slate-900 tracking-tight">Hola de nuevo</h2>
-            <p class="text-slate-500 mb-8 font-medium">Ingresa tus datos para continuar.</p>
-            <form id="login-form" class="space-y-4">
-                <input type="email" id="login-email" placeholder="Correo electrónico" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
-                <input type="password" id="login-password" placeholder="Contraseña" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
-                <button type="submit" id="btn-login" class="w-full bg-slate-900 text-white font-black py-5 rounded-[2rem] shadow-lg mt-6 uppercase tracking-widest active:scale-95 transition-all">
-                    ENTRAR
-                </button>
-            </form>
+        <div id="id-login-container" class="hidden">
+            <div id="view-login" class="fade-in bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 mt-8">
+                <button onclick="switchView('view-main')" class="text-orange-500 font-bold mb-6 hover:text-orange-600">← Volver</button>
+                <h2 class="text-3xl font-black mb-2 text-slate-900 tracking-tight">Hola de nuevo</h2>
+                <p class="text-slate-500 mb-8 font-medium">Ingresa tus datos para continuar.</p>
+                <form id="login-form" class="space-y-4">
+                    <input type="email" id="login-email" placeholder="Correo electrónico" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
+                    <input type="password" id="login-password" placeholder="Contraseña" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
+                    <button type="submit" id="btn-login" class="w-full bg-slate-900 text-white font-black py-5 rounded-[2rem] shadow-lg mt-6 uppercase tracking-widest active:scale-95 transition-all">
+                        ENTRAR
+                    </button>
+                </form>
+            </div>
         </div>
 
         <div id="view-roles" class="hidden fade-in mt-8">
@@ -77,22 +78,23 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
-        // --- CONFIGURACIÓN ---
-        const SUPABASE_URL = 'https://spbgledcjwtqmlqdlpyx.supabase.co'; 
-        const SUPABASE_KEY = 'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY';
-
-        // Inicializamos el cliente después de que la librería cargó
-        const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
-
+        // Función para cambiar de vista
         function switchView(viewId) {
             document.getElementById('view-main').classList.add('hidden');
-            document.getElementById('view-login').classList.add('hidden');
+            document.getElementById('id-login-container').classList.add('hidden');
             document.getElementById('view-roles').classList.add('hidden');
-            document.getElementById(viewId).classList.remove('hidden');
+            
+            if(viewId === 'view-login') {
+                document.getElementById('id-login-container').classList.remove('hidden');
+            } else {
+                document.getElementById(viewId).classList.remove('hidden');
+            }
         }
 
+        // Manejo del Login
         document.getElementById('login-form').addEventListener('submit', async function(e) {
             e.preventDefault();
+            
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             const btn = document.getElementById('btn-login');
@@ -101,6 +103,12 @@
             btn.disabled = true;
 
             try {
+                // LLAMADA DIRECTA SIN VARIABLES EXTERNAS
+                const _supabase = window.supabase.createClient(
+                    'https://spbgledcjwtqmlqdlpyx.supabase.co', // Pega tu URL aquí
+                    'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY'                 // Pega tu Key aquí
+                );
+
                 const { data, error } = await _supabase.auth.signInWithPassword({
                     email: email,
                     password: password,
