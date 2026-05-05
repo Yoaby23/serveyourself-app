@@ -8,10 +8,20 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        /* Animación barra inferior */
         .cart-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes pop {
             0% { transform: scale(0.9) translateX(-50%); opacity: 0; }
             100% { transform: scale(1) translateX(-50%); opacity: 1; }
+        }
+
+        /* Animación Modal */
+        #modal-carrito { transition: all 0.3s ease-in-out; }
+        .modal-content { animation: slideUp 0.4s ease-out; }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
         }
     </style>
 </head>
@@ -20,7 +30,7 @@
     <nav class="p-4 sticky top-0 bg-white/80 backdrop-blur-md z-50 border-b border-slate-100">
         <div class="max-w-md mx-auto flex items-center gap-4">
             <a href="menu.html" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-xl hover:bg-slate-200 transition-all">←</a>
-            <h1 id="res-name" class="font-black text-slate-900 truncate">Cargando menú...</h1>
+            <h1 id="res-name" class="font-black text-slate-900 truncate">Cargando...</h1>
         </div>
     </nav>
 
@@ -32,15 +42,10 @@
             </div>
         </div>
 
-        <div id="contenedor-menu" class="space-y-10">
-            <div class="animate-pulse space-y-4">
-                <div class="h-20 bg-slate-200 rounded-3xl"></div>
-                <div class="h-20 bg-slate-200 rounded-3xl"></div>
-            </div>
-        </div>
+        <div id="contenedor-menu" class="space-y-10"></div>
     </main>
 
-    <div id="cart-bar" class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-slate-900 text-white p-5 rounded-[2.5rem] shadow-2xl flex justify-between items-center hidden z-50 cart-pop">
+    <div id="cart-bar" onclick="abrirCarrito()" class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-slate-900 text-white p-5 rounded-[2.5rem] shadow-2xl flex justify-between items-center hidden z-50 cart-pop cursor-pointer hover:scale-[1.02] transition-transform">
         <div class="flex items-center gap-4">
             <div class="relative">
                 <span class="bg-orange-500 w-7 h-7 rounded-full flex items-center justify-center font-black text-[11px] shadow-lg shadow-orange-500/40" id="cart-count">0</span>
@@ -55,6 +60,35 @@
         </div>
     </div>
 
+    <div id="modal-carrito" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] hidden flex items-end">
+        <div class="modal-content bg-white w-full max-w-md mx-auto rounded-t-[3rem] p-8 pb-10 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-2xl font-black text-slate-900">Tu Pedido</h2>
+                <button onclick="cerrarCarrito()" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold">✕</button>
+            </div>
+
+            <div id="lista-carrito" class="space-y-6 mb-8"></div>
+
+            <div class="mb-8">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Notas adicionales</label>
+                <textarea id="order-notes" 
+                    placeholder="Ej: Sin cebolla, salsas extra, alergias..." 
+                    class="w-full bg-slate-50 border border-slate-100 rounded-[1.5rem] p-4 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all resize-none"
+                    rows="3"></textarea>
+            </div>
+
+            <div class="border-t border-slate-100 pt-6 space-y-4">
+                <div class="flex justify-between items-center">
+                    <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">Total a pagar</p>
+                    <p id="modal-total" class="text-3xl font-black text-slate-900">$0.00</p>
+                </div>
+                <button onclick="confirmarPedido()" class="w-full py-5 bg-orange-500 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-orange-200 hover:bg-orange-600 transition-all">
+                    CONFIRMAR PEDIDO
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const SUPABASE_URL = 'https://spbgledcjwtqmlqdlpyx.supabase.co'; 
@@ -63,46 +97,33 @@
 
         const params = new URLSearchParams(window.location.search);
         const resId = params.get('id');
-
         let carrito = [];
 
         async function cargarPagina() {
             if (!resId) { window.location.href = 'menu.html'; return; }
-
-            // Cargar Info del Restaurante
+            
             const { data: res } = await _supabase.from('profiles').select('*').eq('id', resId).single();
             if (res) {
                 document.getElementById('res-name').innerText = res.business_name;
                 document.getElementById('res-address').innerText = res.address || 'Ubicación Premium';
                 if (res.avatar_url) {
                     const img = document.getElementById('res-logo');
-                    img.src = res.avatar_url;
-                    img.classList.remove('hidden');
+                    img.src = res.avatar_url; img.classList.remove('hidden');
                 }
             }
 
-            // Cargar Productos
-            const { data: productos } = await _supabase.from('products')
-                .select('*')
-                .eq('restaurant_id', resId)
-                .eq('is_available', true);
-            
+            const { data: productos } = await _supabase.from('products').select('*').eq('restaurant_id', resId).eq('is_available', true);
             renderizarProductos(productos);
         }
 
         function renderizarProductos(productos) {
             const contenedor = document.getElementById('contenedor-menu');
             if (!productos || productos.length === 0) {
-                contenedor.innerHTML = `<div class="text-center py-20"><p class="text-slate-400 font-bold italic">Menú no disponible.</p></div>`;
+                contenedor.innerHTML = `<p class="text-center py-20 text-slate-400 font-bold italic">Menú no disponible.</p>`;
                 return;
             }
-
             const categorias = {};
-            productos.forEach(p => {
-                if (!categorias[p.category]) categorias[p.category] = [];
-                categorias[p.category].push(p);
-            });
-
+            productos.forEach(p => { if (!categorias[p.category]) categorias[p.category] = []; categorias[p.category].push(p); });
             contenedor.innerHTML = '';
             for (const cat in categorias) {
                 const section = document.createElement('div');
@@ -112,18 +133,16 @@
                         ${categorias[cat].map(prod => `
                             <div class="bg-white p-4 rounded-[2.2rem] border border-slate-100 flex items-center justify-between shadow-sm">
                                 <div class="flex items-center gap-4 flex-1">
-                                    ${prod.image_url 
-                                        ? `<img src="${prod.image_url}" class="w-16 h-16 rounded-2xl object-cover">` 
-                                        : `<div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-2xl">🍽️</div>`}
+                                    <div class="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-xl">🍽️</div>
                                     <div>
                                         <h4 class="font-bold text-slate-900 text-sm leading-tight">${prod.name}</h4>
                                         <p class="text-orange-500 font-black text-sm mt-1">$${parseFloat(prod.price).toFixed(2)}</p>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-3 bg-slate-50 p-1.5 rounded-full border border-slate-100">
-                                    <button onclick="cambiarCantidad('${prod.id}', -1, '${prod.name}', ${prod.price})" class="w-9 h-9 bg-white text-slate-400 rounded-full flex items-center justify-center font-black shadow-sm hover:text-red-500 transition-all">-</button>
-                                    <span id="qty-${prod.id}" class="font-black text-slate-900 text-sm min-w-[20px] text-center">0</span>
-                                    <button onclick="cambiarCantidad('${prod.id}', 1, '${prod.name}', ${prod.price})" class="w-9 h-9 bg-slate-900 text-white rounded-full flex items-center justify-center font-black shadow-lg hover:bg-orange-500 transition-all">+</button>
+                                <div class="flex items-center gap-3 bg-slate-50 p-1 rounded-full">
+                                    <button onclick="cambiarCantidad('${prod.id}', -1, '${prod.name}', ${prod.price})" class="w-8 h-8 bg-white text-slate-400 rounded-full flex items-center justify-center font-black shadow-sm">-</button>
+                                    <span id="qty-${prod.id}" class="font-black text-slate-900 text-xs min-w-[15px] text-center">0</span>
+                                    <button onclick="cambiarCantidad('${prod.id}', 1, '${prod.name}', ${prod.price})" class="w-8 h-8 bg-slate-900 text-white rounded-full flex items-center justify-center font-black">+</button>
                                 </div>
                             </div>
                         `).join('')}
@@ -134,40 +153,82 @@
         }
 
         function cambiarCantidad(id, cambio, nombre, precio) {
-            const precioNum = parseFloat(precio);
             const index = carrito.findIndex(item => item.id === id);
+            const precioNum = parseFloat(precio);
             
             if (index !== -1) {
                 carrito[index].qty += cambio;
-                if (carrito[index].qty <= 0) {
-                    carrito.splice(index, 1);
-                }
+                if (carrito[index].qty <= 0) carrito.splice(index, 1);
             } else if (cambio > 0) {
-                // Guardamos como 'price' (en inglés) para ser consistentes con la función de actualización
                 carrito.push({ id, nombre, price: precioNum, qty: 1 });
             }
-
+            
             actualizarInterfazCarrito(id);
+            if (!document.getElementById('modal-carrito').classList.contains('hidden')) {
+                actualizarModalCarrito();
+            }
         }
 
         function actualizarInterfazCarrito(prodId) {
             const item = carrito.find(i => i.id === prodId);
             const qtyElement = document.getElementById(`qty-${prodId}`);
-            if (qtyElement) {
-                qtyElement.innerText = item ? item.qty : 0;
-            }
+            if (qtyElement) qtyElement.innerText = item ? item.qty : 0;
 
-            const cartBar = document.getElementById('cart-bar');
             const totalItems = carrito.reduce((acc, item) => acc + item.qty, 0);
             const precioTotal = carrito.reduce((acc, item) => acc + (item.qty * item.price), 0);
 
+            const cartBar = document.getElementById('cart-bar');
             if (totalItems > 0) {
                 cartBar.classList.remove('hidden');
                 document.getElementById('cart-count').innerText = totalItems;
                 document.getElementById('cart-total').innerText = `$${precioTotal.toFixed(2)}`;
             } else {
                 cartBar.classList.add('hidden');
+                cerrarCarrito();
             }
+        }
+
+        function abrirCarrito() {
+            actualizarModalCarrito();
+            document.getElementById('modal-carrito').classList.remove('hidden');
+        }
+
+        function cerrarCarrito() {
+            document.getElementById('modal-carrito').classList.add('hidden');
+        }
+
+        function actualizarModalCarrito() {
+            const lista = document.getElementById('lista-carrito');
+            const totalElement = document.getElementById('modal-total');
+            lista.innerHTML = '';
+            let total = 0;
+
+            carrito.forEach(item => {
+                total += item.price * item.qty;
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center";
+                div.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="font-black text-slate-900">${item.nombre}</span>
+                        <span class="text-orange-500 font-bold text-xs">$${item.price.toFixed(2)} x ${item.qty}</span>
+                    </div>
+                    <div class="flex items-center gap-3 bg-slate-50 p-1 rounded-full border border-slate-100">
+                         <button onclick="cambiarCantidad('${item.id}', -1, '${item.nombre}', ${item.price})" class="w-8 h-8 bg-white text-slate-400 rounded-full flex items-center justify-center font-black">-</button>
+                         <span class="font-black text-slate-900 text-xs">${item.qty}</span>
+                         <button onclick="cambiarCantidad('${item.id}', 1, '${item.nombre}', ${item.price})" class="w-8 h-8 bg-slate-900 text-white rounded-full flex items-center justify-center font-black">+</button>
+                    </div>
+                `;
+                lista.appendChild(div);
+            });
+            totalElement.innerText = `$${total.toFixed(2)}`;
+        }
+
+        function confirmarPedido() {
+            const notas = document.getElementById('order-notes').value;
+            if (carrito.length === 0) return;
+            
+            alert(`¡Pedido listo!\nTotal: ${document.getElementById('modal-total').innerText}\nNotas: ${notas || 'Ninguna'}`);
+            // Aquí irá el insert a la tabla 'orders'
         }
 
         cargarPagina();
