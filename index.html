@@ -3,68 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>serveyourself | Pickup sin filas</title>
+    <title>serveyourself | Registro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
         
-        body { font-family: 'Inter', sans-serif; }
-        
-        .animate-fade-up {
-            animation: fadeUp 0.6s ease-out forwards;
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #ffffff;
         }
 
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(20px); }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(241, 245, 249, 1);
+        }
+
+        .input-field {
+            @apply w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all duration-200 text-slate-700;
+        }
+
+        .btn-primary {
+            @apply w-full bg-orange-500 text-white font-extrabold py-5 rounded-[2rem] shadow-xl shadow-orange-100 hover:bg-orange-600 active:scale-[0.98] transition-all uppercase tracking-wider;
+        }
+
+        .animate-slide-up {
+            animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
-        }
-
-        .logo-container {
-            width: 40px;
-            height: 40px;
-            object-fit: contain;
         }
     </style>
 </head>
-<body class="bg-white text-slate-900">
+<body class="antialiased">
 
-    <nav class="flex items-center justify-between p-5 border-b border-slate-50 sticky top-0 bg-white/90 backdrop-blur-md z-50">
+    <nav class="flex items-center justify-between p-6 sticky top-0 bg-white/80 backdrop-blur-md z-50">
         <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.reload()">
-            <img src="logo.png" alt="S" class="logo-container">
+            <img src="logo.png" alt="S" class="w-10 h-10 object-contain drop-shadow-sm">
             <h1 class="text-xl font-black tracking-tighter">serve<span class="text-orange-500">yourself</span></h1>
         </div>
-        <div class="w-10"></div> </nav>
+    </nav>
 
-    <main id="main-content" class="max-w-md mx-auto p-6 min-h-[80vh]">
+    <main id="main-content" class="max-w-md mx-auto p-6">
         
-        <div class="text-center py-4 animate-fade-up">
-            <h2 class="text-4xl font-[900] mb-3 leading-tight tracking-tight text-slate-900">
+        <div id="home-screen" class="text-center py-8 animate-slide-up">
+            <h2 class="text-4xl font-[800] mb-4 leading-tight tracking-tight text-slate-900">
                 Pide y recoge <br><span class="text-orange-500">sin filas.</span>
             </h2>
-            <p class="text-slate-500 mb-8 text-lg font-medium">
+            <p class="text-slate-500 mb-10 text-lg font-medium">
                 Tus pedidos para llevar, listos cuando tú llegues.
             </p>
             
-            <div class="mb-10 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-orange-100 border-4 border-white">
-                <img src="welcome-image.png" alt="Pedidos para llevar" class="w-full h-auto block">
+            <div class="mb-10 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-orange-50 border-4 border-white">
+                <img src="welcome-image.png" alt="Comida lista" class="w-full">
             </div>
 
-            <div class="grid gap-4 px-2">
-                <button onclick="renderAuth('cliente')" 
-                    class="w-full bg-orange-500 text-white font-black py-5 rounded-[2rem] shadow-lg shadow-orange-200 hover:bg-orange-600 active:scale-95 transition-all text-lg uppercase tracking-wide">
+            <div class="space-y-4">
+                <button onclick="renderAuth('cliente')" class="btn-primary">
                     SOY CLIENTE
                 </button>
                 
-                <button onclick="renderAuth('negocio')" 
-                    class="w-full border-2 border-slate-100 text-slate-600 font-black py-5 rounded-[2rem] hover:border-orange-500 hover:text-orange-500 active:scale-95 transition-all text-lg uppercase tracking-wide">
+                <button onclick="renderAuth('negocio')" class="w-full border-2 border-slate-100 text-slate-500 font-bold py-5 rounded-[2rem] hover:border-orange-200 hover:text-orange-500 transition-all">
                     SOY NEGOCIO
                 </button>
             </div>
-
-            <p class="mt-12 text-xs text-slate-300 font-bold uppercase tracking-widest">
-                Zapopan, Jalisco • 2026
-            </p>
         </div>
 
     </main>
