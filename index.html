@@ -5,34 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>serveyourself | Naranja & Blanco</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .custom-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+        }
+    </style>
 </head>
 <body class="bg-white text-gray-900 font-sans">
 
-    <nav class="flex items-center justify-between p-5 border-b border-gray-100 sticky top-0 bg-white/80 backdrop-blur-md z-50">
-        <div class="flex items-center gap-2" onclick="location.reload()" style="cursor:pointer">
-            <div class="w-10 h-10 bg-[#F97316] rounded-xl flex items-center justify-center shadow-lg shadow-orange-200">
-                <span class="text-white font-bold text-xl">S</span>
-            </div>
-            <h1 class="text-xl font-black tracking-tighter">serve<span class="text-[#F97316]">yourself</span></h1>
+    <nav class="flex items-center justify-between p-5 border-b border-gray-100 sticky top-0 bg-white z-50">
+        <div class="flex items-center gap-3">
+            <img src="logo.png" alt="Logo serveyourself" class="custom-logo">
+            <h1 class="text-xl font-extrabold tracking-tight">serve<span class="text-[#F97316]">yourself</span></h1>
         </div>
     </nav>
 
     <main id="main-content" class="max-w-md mx-auto p-6">
-        <div class="text-center py-12 animate-in fade-in">
-            <h2 class="text-4xl font-black mb-6 leading-tight">Pide y recoge <br><span class="text-[#F97316]">sin filas.</span></h2>            
+        <div class="text-center py-6 animate-in fade-in">
+            
+            <h2 class="text-3xl font-black mb-2 leading-tight">Pide y recoge <span class="text-[#F97316]">sin filas.</span></h2>
+            
+            <div class="mb-8 rounded-3xl overflow-hidden shadow-sm border border-gray-100">
+                <img src="welcome-image.png" alt="Pareja feliz pidiendo comida" class="w-full h-auto">
+            </div>
+
             <div class="grid gap-4">
-                <button onclick="renderAuth('cliente')" class="w-full bg-[#F97316] text-white font-black py-5 rounded-3xl shadow-xl shadow-orange-100 hover:scale-[1.02] active:scale-95 transition-all text-lg">
+                <button onclick="renderAuth('cliente')" class="w-full bg-[#F97316] text-white font-black py-4 rounded-3xl shadow-lg shadow-orange-100 hover:bg-orange-600 transition text-lg">
                     SOY CLIENTE
                 </button>
                 
-                <button onclick="renderAuth('negocio')" class="w-full border-2 border-gray-100 text-gray-700 font-black py-5 rounded-3xl hover:border-[#F97316] hover:text-[#F97316] transition-all text-lg">
+                <button onclick="renderAuth('negocio')" class="w-full border-2 border-gray-100 text-gray-700 font-black py-4 rounded-3xl hover:border-orange-500 hover:text-orange-500 transition text-lg">
                     SOY NEGOCIO
                 </button>
             </div>
         </div>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
 </body>
 </html>
