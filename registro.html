@@ -49,52 +49,39 @@
         }
 
         document.getElementById('ui-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('btn-register');
-            btn.innerText = "PROCESANDO...";
-            btn.disabled = true;
+    e.preventDefault();
+    const btn = document.getElementById('btn-register');
+    const email = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value;
 
-            const email = document.getElementById('reg-email').value.trim();
-            const password = document.getElementById('reg-password').value;
-            const fullName = document.getElementById('reg-name').value.trim();
-            const bizName = document.getElementById('biz-name').value.trim();
+    btn.innerText = "PRUEBA DE EMERGENCIA...";
+    btn.disabled = true;
 
-            try {
-                // PASO 1: Registro en Auth
-                const { data: authData, error: authError } = await _supabase.auth.signUp({
-                    email,
-                    password
-                });
-
-                if (authError) throw authError;
-
-                // PASO 2: Inserción de Perfil
-                if (authData.user) {
-                    const { error: profileError } = await _supabase
-                        .from('profiles')
-                        .insert([{
-                            id: authData.user.id,
-                            full_name: fullName,
-                            email: email,
-                            role: role,
-                            business_name: role === 'negocio' ? bizName : null
-                        }]);
-
-                    if (profileError) {
-                        console.warn("Auth exitoso, pero perfil falló:", profileError.message);
-                        alert("Cuenta creada, pero hubo un problema con el perfil. Intenta iniciar sesión.");
-                    } else {
-                        alert("¡Registro exitoso!");
-                    }
-                    window.location.href = (role === 'negocio') ? 'admin.html' : 'menu.html';
-                }
-            } catch (error) {
-                console.error("Error detectado:", error);
-                alert("Error de Servidor: " + error.message);
-                btn.innerText = "CREAR MI CUENTA";
-                btn.disabled = false;
-            }
+    try {
+        console.log("Iniciando registro solo en Auth...");
+        
+        // INTENTO DE REGISTRO PURO (Sin tocar la tabla profiles)
+        const { data, error } = await _supabase.auth.signUp({
+            email: email,
+            password: password
         });
+
+        if (error) {
+            console.error("EL ERROR ES DE SUPABASE AUTH:", error);
+            throw error;
+        }
+
+        alert("¡ESTO ES INCREÍBLE! El usuario se creó en Auth. El problema SÍ era la tabla profiles.");
+        console.log("Datos del usuario creado:", data);
+
+    } catch (error) {
+        console.error("ERROR DEFINITIVO:", error);
+        alert("Si ves esto, tu proyecto de Supabase tiene un problema interno: " + error.message);
+    } finally {
+        btn.innerText = "CREAR MI CUENTA";
+        btn.disabled = false;
+    }
+});
     </script>
 </body>
 </html>
