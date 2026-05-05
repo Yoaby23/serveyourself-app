@@ -7,52 +7,55 @@
     <title>serveyourself | Restaurantes</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .fade-in-down { animation: fadeInDown 0.2s ease-out forwards; }
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-10px); }
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen pb-10">
+<body class="bg-slate-50 min-h-screen pb-20">
 
-    <nav class="bg-white/90 backdrop-blur-md p-4 sticky top-0 z-50 border-b border-slate-100">
-        <div class="flex justify-between items-center relative max-w-md mx-auto">
+    <nav class="bg-white/80 backdrop-blur-xl p-4 sticky top-0 z-50 border-b border-slate-100">
+        <div class="flex justify-between items-center max-w-md mx-auto relative">
             <div class="w-10"></div>
-            <h1 class="absolute left-1/2 transform -translate-x-1/2 text-lg font-black tracking-tighter text-slate-900">serve<span class="text-orange-500">yourself</span></h1>
+            <h1 class="absolute left-1/2 transform -translate-x-1/2 text-xl font-black tracking-tighter text-slate-900">
+                serve<span class="text-orange-500">yourself</span>
+            </h1>
             
             <div class="relative">
-                <button onclick="toggleUserMenu()" class="w-10 h-10 bg-slate-100 text-slate-700 hover:bg-orange-100 hover:text-orange-500 rounded-full flex items-center justify-center font-black transition-all">👤</button>
+                <button onclick="toggleUserMenu()" class="w-10 h-10 bg-slate-100 text-slate-700 hover:bg-orange-500 hover:text-white rounded-full flex items-center justify-center font-black transition-all shadow-sm">👤</button>
                 
-                <div id="user-menu" class="hidden absolute top-14 right-0 w-64 bg-white rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden fade-in-down z-[60]">
-                    <div class="p-5 border-b border-slate-50 bg-slate-50/50">
-                        <p id="user-name-display" class="text-sm font-black text-slate-900 leading-none">Cargando...</p>
-                        <p id="user-role-display" class="text-[10px] font-bold text-orange-500 uppercase tracking-widest mt-1">...</p>
+                <div id="user-menu" class="hidden absolute top-14 right-0 w-64 bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden fade-in z-[60]">
+                    <div class="p-6 border-b border-slate-50 bg-slate-50/50">
+                        <p id="user-name-display" class="text-sm font-black text-slate-900 leading-none italic">Cargando...</p>
+                        <p id="user-role-display" class="text-[10px] font-bold text-orange-500 uppercase tracking-[0.2em] mt-2">...</p>
                     </div>
                     
-                    <div id="menu-options" class="flex flex-col py-2">
+                    <div id="menu-options" class="flex flex-col py-3">
                         </div>
 
-                    <div class="p-2 bg-slate-50 border-t border-slate-100">
-                        <button onclick="cerrarSesion()" class="block text-center w-full py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors">Cerrar sesión</button>
+                    <div class="p-3 bg-slate-50 border-t border-slate-100">
+                        <button onclick="cerrarSesion()" class="w-full py-3 text-sm font-black text-red-500 hover:bg-red-50 rounded-2xl transition-colors">CERRAR SESIÓN</button>
                     </div>
                 </div>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-md mx-auto p-4 space-y-6 mt-2">
+    <main class="max-w-md mx-auto p-5 space-y-8 mt-2">
         <header>
-            <h2 class="text-2xl font-black text-slate-900 tracking-tight">Explorar lugares</h2>
-            <p class="text-slate-500 text-sm font-medium">¿Qué se te antoja comer hoy?</p>
+            <h2 class="text-3xl font-black text-slate-900 tracking-tight">Explorar</h2>
+            <p class="text-slate-400 text-sm font-semibold">Restaurantes listos para servirte.</p>
         </header>
 
-        <section id="lista-restaurantes" class="space-y-4">
-            <div class="animate-pulse flex flex-col gap-4">
-                <div class="h-32 bg-slate-200 rounded-[2rem]"></div>
-                <div class="h-32 bg-slate-200 rounded-[2rem]"></div>
+        <section id="lista-restaurantes" class="grid gap-5">
+            <div class="animate-pulse space-y-4">
+                <div class="h-32 bg-slate-200 rounded-[2.5rem]"></div>
+                <div class="h-32 bg-slate-200 rounded-[2.5rem]"></div>
+                <div class="h-32 bg-slate-200 rounded-[2.5rem]"></div>
             </div>
         </section>
     </main>
@@ -63,8 +66,11 @@
         const SUPABASE_KEY = 'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        function toggleUserMenu() { document.getElementById('user-menu').classList.toggle('hidden'); }
+        function toggleUserMenu() { 
+            document.getElementById('user-menu').classList.toggle('hidden'); 
+        }
 
+        // 1. Cargar datos del perfil logueado
         async function cargarDatosUsuario() {
             const { data: { user } } = await _supabase.auth.getUser();
             if (!user) { window.location.href = 'index.html'; return; }
@@ -74,71 +80,101 @@
             if (profile) {
                 document.getElementById('user-name-display').innerText = profile.full_name;
                 document.getElementById('user-role-display').innerText = profile.role;
-                renderizarOpcionesMenu(profile.role);
+                renderMenuPorRol(profile.role);
             }
         }
 
-        function renderizarOpcionesMenu(role) {
+        // 2. Dibujar opciones del menú según sea Cliente o Negocio
+        function renderMenuPorRol(role) {
             const container = document.getElementById('menu-options');
-            const itemsBase = `<button class="text-left px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all">👤 Detalles del Perfil</button>`;
+            const linkClass = "text-left px-7 py-3.5 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all flex items-center gap-3";
+            
+            let html = `<button class="${linkClass}"><span>👤</span> Perfil</button>`;
             
             if (role === 'negocio') {
-                container.innerHTML = itemsBase + `
-                    <button class="text-left px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all">📊 Pedidos Recibidos</button>
-                    <button onclick="window.location.href='admin.html'" class="text-left px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all">🍳 Panel de Control</button>
+                html += `
+                    <button class="${linkClass}"><span>📦</span> Pedidos Recibidos</button>
+                    <button onclick="window.location.href='admin.html'" class="${linkClass}"><span>⚙️</span> Mi Panel de Control</button>
                 `;
             } else {
-                container.innerHTML = itemsBase + `
-                    <button class="text-left px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all">🛍️ Mis Pedidos</button>
-                    <button class="text-left px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all">💳 Métodos de Pago</button>
+                html += `
+                    <button class="${linkClass}"><span>🛍️</span> Mis Pedidos</button>
+                    <button class="${linkClass}"><span>💳</span> Métodos de Pago</button>
                 `;
             }
+            container.innerHTML = html;
         }
 
+        // 3. Cargar lista de restaurantes
         async function cargarRestaurantes() {
             const contenedor = document.getElementById('lista-restaurantes');
-            const { data: negocios, error } = await _supabase.from('profiles').select('*').eq('role', 'negocio');
+            const { data: negocios, error } = await _supabase
+                .from('profiles')
+                .select('*')
+                .eq('role', 'negocio');
 
-            if (error || !negocios) return;
+            if (error || !negocios) {
+                contenedor.innerHTML = `<p class="text-center text-slate-400 py-20 font-bold italic">No hay restaurantes registrados.</p>`;
+                return;
+            }
+
             contenedor.innerHTML = '';
             
+            // Obtener hora actual en formato HH:MM:00
             const ahora = new Date();
-            const horaActual = ahora.getHours().toString().padStart(2, '0') + ":" + ahora.getMinutes().toString().padStart(2, '0') + ":00";
+            const horaActual = ahora.getHours().toString().padStart(2, '0') + ":" + 
+                               ahora.getMinutes().toString().padStart(2, '0') + ":00";
 
-            negocios.forEach(restaurante => {
-                let estaAbierto = false;
-                if (restaurante.open_time && restaurante.close_time) {
-                    estaAbierto = horaActual >= restaurante.open_time && horaActual <= restaurante.close_time;
+            negocios.forEach(res => {
+                // Validación de horario
+                let abierto = false;
+                if (res.open_time && res.close_time) {
+                    abierto = horaActual >= res.open_time && horaActual <= res.close_time;
                 }
 
                 const card = document.createElement('div');
-                card.className = `bg-white p-5 rounded-[2.5rem] shadow-sm border border-slate-100 hover:shadow-xl transition-all cursor-pointer relative group ${!estaAbierto ? 'opacity-70 grayscale-[0.4]' : ''}`;
+                card.className = `bg-white p-5 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer relative group ${!abierto ? 'opacity-70 grayscale-[0.5]' : ''}`;
                 
                 card.innerHTML = `
-                    <div class="flex gap-4 items-center">
-                        <div class="relative">
-                            ${restaurante.avatar_url 
-                                ? `<img src="${restaurante.avatar_url}" class="w-16 h-16 rounded-3xl object-cover shadow-sm border-2 border-white">`
-                                : `<div class="w-16 h-16 rounded-3xl bg-slate-100 text-slate-400 flex items-center justify-center text-3xl">🏪</div>`}
+                    <div class="flex gap-5 items-center">
+                        <div class="relative shrink-0">
+                            ${res.avatar_url 
+                                ? `<img src="${res.avatar_url}" class="w-20 h-20 rounded-[1.8rem] object-cover border-4 border-slate-50 shadow-sm">`
+                                : `<div class="w-20 h-20 rounded-[1.8rem] bg-orange-50 text-orange-400 flex items-center justify-center text-4xl shadow-inner">🏪</div>`}
+                            ${abierto ? '<div class="absolute -top-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>' : ''}
                         </div>
-                        <div class="flex-1">
+                        <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start">
-                                <h3 class="font-black text-slate-900 text-lg">${restaurante.business_name}</h3>
-                                <span class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">⭐ ${restaurante.rating || '5.0'}</span>
+                                <h3 class="font-black text-slate-900 text-lg truncate pr-2">${res.business_name}</h3>
+                                <div class="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-xl shrink-0">
+                                    <span class="text-amber-500 text-[10px]">⭐</span>
+                                    <span class="text-xs font-black text-amber-700">${res.rating || '5.0'}</span>
+                                </div>
                             </div>
-                            <p class="text-slate-400 text-[11px] font-bold uppercase tracking-tight mt-1">📍 ${restaurante.address || 'Sin ubicación'}</p>
+                            <p class="text-slate-400 text-[11px] font-bold uppercase tracking-tight mt-1 truncate">📍 ${res.address || 'Sin dirección'}</p>
                             <div class="flex gap-2 mt-3">
-                                <span class="text-[10px] font-black px-3 py-1 rounded-full ${estaAbierto ? 'bg-green-50 text-green-500' : 'bg-red-50 text-red-500'}">
-                                    ${estaAbierto ? 'ABIERTO' : 'CERRADO'}
+                                <span class="text-[9px] font-black px-3 py-1 rounded-full ${abierto ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'} uppercase tracking-widest">
+                                    ${abierto ? 'Abierto' : 'Cerrado'}
                                 </span>
-                                <span class="text-[10px] font-black text-slate-400 bg-slate-50 px-3 py-1 rounded-full uppercase tracking-widest">
-                                    ${restaurante.open_time?.slice(0,5)} - ${restaurante.close_time?.slice(0,5)}
+                                <span class="text-[9px] font-black text-slate-400 bg-slate-100 px-3 py-1 rounded-full uppercase tracking-widest">
+                                    ${res.open_time?.slice(0,5)} - ${res.close_time?.slice(0,5)}
                                 </span>
                             </div>
                         </div>
                     </div>
+                    <div class="absolute right-6 bottom-8 opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all">
+                        <span class="text-orange-500 text-2xl">→</span>
+                    </div>
                 `;
-                card.onclick = () => { window.location.href = `restaurante.html?id=${restaurante.id}`; };
+
+                card.onclick = () => {
+                    if (!abierto) {
+                        const seguir = confirm("El restaurante está cerrado. ¿Deseas ver el menú de todos modos?");
+                        if (!seguir) return;
+                    }
+                    window.location.href = `restaurante.html?id=${res.id}`;
+                };
+
                 contenedor.appendChild(card);
             });
         }
@@ -148,6 +184,7 @@
             window.location.href = 'index.html';
         }
 
+        // Inicializar
         cargarDatosUsuario();
         cargarRestaurantes();
     </script>
