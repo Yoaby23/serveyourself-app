@@ -27,7 +27,7 @@
                 
                 <div id="biz-section" class="hidden space-y-4 pt-4 border-t border-slate-100 mt-4">
                     <input type="text" id="biz-name" placeholder="Nombre de tu Negocio" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium">
-                    <input type="text" placeholder="Dirección para el Pickup" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium">
+                    <input type="text" id="biz-address" placeholder="Dirección para el Pickup" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium">
                 </div>
 
                 <button type="submit" id="btn-register" class="w-full bg-orange-500 text-white font-black py-5 rounded-[2rem] shadow-lg shadow-orange-100 mt-6 uppercase tracking-widest active:scale-95 transition-all hover:bg-orange-600">
@@ -41,8 +41,8 @@
     <script src="supabase-config.js"></script>
 
     <script>
-        // Esperamos a que todo el contenido cargue
-        window.onload = function() {
+        // Este evento asegura que NADA se ejecute hasta que Supabase y las claves estén cargadas
+        window.addEventListener('load', () => {
             const params = new URLSearchParams(window.location.search);
             const role = params.get('role') || 'cliente';
 
@@ -50,6 +50,7 @@
             const subtitle = document.getElementById('form-subtitle');
             const bizSection = document.getElementById('biz-section');
 
+            // Adaptar interfaz según el rol
             if (role === 'negocio') {
                 title.innerText = "Tu Negocio";
                 subtitle.innerText = "Configura tu punto de entrega.";
@@ -59,12 +60,13 @@
                 subtitle.innerText = "Pide sin filas desde hoy.";
             }
 
+            // Lógica de Registro Real
             document.getElementById('ui-form').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 
-                // Validación de seguridad para el objeto Supabase
+                // VERIFICACIÓN CRÍTICA: Si window.supabase no existe, detenemos el proceso
                 if (!window.supabase) {
-                    alert("La conexión con la base de datos no está lista. Por favor, recarga la página.");
+                    alert("Error crítico: No se detecta la conexión con Supabase. Revisa tus claves en supabase-config.js");
                     return;
                 }
 
@@ -72,13 +74,14 @@
                 const password = document.getElementById('reg-password').value;
                 const fullName = document.getElementById('reg-name').value;
                 const businessName = document.getElementById('biz-name').value;
+                const businessAddress = document.getElementById('biz-address').value;
                 const btn = document.getElementById('btn-register');
 
                 btn.innerText = "CREANDO CUENTA...";
                 btn.disabled = true;
 
                 try {
-                    // 1. Crear usuario en Auth
+                    // 1. Crear usuario en Auth de Supabase
                     const { data: authData, error: authError } = await window.supabase.auth.signUp({
                         email: email,
                         password: password
@@ -86,7 +89,7 @@
 
                     if (authError) throw authError;
 
-                    // 2. Insertar en tabla profiles
+                    // 2. Insertar datos en la tabla 'profiles' si el usuario se creó correctamente
                     if (authData.user) {
                         const { error: profileError } = await window.supabase
                             .from('profiles')
@@ -96,13 +99,16 @@
                                     full_name: fullName,
                                     email: email,
                                     role: role,
-                                    business_name: role === 'negocio' ? businessName : null
+                                    business_name: role === 'negocio' ? businessName : null,
+                                    business_address: role === 'negocio' ? businessAddress : null
                                 }
                             ]);
 
                         if (profileError) throw profileError;
 
                         alert("¡Cuenta creada con éxito!");
+                        
+                        // Redirigir según el rol
                         window.location.href = (role === 'negocio') ? 'admin.html' : 'menu.html';
                     }
 
@@ -112,7 +118,7 @@
                     btn.disabled = false;
                 }
             });
-        };
+        });
     </script>
 </body>
 </html>
