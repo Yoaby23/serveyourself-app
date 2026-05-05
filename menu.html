@@ -48,8 +48,8 @@
 
         <section id="lista-restaurantes" class="space-y-4">
             <div class="animate-pulse flex flex-col gap-4">
-                <div class="h-40 bg-slate-200 rounded-[2rem]"></div>
-                <div class="h-40 bg-slate-200 rounded-[2rem]"></div>
+                <div class="h-32 bg-slate-200 rounded-[2rem]"></div>
+                <div class="h-32 bg-slate-200 rounded-[2rem]"></div>
             </div>
         </section>
     </main>
@@ -74,57 +74,62 @@
         async function cargarRestaurantes() {
             const contenedor = document.getElementById('lista-restaurantes');
             
-            // Buscamos todos los perfiles que sean tipo negocio
+            // Traemos nombre, dirección, foto y valoración
             const { data: negocios, error } = await _supabase
                 .from('profiles')
-                .select('*')
+                .select('id, business_name, address, avatar_url, rating')
                 .eq('role', 'negocio');
 
             if (error) {
-                contenedor.innerHTML = `<p class="text-center text-red-500 font-bold">Error al cargar restaurantes</p>`;
+                contenedor.innerHTML = `<p class="text-center text-red-500 font-bold">Error al conectar con la base de datos</p>`;
                 return;
             }
 
-            if (negocios.length === 0) {
-                contenedor.innerHTML = `<p class="text-center text-slate-400 py-10 font-medium italic">No hay restaurantes registrados aún.</p>`;
+            if (!negocios || negocios.length === 0) {
+                contenedor.innerHTML = `<p class="text-center text-slate-400 py-10 font-medium italic">No hay restaurantes disponibles en este momento.</p>`;
                 return;
             }
 
-            contenedor.innerHTML = ''; // Limpiar loaders
+            contenedor.innerHTML = ''; 
 
             negocios.forEach(restaurante => {
                 const card = document.createElement('div');
-                card.className = "bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden group";
+                card.className = "bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-pointer relative group overflow-hidden";
                 
-                // Generamos una imagen placeholder colorida basada en el nombre
-                const randomHue = Math.floor(Math.random() * 360);
-                
+                // Lógica de imagen: Si no hay avatar_url, ponemos un placeholder con inicial
+                const tieneFoto = restaurante.avatar_url && restaurante.avatar_url.trim() !== "";
+                const imgHTML = tieneFoto 
+                    ? `<img src="${restaurante.avatar_url}" class="w-14 h-14 rounded-2xl object-cover shadow-sm border border-slate-50">`
+                    : `<div class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-500 flex items-center justify-center text-2xl shadow-inner">🏪</div>`;
+
                 card.innerHTML = `
-                    <div class="flex flex-col gap-3">
-                        <div class="flex justify-between items-start">
-                            <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-inner" style="background-color: hsl(${randomHue}, 70%, 95%); color: hsl(${randomHue}, 70%, 45%)">
-                                🏪
+                    <div class="flex gap-4 items-center">
+                        ${imgHTML}
+                        <div class="flex-1">
+                            <div class="flex justify-between items-start">
+                                <h3 class="font-black text-slate-900 text-lg leading-tight">${restaurante.business_name}</h3>
+                                <div class="flex items-center gap-1 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-lg">
+                                    <span class="text-amber-500 text-xs">⭐</span>
+                                    <span class="text-xs font-bold text-amber-700">${restaurante.rating || '5.0'}</span>
+                                </div>
                             </div>
-                            <span class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Abierto</span>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-black text-slate-900">${restaurante.business_name}</h3>
-                            <p class="text-slate-400 text-xs font-bold uppercase tracking-tighter mt-0.5">📍 ${restaurante.address || 'Dirección no disponible'}</p>
-                        </div>
-                        <div class="flex items-center gap-2 mt-2">
-                            <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-lg">⭐ 5.0</span>
-                            <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-lg">🚲 15-25 min</span>
+                            <p class="text-slate-400 text-xs font-bold uppercase tracking-tighter mt-1">
+                                📍 ${restaurante.address || 'Dirección no disponible'}
+                            </p>
+                            <div class="flex gap-2 mt-2">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-green-500 bg-green-50 px-2 py-0.5 rounded-md">Abierto</span>
+                                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md">🚲 20 min</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="absolute right-6 bottom-6 opacity-0 group-hover:opacity-100 transition-opacity bg-orange-500 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg shadow-orange-200">
-                        →
+                    <div class="absolute right-4 bottom-1/2 translate-y-1/2 opacity-0 group-hover:opacity-100 group-hover:right-6 transition-all">
+                        <span class="text-orange-500 text-xl font-black">→</span>
                     </div>
                 `;
 
-                // Al hacer clic, podrías redirigir a una vista de productos de ese restaurante
                 card.onclick = () => {
-                    console.log("Cargando menú de:", restaurante.business_name);
-                    // window.location.href = `productos.html?id=${restaurante.id}`;
+                    // Aquí mandaremos al usuario al menú de ese restaurante específico
+                    window.location.href = `restaurante.html?id=${restaurante.id}`;
                 };
 
                 contenedor.appendChild(card);

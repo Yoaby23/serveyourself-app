@@ -14,7 +14,7 @@
 <body class="bg-slate-50">
     <main class="max-w-md mx-auto p-6 min-h-screen flex flex-col justify-center">
         <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
-            <a href="index.html" class="text-orange-500 font-bold mb-6 inline-block hover:opacity-75 transition-opacity">← Volver</a>
+            <a href="index.html" class="text-orange-500 font-bold mb-6 inline-block hover:opacity-75 transition-all">← Volver</a>
             <h2 id="form-title" class="text-3xl font-black mb-2 text-slate-900">Registro</h2>
             <p id="form-subtitle" class="text-slate-500 mb-8 font-medium">Crea tu cuenta para continuar.</p>
 
@@ -28,9 +28,13 @@
                 <input type="password" id="reg-password" placeholder="Contraseña (6+ caracteres)" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
                 
                 <div id="biz-section" class="hidden space-y-4 pt-4 border-t border-slate-100 mt-4">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">Datos del establecimiento</p>
+                    
                     <input type="text" id="biz-name" placeholder="Nombre de tu Negocio" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium">
                     
                     <input type="text" id="biz-address" placeholder="Dirección completa del local" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium">
+                    
+                    <input type="url" id="biz-logo" placeholder="URL del Logo (opcional)" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium">
                 </div>
 
                 <button type="submit" id="btn-register" class="w-full bg-orange-500 text-white font-black py-5 rounded-[2rem] shadow-lg shadow-orange-200 mt-6 uppercase tracking-widest active:scale-95 transition-all hover:bg-orange-600">
@@ -42,21 +46,17 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // Configuración de Supabase
         const SUPABASE_URL = 'https://spbgledcjwtqmlqdlpyx.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Obtener rol de la URL
         const params = new URLSearchParams(window.location.search);
         const role = params.get('role') || 'cliente';
 
-        // Ajustar interfaz si es negocio
         if (role === 'negocio') {
             document.getElementById('form-title').innerText = "Tu Negocio";
-            document.getElementById('form-subtitle').innerText = "Configura tu punto de entrega.";
+            document.getElementById('form-subtitle').innerText = "Configura tu perfil comercial.";
             document.getElementById('biz-section').classList.remove('hidden');
-            // Hacer obligatorios los campos de negocio
             document.getElementById('biz-name').required = true;
             document.getElementById('biz-address').required = true;
         }
@@ -65,28 +65,24 @@
             e.preventDefault();
             const btn = document.getElementById('btn-register');
             
-            // Captura de valores
             const email = document.getElementById('reg-email').value.trim();
             const password = document.getElementById('reg-password').value;
             const fullName = document.getElementById('reg-name').value.trim();
             const phone = document.getElementById('reg-phone').value.trim();
+            
+            // Campos de negocio
             const bizName = document.getElementById('biz-name').value.trim();
             const bizAddress = document.getElementById('biz-address').value.trim();
+            const bizLogo = document.getElementById('biz-logo').value.trim();
 
-            btn.innerText = "CREANDO CUENTA...";
+            btn.innerText = "PROCESANDO...";
             btn.disabled = true;
 
             try {
-                // 1. Crear usuario en Authentication
-                const { data: authData, error: authError } = await _supabase.auth.signUp({
-                    email,
-                    password
-                });
-
+                const { data: authData, error: authError } = await _supabase.auth.signUp({ email, password });
                 if (authError) throw authError;
 
                 if (authData.user) {
-                    // 2. Crear perfil con los nuevos campos (phone y address)
                     const { error: profileError } = await _supabase
                         .from('profiles')
                         .insert([{
@@ -96,15 +92,12 @@
                             phone: phone,
                             role: role,
                             business_name: role === 'negocio' ? bizName : null,
-                            address: role === 'negocio' ? bizAddress : null
+                            address: role === 'negocio' ? bizAddress : null,
+                            avatar_url: role === 'negocio' ? (bizLogo || null) : null,
+                            rating: role === 'negocio' ? 5.0 : null // Valoración inicial
                         }]);
 
-                    if (profileError) {
-                        console.error("Error en perfil:", profileError.message);
-                        alert("Usuario creado, pero hubo un error con los datos adicionales.");
-                    }
-
-                    // Redirección directa (asumiendo que Confirm Email está en OFF)
+                    if (profileError) throw profileError;
                     window.location.href = (role === 'negocio') ? 'admin.html' : 'menu.html';
                 }
             } catch (error) {
