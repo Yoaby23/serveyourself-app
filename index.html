@@ -106,32 +106,30 @@
 
             btn.innerText = "CARGANDO...";
 
-            // IMPORTANTE: Ahora usamos window.supabase que es la conexión global segura
-            const { data, error } = await window.supabase.auth.signInWithPassword({
-                email: email,
-                password: password,
-            });
+            try {
+                // Usamos window.supabase para asegurar que use la conexión global
+                const { data, error } = await window.supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
 
-            if (error) {
-                alert("Error: " + error.message);
+                if (error) throw error;
+
+                const userId = data.user.id;
+                const { data: profileData, error: profileError } = await window.supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', userId)
+                    .single();
+
+                if (profileError) throw profileError;
+
+                window.location.href = (profileData.role === 'negocio') ? 'admin.html' : 'menu.html';
+
+            } catch (err) {
+                alert("Error: " + err.message);
                 btn.innerText = "ENTRAR";
-                return;
             }
-
-            const userId = data.user.id;
-            const { data: profileData, error: profileError } = await window.supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', userId)
-                .single();
-
-            if (profileError) {
-                console.error(profileError);
-                btn.innerText = "ENTRAR";
-                return;
-            }
-
-            window.location.href = (profileData.role === 'negocio') ? 'admin.html' : 'menu.html';
         });
     </script>
 </body>
