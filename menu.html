@@ -4,7 +4,7 @@
     <link rel="icon" href="logo.png" type="image/png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>serveyourself | Menú</title>
+    <title>serveyourself | Restaurantes</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800;900&display=swap');
@@ -16,33 +16,24 @@
         }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen pb-28 relative">
+<body class="bg-slate-50 min-h-screen pb-10">
 
     <nav class="bg-white/90 backdrop-blur-md p-4 sticky top-0 z-50 border-b border-slate-100">
         <div class="flex justify-between items-center relative max-w-md mx-auto">
             <div class="w-10"></div>
-            <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2 cursor-pointer pointer-events-none">
+            <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2">
                 <h1 class="text-lg font-black tracking-tighter text-slate-900">serve<span class="text-orange-500">yourself</span></h1>
             </div>
 
             <div class="relative">
-                <button onclick="toggleUserMenu()" class="w-10 h-10 bg-slate-100 text-slate-700 hover:bg-orange-100 hover:text-orange-500 rounded-full flex items-center justify-center font-black transition-colors">
-                    👤
-                </button>
-
+                <button onclick="toggleUserMenu()" class="w-10 h-10 bg-slate-100 text-slate-700 hover:bg-orange-100 hover:text-orange-500 rounded-full flex items-center justify-center font-black transition-colors">👤</button>
                 <div id="user-menu" class="hidden absolute top-14 right-0 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden fade-in-down">
                     <div class="p-4 border-b border-slate-50 bg-slate-50/50">
                         <p id="user-name-display" class="text-sm font-black text-slate-900">Cargando...</p>
                         <p id="user-email-display" class="text-xs font-medium text-slate-500">...</p>
                     </div>
-                    <div class="flex flex-col py-2">
-                        <button class="text-left px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">📄 Historial de pedidos</button>
-                        <button class="text-left px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">💳 Tarjetas guardadas</button>
-                    </div>
                     <div class="p-2 bg-slate-50 border-t border-slate-100">
-                        <button onclick="cerrarSesion()" class="block text-center w-full py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors">
-                            Cerrar sesión
-                        </button>
+                        <button onclick="cerrarSesion()" class="block text-center w-full py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors">Cerrar sesión</button>
                     </div>
                 </div>
             </div>
@@ -50,88 +41,94 @@
     </nav>
 
     <main class="max-w-md mx-auto p-4 space-y-6 mt-2">
-        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 text-center">
-            <h2 class="text-2xl font-black text-slate-900">Restaurante Principal</h2>
-            <p class="text-slate-500 text-sm mt-1 font-medium">📍 Pickup: Sucursal Central</p>
-            <div class="mt-4 inline-block bg-green-100 text-green-600 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest">
-                Abierto ahora
-            </div>
-        </div>
+        <header>
+            <h2 class="text-2xl font-black text-slate-900 tracking-tight">Explorar lugares</h2>
+            <p class="text-slate-500 text-sm font-medium">Restaurantes disponibles cerca de ti</p>
+        </header>
 
-        <section>
-            <h3 class="font-bold text-slate-900 mb-4 px-2 text-lg">Menú Disponible</h3>
-            <div id="contenedor-productos" class="space-y-4">
-                <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex gap-4 items-center">
-                    <div class="w-24 h-24 bg-slate-200 rounded-2xl flex items-center justify-center shrink-0 text-slate-400">📷</div>
-                    <div class="flex-1">
-                        <h4 class="font-bold text-slate-900 leading-tight">Cargando menú...</h4>
-                        <p class="text-slate-400 text-xs mt-1 leading-snug">Espera un momento.</p>
-                        <p class="text-slate-900 font-black mt-2 text-lg">$0.00 <span class="text-xs text-slate-400 font-semibold">MXN</span></p>
-                    </div>
-                    <button class="w-10 h-10 shrink-0 rounded-full bg-slate-100 text-slate-400 font-black flex items-center justify-center text-xl hover:bg-orange-500 hover:text-white transition-colors">+</button>
-                </div>
+        <section id="lista-restaurantes" class="space-y-4">
+            <div class="animate-pulse flex flex-col gap-4">
+                <div class="h-40 bg-slate-200 rounded-[2rem]"></div>
+                <div class="h-40 bg-slate-200 rounded-[2rem]"></div>
             </div>
         </section>
     </main>
 
-    <div class="fixed bottom-0 left-0 w-full p-4 z-40 pointer-events-none">
-        <div class="max-w-md mx-auto pointer-events-auto">
-            <div class="bg-slate-900 text-white rounded-[2rem] p-4 flex items-center justify-between shadow-2xl cursor-pointer hover:bg-black transition-colors">
-                <div class="flex items-center gap-3">
-                    <div class="bg-slate-800 text-orange-500 w-10 h-10 rounded-full flex items-center justify-center font-black">0</div>
-                    <div>
-                        <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Tu Pedido</p>
-                        <p class="font-black">$0.00 MXN</p>
-                    </div>
-                </div>
-                <div class="bg-slate-700 text-slate-300 px-6 py-3 rounded-full font-black uppercase text-sm tracking-wide">Pagar →</div>
-            </div>
-        </div>
-    </div>
-
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // CONFIGURACIÓN INTEGRADA (Sin archivo externo)
         const SUPABASE_URL = 'https://spbgledcjwtqmlqdlpyx.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Lógica de UI
-        function toggleUserMenu() {
-            document.getElementById('user-menu').classList.toggle('hidden');
-        }
+        function toggleUserMenu() { document.getElementById('user-menu').classList.toggle('hidden'); }
 
-        // Cerrar menú al hacer clic fuera
-        document.addEventListener('click', (e) => {
-            const menu = document.getElementById('user-menu');
-            const btn = e.target.closest('button[onclick="toggleUserMenu()"]');
-            if (!btn && !menu.contains(e.target)) menu.classList.add('hidden');
-        });
-
-        // CARGAR DATOS DEL USUARIO
         async function cargarDatosUsuario() {
             const { data: { user } } = await _supabase.auth.getUser();
+            if (!user) { window.location.href = 'index.html'; return; }
+            document.getElementById('user-email-display').innerText = user.email;
+            
+            const { data: profile } = await _supabase.from('profiles').select('full_name').eq('id', user.id).single();
+            document.getElementById('user-name-display').innerText = profile ? profile.full_name : "Usuario";
+        }
 
-            if (!user) {
-                window.location.href = 'index.html';
+        async function cargarRestaurantes() {
+            const contenedor = document.getElementById('lista-restaurantes');
+            
+            // Buscamos todos los perfiles que sean tipo negocio
+            const { data: negocios, error } = await _supabase
+                .from('profiles')
+                .select('*')
+                .eq('role', 'negocio');
+
+            if (error) {
+                contenedor.innerHTML = `<p class="text-center text-red-500 font-bold">Error al cargar restaurantes</p>`;
                 return;
             }
 
-            // Mostrar el email del Auth
-            document.getElementById('user-email-display').innerText = user.email;
-
-            // Buscar el nombre en la tabla 'profiles'
-            const { data: profile, error } = await _supabase
-                .from('profiles')
-                .select('full_name')
-                .eq('id', user.id)
-                .single();
-
-            if (profile) {
-                document.getElementById('user-name-display').innerText = profile.full_name;
-            } else {
-                document.getElementById('user-name-display').innerText = "Usuario";
+            if (negocios.length === 0) {
+                contenedor.innerHTML = `<p class="text-center text-slate-400 py-10 font-medium italic">No hay restaurantes registrados aún.</p>`;
+                return;
             }
+
+            contenedor.innerHTML = ''; // Limpiar loaders
+
+            negocios.forEach(restaurante => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden group";
+                
+                // Generamos una imagen placeholder colorida basada en el nombre
+                const randomHue = Math.floor(Math.random() * 360);
+                
+                card.innerHTML = `
+                    <div class="flex flex-col gap-3">
+                        <div class="flex justify-between items-start">
+                            <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-inner" style="background-color: hsl(${randomHue}, 70%, 95%); color: hsl(${randomHue}, 70%, 45%)">
+                                🏪
+                            </div>
+                            <span class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Abierto</span>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-black text-slate-900">${restaurante.business_name}</h3>
+                            <p class="text-slate-400 text-xs font-bold uppercase tracking-tighter mt-0.5">📍 ${restaurante.address || 'Dirección no disponible'}</p>
+                        </div>
+                        <div class="flex items-center gap-2 mt-2">
+                            <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-lg">⭐ 5.0</span>
+                            <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-lg">🚲 15-25 min</span>
+                        </div>
+                    </div>
+                    <div class="absolute right-6 bottom-6 opacity-0 group-hover:opacity-100 transition-opacity bg-orange-500 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg shadow-orange-200">
+                        →
+                    </div>
+                `;
+
+                // Al hacer clic, podrías redirigir a una vista de productos de ese restaurante
+                card.onclick = () => {
+                    console.log("Cargando menú de:", restaurante.business_name);
+                    // window.location.href = `productos.html?id=${restaurante.id}`;
+                };
+
+                contenedor.appendChild(card);
+            });
         }
 
         async function cerrarSesion() {
@@ -139,8 +136,8 @@
             window.location.href = 'index.html';
         }
 
-        // Ejecutar al cargar
         cargarDatosUsuario();
+        cargarRestaurantes();
     </script>
 </body>
 </html>
