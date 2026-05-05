@@ -41,76 +41,78 @@
     <script src="supabase-config.js"></script>
 
     <script>
-        const params = new URLSearchParams(window.location.search);
-        const role = params.get('role') || 'cliente';
+        // Esperamos a que todo el contenido cargue
+        window.onload = function() {
+            const params = new URLSearchParams(window.location.search);
+            const role = params.get('role') || 'cliente';
 
-        const title = document.getElementById('form-title');
-        const subtitle = document.getElementById('form-subtitle');
-        const bizSection = document.getElementById('biz-section');
+            const title = document.getElementById('form-title');
+            const subtitle = document.getElementById('form-subtitle');
+            const bizSection = document.getElementById('biz-section');
 
-        if (role === 'negocio') {
-            title.innerText = "Tu Negocio";
-            subtitle.innerText = "Configura tu punto de entrega.";
-            bizSection.classList.remove('hidden');
-        } else {
-            title.innerText = "Tu Cuenta";
-            subtitle.innerText = "Pide sin filas desde hoy.";
-        }
+            if (role === 'negocio') {
+                title.innerText = "Tu Negocio";
+                subtitle.innerText = "Configura tu punto de entrega.";
+                bizSection.classList.remove('hidden');
+            } else {
+                title.innerText = "Tu Cuenta";
+                subtitle.innerText = "Pide sin filas desde hoy.";
+            }
 
-        // Lógica de Registro Real
-        document.getElementById('ui-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const email = document.getElementById('reg-email').value;
-            const password = document.getElementById('reg-password').value;
-            const fullName = document.getElementById('reg-name').value;
-            const businessName = document.getElementById('biz-name').value;
-            const btn = document.getElementById('btn-register');
-
-            btn.innerText = "CREANDO CUENTA...";
-            btn.disabled = true;
-
-            try {
-                // 1. Crear usuario en Supabase Auth
-                const { data: authData, error: authError } = await window.supabase.auth.signUp({
-                    email: email,
-                    password: password
-                });
-
-                if (authError) throw authError;
-
-                // 2. Insertar datos en la tabla 'profiles'
-                if (authData.user) {
-                    const { error: profileError } = await window.supabase
-                        .from('profiles')
-                        .insert([
-                            {
-                                id: authData.user.id,
-                                full_name: fullName,
-                                email: email,
-                                role: role,
-                                business_name: role === 'negocio' ? businessName : null
-                            }
-                        ]);
-
-                    if (profileError) throw profileError;
-
-                    alert("¡Cuenta creada con éxito!");
-                    
-                    // Redirigir según el rol
-                    if (role === 'negocio') {
-                        window.location.href = 'admin.html';
-                    } else {
-                        window.location.href = 'menu.html';
-                    }
+            document.getElementById('ui-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                // Validación de seguridad para el objeto Supabase
+                if (!window.supabase) {
+                    alert("La conexión con la base de datos no está lista. Por favor, recarga la página.");
+                    return;
                 }
 
-            } catch (error) {
-                alert("Error: " + error.message);
-                btn.innerText = "CREAR MI CUENTA";
-                btn.disabled = false;
-            }
-        });
+                const email = document.getElementById('reg-email').value;
+                const password = document.getElementById('reg-password').value;
+                const fullName = document.getElementById('reg-name').value;
+                const businessName = document.getElementById('biz-name').value;
+                const btn = document.getElementById('btn-register');
+
+                btn.innerText = "CREANDO CUENTA...";
+                btn.disabled = true;
+
+                try {
+                    // 1. Crear usuario en Auth
+                    const { data: authData, error: authError } = await window.supabase.auth.signUp({
+                        email: email,
+                        password: password
+                    });
+
+                    if (authError) throw authError;
+
+                    // 2. Insertar en tabla profiles
+                    if (authData.user) {
+                        const { error: profileError } = await window.supabase
+                            .from('profiles')
+                            .insert([
+                                {
+                                    id: authData.user.id,
+                                    full_name: fullName,
+                                    email: email,
+                                    role: role,
+                                    business_name: role === 'negocio' ? businessName : null
+                                }
+                            ]);
+
+                        if (profileError) throw profileError;
+
+                        alert("¡Cuenta creada con éxito!");
+                        window.location.href = (role === 'negocio') ? 'admin.html' : 'menu.html';
+                    }
+
+                } catch (error) {
+                    alert("Error: " + error.message);
+                    btn.innerText = "CREAR MI CUENTA";
+                    btn.disabled = false;
+                }
+            });
+        };
     </script>
 </body>
 </html>
