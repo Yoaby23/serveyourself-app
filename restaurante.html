@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>serveyourself | Menú</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen pb-24">
+
+    <nav class="p-4 sticky top-0 bg-white/80 backdrop-blur-md z-50 border-b border-slate-100">
+        <div class="max-w-md mx-auto flex items-center gap-4">
+            <a href="menu.html" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-xl">←</a>
+            <h1 id="res-name" class="font-black text-slate-900 truncate">Cargando menú...</h1>
+        </div>
+    </nav>
+
+    <main class="max-w-md mx-auto p-5">
+        <div id="res-banner" class="w-full h-40 rounded-[2.5rem] bg-slate-200 mb-6 overflow-hidden relative">
+            <img id="res-logo" src="" class="w-full h-full object-cover hidden">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-6">
+                <p id="res-address" class="text-white text-xs font-bold uppercase tracking-widest opacity-90"></p>
+            </div>
+        </div>
+
+        <div id="contenedor-menu" class="space-y-8">
+            </div>
+    </main>
+
+    <div id="cart-bar" class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-slate-900 text-white p-4 rounded-[2rem] shadow-2xl flex justify-between items-center hidden">
+        <div class="flex items-center gap-3">
+            <span class="bg-orange-500 w-8 h-8 rounded-full flex items-center justify-center font-black text-xs" id="cart-count">0</span>
+            <span class="font-bold">Ver pedido</span>
+        </div>
+        <span id="cart-total" class="font-black text-orange-400">$0.00</span>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://spbgledcjwtqmlqdlpyx.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const params = new URLSearchParams(window.location.search);
+        const resId = params.get('id');
+
+        async function cargarPagina() {
+            if (!resId) { window.location.href = 'menu.html'; return; }
+
+            // 1. Cargar info del restaurante
+            const { data: res } = await _supabase.from('profiles').select('*').eq('id', resId).single();
+            if (res) {
+                document.getElementById('res-name').innerText = res.business_name;
+                document.getElementById('res-address').innerText = res.address || 'Ubicación no disponible';
+                if (res.avatar_url) {
+                    const img = document.getElementById('res-logo');
+                    img.src = res.avatar_url;
+                    img.classList.remove('hidden');
+                }
+            }
+
+            // 2. Cargar productos
+            const { data: productos } = await _supabase
+                .from('products')
+                .select('*')
+                .eq('restaurant_id', resId)
+                .order('category');
+
+            renderizarProductos(productos);
+        }
+
+        function renderizarProductos(productos) {
+            const contenedor = document.getElementById('contenedor-menu');
+            if (!productos || productos.length === 0) {
+                contenedor.innerHTML = `<p class="text-center text-slate-400 py-10">Este restaurante aún no tiene productos en el menú.</p>`;
+                return;
+            }
+
+            // Agrupar por categoría
+            const categorias = {};
+            productos.forEach(p => {
+                if (!categorias[p.category]) categorias[p.category] = [];
+                categorias[p.category].push(p);
+            });
+
+            contenedor.innerHTML = '';
+            for (const cat in categorias) {
+                const section = document.createElement('div');
+                section.innerHTML = `
+                    <h3 class="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-4 ml-2">${cat}</h3>
+                    <div class="grid gap-4">
+                        ${categorias[cat].map(prod => `
+                            <div class="bg-white p-4 rounded-[2rem] border border-slate-100 flex items-center justify-between shadow-sm active:scale-95 transition-all">
+                                <div class="flex items-center gap-4">
+                                    ${prod.image_url ? `<img src="${prod.image_url}" class="w-16 h-16 rounded-2xl object-cover">` : `<div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center">🍲</div>`}
+                                    <div>
+                                        <h4 class="font-bold text-slate-900 text-sm">${prod.name}</h4>
+                                        <p class="text-orange-500 font-black text-xs">$${prod.price} MXN</p>
+                                    </div>
+                                </div>
+                                <button class="w-10 h-10 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center font-black text-xl hover:bg-orange-500 hover:text-white transition-all">+</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                contenedor.appendChild(section);
+            }
+        }
+
+        cargarPagina();
+    </script>
+</body>
+</html>
