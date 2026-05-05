@@ -85,11 +85,16 @@
 
     </main>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <script src="supabase-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
+        // CONFIGURACIÓN INTEGRADA (EVITA ERROR 404)
+        const SUPABASE_URL = 'https://spbgledcjwtqmlqdlpyx.supabase.co/rest/v1/'; 
+        const SUPABASE_KEY = 'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY';
+
+        // Creamos la conexión globalmente
+        const _supabase = supabase.createClient(SB_URL, SB_KEY);
+
         function switchView(viewId) {
             document.getElementById('view-main').classList.add('hidden');
             document.getElementById('view-login').classList.add('hidden');
@@ -105,18 +110,20 @@
             const btn = document.getElementById('btn-login');
 
             btn.innerText = "CARGANDO...";
+            btn.disabled = true;
 
             try {
-                // Usamos window.supabase para asegurar que use la conexión global
-                const { data, error } = await window.supabase.auth.signInWithPassword({
+                // Inicio de sesión real
+                const { data, error } = await _supabase.auth.signInWithPassword({
                     email: email,
                     password: password,
                 });
 
                 if (error) throw error;
 
+                // Consulta de rol en la tabla profiles
                 const userId = data.user.id;
-                const { data: profileData, error: profileError } = await window.supabase
+                const { data: profileData, error: profileError } = await _supabase
                     .from('profiles')
                     .select('role')
                     .eq('id', userId)
@@ -124,11 +131,13 @@
 
                 if (profileError) throw profileError;
 
+                // Redirección exitosa
                 window.location.href = (profileData.role === 'negocio') ? 'admin.html' : 'menu.html';
 
             } catch (err) {
                 alert("Error: " + err.message);
                 btn.innerText = "ENTRAR";
+                btn.disabled = false;
             }
         });
     </script>
