@@ -39,39 +39,41 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
-        // --- CONFIGURACIÓN DIRECTA ---
-        // Pega aquí tus datos de Supabase (Settings > API)
+        // --- CONFIGURACIÓN ---
         const SUPABASE_URL = 'https://spbgledcjwtqmlqdlpyx.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY';
 
-        // Inicialización segura
+        // Inicializar cliente
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Lógica de Interfaz
+        // Capturar rol de la URL
         const params = new URLSearchParams(window.location.search);
         const role = params.get('role') || 'cliente';
 
-        if (role === 'negocio') {
-            document.getElementById('form-title').innerText = "Tu Negocio";
-            document.getElementById('form-subtitle').innerText = "Configura tu punto de entrega.";
-            document.getElementById('biz-section').classList.remove('hidden');
-        }
+        // Ajustar interfaz según rol
+        window.addEventListener('DOMContentLoaded', () => {
+            if (role === 'negocio') {
+                document.getElementById('form-title').innerText = "Tu Negocio";
+                document.getElementById('form-subtitle').innerText = "Configura tu punto de entrega.";
+                document.getElementById('biz-section').classList.remove('hidden');
+            }
+        });
 
         // Evento de Registro
         document.getElementById('ui-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-register');
             
-            const email = document.getElementById('reg-email').value;
+            const email = document.getElementById('reg-email').value.trim();
             const password = document.getElementById('reg-password').value;
-            const fullName = document.getElementById('reg-name').value;
-            const businessName = document.getElementById('biz-name').value;
+            const fullName = document.getElementById('reg-name').value.trim();
+            const businessName = document.getElementById('biz-name').value.trim();
 
             btn.innerText = "CARGANDO...";
             btn.disabled = true;
 
             try {
-                // 1. Crear usuario en Auth
+                // 1. Registro en Authentication
                 const { data: authData, error: authError } = await _supabase.auth.signUp({
                     email,
                     password
@@ -79,7 +81,7 @@
 
                 if (authError) throw authError;
 
-                // 2. Insertar perfil
+                // 2. Registro en tabla Profiles (si el usuario se creó)
                 if (authData.user) {
                     const { error: profileError } = await _supabase
                         .from('profiles')
@@ -91,12 +93,16 @@
                             business_name: role === 'negocio' ? businessName : null
                         }]);
 
-                    if (profileError) throw profileError;
+                    if (profileError) {
+                        console.error("Error en tabla profiles:", profileError);
+                        throw new Error("Error al guardar perfil: " + profileError.message);
+                    }
 
                     alert("¡Registro exitoso!");
                     window.location.href = (role === 'negocio') ? 'admin.html' : 'menu.html';
                 }
             } catch (error) {
+                console.error("Error completo:", error);
                 alert("Error: " + error.message);
                 btn.innerText = "CREAR MI CUENTA";
                 btn.disabled = false;
