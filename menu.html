@@ -125,8 +125,11 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
     <script>
-        const _supabase = supabase.createClient('https://spbgledcjwtqmlqdlpyx.supabase.co', 'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY');
+        const _supabase = window.serveYourself.supabase;
+        const escapeHtml = window.serveYourself.escapeHtml;
+        const safeImageUrl = window.serveYourself.safeImageUrl;
         let currentUser = null;
         let userRole = null;
         let searchTimer = null;
@@ -145,10 +148,18 @@
         }
 
         async function inicializar() {
-            const { data: { user } } = await _supabase.auth.getUser();
-            if (!user) { window.location.href = 'index.html'; return; }
+            const user = await window.serveYourself.requireUser();
+            if (!user) return;
             currentUser = user;
-            const { data: profile } = await _supabase.from('profiles').select('*').eq('id', user.id).single();
+            const { data: profile, error: profileError } = await _supabase
+                .from('profiles')
+                .select('id, full_name, phone, address, role, business_name, open_time, close_time')
+                .eq('id', user.id)
+                .single();
+            if (profileError || !profile) {
+                alert('No se pudo cargar tu perfil.');
+                return;
+            }
             if (profile) {
                 userRole = profile.role;
                 document.getElementById('user-name-display').innerText = profile.full_name;
@@ -188,23 +199,27 @@
             if (!query) { cargarRestaurantes(); return; }
 
             // 1. Buscar en perfiles (Negocios)
-            const { data: negociosPorNombre } = await _supabase
-                .from('profiles')
+            const { data: negociosPorNombre, error: businessError } = await _supabase
+                .from('public_restaurants')
                 .select('*')
-                .eq('role', 'negocio')
                 .ilike('business_name', `%${query}%`);
 
             // 2. Buscar en productos
-            const { data: productos } = await _supabase
+            const { data: productos, error: productsError } = await _supabase
                 .from('products')
                 .select('restaurant_id')
                 .ilike('name', `%${query}%`);
+
+            if (businessError || productsError) {
+                renderizarLista([]);
+                return;
+            }
 
             const idsDesdeProductos = [...new Set(productos?.map(p => p.restaurant_id) || [])];
 
             // 3. Obtener perfiles de esos productos
             const { data: negociosPorProducto } = idsDesdeProductos.length > 0 
-                ? await _supabase.from('profiles').select('*').in('id', idsDesdeProductos)
+                ? await _supabase.from('public_restaurants').select('*').in('id', idsDesdeProductos)
                 : { data: [] };
 
             // Combinar y eliminar duplicados
@@ -215,7 +230,11 @@
         }
 
         async function cargarRestaurantes() {
-            const { data: negocios } = await _supabase.from('profiles').select('*').eq('role', 'negocio');
+            const { data: negocios, error } = await _supabase.from('public_restaurants').select('*');
+            if (error) {
+                renderizarLista([]);
+                return;
+            }
             renderizarLista(negocios || []);
         }
 
@@ -237,24 +256,26 @@
                     abierto = open <= close ? (horaActual >= open && horaActual <= close) : (horaActual >= open || horaActual <= close);
                 }
 
+                const imageUrl = safeImageUrl(res.avatar_url);
+                const restaurantId = escapeHtml(res.id);
                 return `
-                <div onclick="window.location.href='restaurante.html?id=${res.id}'" class="bg-white p-5 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-pointer relative group ${!abierto ? 'opacity-70 grayscale-[0.3]' : ''}">
+                <div onclick="window.location.href='restaurante.html?id=${restaurantId}'" class="bg-white p-5 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-pointer relative group ${!abierto ? 'opacity-70 grayscale-[0.3]' : ''}">
                     <div class="flex gap-5 items-center">
                         <div class="relative shrink-0">
                             <div class="w-20 h-20 rounded-[1.8rem] bg-orange-50 overflow-hidden shadow-inner flex items-center justify-center">
-                                ${res.avatar_url ? `<img src="${res.avatar_url}" class="w-full h-full object-cover">` : '<span class="text-4xl">🏪</span>'}
+                                ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="" class="w-full h-full object-cover">` : '<span class="text-4xl">🏪</span>'}
                             </div>
                             ${abierto ? '<div class="absolute -top-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>' : ''}
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start">
-                                <h3 class="font-black text-slate-900 text-lg truncate pr-2">${res.business_name}</h3>
+                                <h3 class="font-black text-slate-900 text-lg truncate pr-2">${escapeHtml(res.business_name)}</h3>
                                 <div class="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-xl shrink-0">
                                     <span class="text-amber-500 text-[10px]">⭐</span>
-                                    <span class="text-xs font-black text-amber-700">${res.rating || '5.0'}</span>
+                                    <span class="text-xs font-black text-amber-700">${escapeHtml(res.rating || '5.0')}</span>
                                 </div>
                             </div>
-                            <p class="text-slate-400 text-[11px] font-bold uppercase tracking-tight mt-1 truncate">📍 ${res.address || 'Ubicación Central'}</p>
+                            <p class="text-slate-400 text-[11px] font-bold uppercase tracking-tight mt-1 truncate">📍 ${escapeHtml(res.address || 'Ubicación Central')}</p>
                             <div class="flex gap-2 mt-3 text-[9px] font-black uppercase tracking-widest">
                                 <span class="${abierto ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100'} px-3 py-1 rounded-full">${abierto ? 'Abierto' : 'Cerrado'}</span>
                                 <span class="bg-slate-100 text-slate-400 px-3 py-1 rounded-full">${res.open_time?.slice(0,5)} - ${res.close_time?.slice(0,5)}</span>
@@ -286,20 +307,21 @@
             const container = document.getElementById('lista-mis-pedidos');
             container.innerHTML = '<p class="text-center py-10 animate-pulse text-xs font-black text-slate-400 uppercase">Consultando...</p>';
             const fechaLimite = new Date(); fechaLimite.setDate(fechaLimite.getDate() - 15);
-            const { data: pedidos } = await _supabase.from('orders').select('*, profiles!orders_restaurant_id_fkey(business_name)').eq('customer_id', currentUser.id).gte('created_at', fechaLimite.toISOString()).order('created_at', { ascending: false });
+            const { data: pedidos, error } = await _supabase.from('orders').select('*').eq('customer_id', currentUser.id).gte('created_at', fechaLimite.toISOString()).order('created_at', { ascending: false });
+            if (error) { container.innerHTML = '<div class="p-10 text-center text-red-400 text-sm">No se pudo cargar el historial.</div>'; return; }
             if (!pedidos || pedidos.length === 0) { container.innerHTML = '<div class="p-10 text-center text-slate-300 italic text-sm">Sin actividad reciente.</div>'; return; }
             container.innerHTML = pedidos.map(p => `
                 <div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
                     <div class="flex justify-between mb-3 items-center">
-                        <h4 class="font-black text-slate-900">${p.profiles?.business_name || 'Restaurante'}</h4>
+                        <h4 class="font-black text-slate-900">${escapeHtml(p.restaurant_name || 'Restaurante')}</h4>
                         <span class="text-[9px] font-black px-2 py-1 bg-slate-50 text-slate-400 rounded-lg">${new Date(p.created_at).toLocaleDateString()}</span>
                     </div>
                     <div class="text-xs font-bold text-slate-500 space-y-1 mb-3">
-                        ${p.items.map(i => `<div><span class="text-orange-500">${i.qty}x</span> ${i.nombre}</div>`).join('')}
+                        ${p.items.map(i => `<div><span class="text-orange-500">${Number(i.qty)}x</span> ${escapeHtml(i.nombre)}</div>`).join('')}
                     </div>
                     <div class="flex justify-between items-center border-t border-slate-50 pt-3">
                         <span class="text-lg font-black text-slate-900">$${p.total}</span>
-                        <span class="text-[9px] font-black uppercase px-3 py-1 rounded-full ${p.status === 'pendiente' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}">${p.status}</span>
+                        <span class="text-[9px] font-black uppercase px-3 py-1 rounded-full ${p.status === 'pendiente' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}">${escapeHtml(p.status)}</span>
                     </div>
                 </div>
             `).join('');

@@ -76,6 +76,7 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
 
     <script>
         // Función para cambiar de vista
@@ -104,10 +105,7 @@
 
             try {
                 // LLAMADA DIRECTA SIN VARIABLES EXTERNAS
-                const _supabase = window.supabase.createClient(
-                    'https://spbgledcjwtqmlqdlpyx.supabase.co', // Pega tu URL aquí
-                    'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY'                 // Pega tu Key aquí
-                );
+                const _supabase = window.serveYourself.supabase;
 
                 const { data, error } = await _supabase.auth.signInWithPassword({
                     email: email,

@@ -22,7 +22,7 @@
                 <input type="text" id="reg-name" placeholder="Nombre completo" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
                 <input type="tel" id="reg-phone" placeholder="WhatsApp / Teléfono" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
                 <input type="email" id="reg-email" placeholder="Correo electrónico" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
-                <input type="password" id="reg-password" placeholder="Contraseña segura" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
+                <input type="password" id="reg-password" placeholder="Contraseña segura (mínimo 8 caracteres)" minlength="8" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
                 
                 <div id="biz-section" class="hidden space-y-4 pt-4 border-t border-slate-100 mt-4">
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Configuración del Local</p>
@@ -50,13 +50,13 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
     <script>
-        const SUPABASE_URL = 'https://spbgledcjwtqmlqdlpyx.supabase.co'; 
-        const SUPABASE_KEY = 'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY';
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const _supabase = window.serveYourself.supabase;
 
         const params = new URLSearchParams(window.location.search);
-        const role = params.get('role') || 'cliente';
+        const requestedRole = params.get('role');
+        const role = ['cliente', 'negocio'].includes(requestedRole) ? requestedRole : 'cliente';
 
         if (role === 'negocio') {
             document.getElementById('form-title').innerText = "Tu Restaurante";
@@ -73,28 +73,30 @@
 
             const email = document.getElementById('reg-email').value.trim();
             const password = document.getElementById('reg-password').value;
-            
+            const profileData = {
+                full_name: document.getElementById('reg-name').value.trim(),
+                phone: document.getElementById('reg-phone').value.trim(),
+                role,
+                business_name: role === 'negocio' ? document.getElementById('biz-name').value.trim() : null,
+                address: role === 'negocio' ? document.getElementById('biz-address').value.trim() : null,
+                open_time: role === 'negocio' ? (document.getElementById('open-time').value || null) : null,
+                close_time: role === 'negocio' ? (document.getElementById('close-time').value || null) : null,
+                avatar_url: role === 'negocio' ? (document.getElementById('biz-logo').value || null) : null
+            };
+
             try {
-                const { data: authData, error: authError } = await _supabase.auth.signUp({ email, password });
+                const { data: authData, error: authError } = await _supabase.auth.signUp({
+                    email,
+                    password,
+                    options: { data: profileData }
+                });
                 if (authError) throw authError;
 
-                if (authData.user) {
-                    const { error: profileError } = await _supabase.from('profiles').insert([{
-                        id: authData.user.id,
-                        full_name: document.getElementById('reg-name').value,
-                        email: email,
-                        phone: document.getElementById('reg-phone').value,
-                        role: role,
-                        business_name: role === 'negocio' ? document.getElementById('biz-name').value : null,
-                        address: role === 'negocio' ? document.getElementById('biz-address').value : null,
-                        open_time: role === 'negocio' ? document.getElementById('open-time').value : null,
-                        close_time: role === 'negocio' ? document.getElementById('close-time').value : null,
-                        avatar_url: role === 'negocio' ? (document.getElementById('biz-logo').value || null) : null,
-                        rating: 5.0
-                    }]);
-
-                    if (profileError) throw profileError;
+                if (authData.user && authData.session) {
                     window.location.href = (role === 'negocio') ? 'admin.html' : 'menu.html';
+                } else {
+                    alert('Cuenta creada. Revisa tu correo para confirmar el registro y después inicia sesión.');
+                    window.location.href = 'index.html';
                 }
             } catch (error) {
                 alert("Error: " + error.message);
