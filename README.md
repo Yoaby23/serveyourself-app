@@ -42,11 +42,12 @@ Esta migración agrega ubicación, métodos de pago, cancelaciones, Supabase Sto
 
 ## Servicios externos
 
-### Google Maps
+### Mapas
 
-1. Crea una clave de **Maps JavaScript API** en Google Cloud.
-2. Restringe la clave a `https://serveyourself-app.vercel.app/*` y a las vistas previas necesarias.
-3. Coloca la clave pública en `app-config.js` como `googleMapsApiKey`.
+La vista de restaurantes usa Leaflet con los mosaicos estándar de OpenStreetMap.
+No requiere clave ni cuenta de facturación. Debe conservarse la atribución visible
+y respetarse la política de uso de mosaicos de OpenStreetMap. Para un volumen alto,
+cambia el proveedor de mosaicos por uno con capacidad y SLA adecuados.
 
 ### OneSignal
 
