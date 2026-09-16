@@ -33,26 +33,6 @@ window.serveYourself = {
         return user;
     },
 
-    loadGoogleMaps() {
-        if (window.google?.maps) return Promise.resolve(window.google.maps);
-        if (this.googleMapsPromise) return this.googleMapsPromise;
-        const apiKey = window.APP_CONFIG?.googleMapsApiKey;
-        if (!apiKey) return Promise.reject(new Error('Google Maps no está configurado'));
-        this.googleMapsPromise = new Promise((resolve, reject) => {
-            const callbackName = `initServeYourselfMaps${Date.now()}`;
-            window[callbackName] = () => {
-                delete window[callbackName];
-                resolve(window.google.maps);
-            };
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&callback=${callbackName}`;
-            script.async = true;
-            script.onerror = () => reject(new Error('No se pudo cargar Google Maps'));
-            document.head.appendChild(script);
-        });
-        return this.googleMapsPromise;
-    },
-
     async initPushNotifications(user) {
         const appId = window.APP_CONFIG?.oneSignalAppId;
         if (!appId || !user) return false;
