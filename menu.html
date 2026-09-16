@@ -110,6 +110,11 @@
                 </div>
 
                 <hr class="border-slate-50 my-2">
+                <div class="bg-orange-50 p-4 rounded-2xl border border-orange-100">
+                    <p class="text-xs font-black text-slate-800">Avisos de pedidos</p>
+                    <p class="text-[10px] font-semibold text-slate-500 mt-1">Recibe una notificación cuando tu pedido cambie de estado.</p>
+                    <button onclick="activarNotificaciones()" class="w-full mt-3 py-3 bg-orange-500 text-white rounded-xl text-[10px] font-black uppercase">Activar notificaciones</button>
+                </div>
                 <div>
                     <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Nueva Contraseña</label>
                     <input type="password" id="edit-pass" placeholder="Min. 6 caracteres" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 font-bold text-sm outline-none focus:border-orange-500">
@@ -417,6 +422,17 @@
             const { error } = await _supabase.rpc('submit_rating', { p_order_id: orderId, p_rating: rating, p_comment: comment });
             if (error) { alert(error.message); return; }
             cargarHistorialPedidos();
+        }
+
+        async function activarNotificaciones() {
+            try {
+                const granted = await window.serveYourself.requestPushPermission();
+                alert(granted
+                    ? 'Notificaciones activadas correctamente.'
+                    : 'No se concedió el permiso. Puedes habilitarlo desde la configuración del navegador.');
+            } catch (error) {
+                alert(error.message || 'No se pudieron activar las notificaciones.');
+            }
         }
 
         function activarPedidosRealtime() {
