@@ -32,6 +32,53 @@ La migración:
 
 El frontend de esta versión depende de esa migración. Debe aplicarse antes del despliegue.
 
+### Versión 2
+
+Ejecuta después:
+
+`supabase/migrations/002_platform_features.sql`
+
+Esta migración agrega ubicación, métodos de pago, cancelaciones, Supabase Storage para fotografías, estadísticas y calificaciones.
+
+## Servicios externos
+
+### Google Maps
+
+1. Crea una clave de **Maps JavaScript API** en Google Cloud.
+2. Restringe la clave a `https://serveyourself-app.vercel.app/*` y a las vistas previas necesarias.
+3. Coloca la clave pública en `app-config.js` como `googleMapsApiKey`.
+
+### OneSignal
+
+1. Crea una Web App en OneSignal con el dominio de producción.
+2. Coloca el App ID público en `app-config.js` como `oneSignalAppId`.
+3. Configura estos secretos en Supabase Functions:
+
+```text
+ONESIGNAL_APP_ID
+ONESIGNAL_REST_API_KEY
+APP_URL=https://serveyourself-app.vercel.app
+```
+
+### Mercado Pago
+
+Configura estos secretos en Supabase Functions:
+
+```text
+MERCADO_PAGO_ACCESS_TOKEN
+APP_URL=https://serveyourself-app.vercel.app
+```
+
+Despliega las funciones:
+
+```bash
+supabase functions deploy create-mercado-pago-preference
+supabase functions deploy send-order-notification
+supabase functions deploy mercado-pago-webhook --no-verify-jwt
+```
+
+`SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` son proporcionadas automáticamente por Supabase Functions. Nunca coloques el Access Token de Mercado Pago, la REST API Key de OneSignal o la clave `service_role` en archivos públicos.
+
 ## Ejecución local
 
 Sirve la carpeta mediante HTTP; no abras los archivos con `file://`.

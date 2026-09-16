@@ -70,6 +70,11 @@
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Notas adicionales</label>
                 <textarea id="order-notes" placeholder="Ej: Sin cebolla, salsas extra..." class="w-full bg-slate-50 border border-slate-100 rounded-[1.5rem] p-4 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all resize-none" rows="3"></textarea>
             </div>
+            <div class="mb-8">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Método de pago</label>
+                <select id="payment-method" onchange="mostrarDatosTransferencia()" class="w-full bg-slate-50 border border-slate-100 rounded-[1.5rem] p-4 text-sm font-bold outline-none"></select>
+                <div id="transfer-details" class="hidden mt-3 p-4 bg-blue-50 rounded-2xl text-xs text-blue-700"></div>
+            </div>
             <div class="border-t border-slate-100 pt-6 space-y-4">
                 <div class="flex justify-between items-center">
                     <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">Total a pagar</p>
@@ -81,6 +86,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app-config.js"></script>
     <script src="app.js"></script>
     <script>
         const _supabase = window.serveYourself.supabase;
@@ -91,6 +97,7 @@
         const resId = params.get('id');
         let carrito = [];
         const productosPorId = new Map();
+        let restaurant = null;
 
         async function cargarPagina() {
             const user = await window.serveYourself.requireUser();
@@ -99,7 +106,7 @@
 
             const { data: res, error: restaurantError } = await _supabase
                 .from('public_restaurants')
-                .select('id, business_name, address, avatar_url')
+                .select('*')
                 .eq('id', resId)
                 .single();
 
@@ -110,6 +117,10 @@
             }
 
             if (res) {
+                restaurant = res;
+                if (res.accepting_orders === false) {
+                    alert('Este restaurante no está aceptando pedidos en este momento.');
+                }
                 document.getElementById('res-name').innerText = res.business_name;
                 document.getElementById('res-address').innerText = res.address || 'Ubicación Premium';
                 const imageUrl = safeImageUrl(res.avatar_url);
@@ -117,6 +128,7 @@
                     const img = document.getElementById('res-logo');
                     img.src = imageUrl; img.classList.remove('hidden');
                 }
+                renderPaymentMethods(res);
             }
 
             const { data: productos, error: productsError } = await _supabase
@@ -130,6 +142,25 @@
                 return;
             }
             renderizarProductos(productos);
+        }
+
+        function renderPaymentMethods(res) {
+            const options = [];
+            if (res.payment_cash) options.push('<option value="cash">Efectivo al recoger</option>');
+            if (res.payment_transfer) options.push('<option value="transfer">Transferencia bancaria</option>');
+            if (res.payment_online) options.push('<option value="mercado_pago">Mercado Pago</option>');
+            document.getElementById('payment-method').innerHTML = options.join('');
+            if (!options.length) document.getElementById('btn-confirmar').disabled = true;
+            mostrarDatosTransferencia();
+        }
+
+        function mostrarDatosTransferencia() {
+            const details = document.getElementById('transfer-details');
+            const isTransfer = document.getElementById('payment-method').value === 'transfer';
+            details.classList.toggle('hidden', !isTransfer);
+            if (isTransfer && restaurant) {
+                details.innerHTML = `<strong>${escapeHtml(restaurant.bank_name || 'Banco')}</strong><br>${escapeHtml(restaurant.bank_account_holder || '')}<br>CLABE: ${escapeHtml(restaurant.bank_clabe || 'Solicítala al negocio')}`;
+            }
         }
 
         function renderizarProductos(productos) {
@@ -238,22 +269,32 @@
 
         async function confirmarPedido() {
             if (carrito.length === 0) return;
+            if (restaurant?.accepting_orders === false) { alert('El restaurante no está aceptando pedidos.'); return; }
             const btn = document.getElementById('btn-confirmar');
             const notas = document.getElementById('order-notes').value;
+            const paymentMethod = document.getElementById('payment-method').value;
             btn.disabled = true;
             btn.innerText = "ENVIANDO...";
 
             try {
                 const items = carrito.map(item => ({ id: item.id, qty: item.qty }));
-                const { error } = await _supabase.rpc('create_order', {
+                const { data: order, error } = await _supabase.rpc('create_order_v2', {
                     p_restaurant_id: resId,
                     p_items: items,
-                    p_notes: notas.slice(0, 500)
+                    p_notes: notas.slice(0, 500),
+                    p_payment_method: paymentMethod
                 });
 
                 if (error) throw error;
 
-                alert("¡Pedido enviado con éxito!");
+                if (paymentMethod === 'mercado_pago') {
+                    const { data: checkout, error: checkoutError } = await _supabase.functions.invoke('create-mercado-pago-preference', { body: { orderId: order.id } });
+                    if (checkoutError || !checkout?.checkoutUrl) throw new Error(checkoutError?.message || 'No se pudo abrir Mercado Pago');
+                    window.location.href = checkout.checkoutUrl;
+                    return;
+                }
+
+                alert(paymentMethod === 'transfer' ? 'Pedido enviado. Realiza la transferencia con los datos indicados.' : '¡Pedido enviado con éxito!');
                 carrito = [];
                 // Resetear UI de cantidades en el menú
                 document.querySelectorAll('[id^="qty-"]').forEach(el => el.innerText = '0');

@@ -31,5 +31,49 @@ window.serveYourself = {
             return null;
         }
         return user;
+    },
+
+    loadGoogleMaps() {
+        if (window.google?.maps) return Promise.resolve(window.google.maps);
+        if (this.googleMapsPromise) return this.googleMapsPromise;
+        const apiKey = window.APP_CONFIG?.googleMapsApiKey;
+        if (!apiKey) return Promise.reject(new Error('Google Maps no está configurado'));
+        this.googleMapsPromise = new Promise((resolve, reject) => {
+            const callbackName = `initServeYourselfMaps${Date.now()}`;
+            window[callbackName] = () => {
+                delete window[callbackName];
+                resolve(window.google.maps);
+            };
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&callback=${callbackName}`;
+            script.async = true;
+            script.onerror = () => reject(new Error('No se pudo cargar Google Maps'));
+            document.head.appendChild(script);
+        });
+        return this.googleMapsPromise;
+    },
+
+    async initPushNotifications(user) {
+        const appId = window.APP_CONFIG?.oneSignalAppId;
+        if (!appId || !user) return false;
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        if (!document.querySelector('script[data-onesignal]')) {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+            script.defer = true;
+            script.dataset.onesignal = 'true';
+            document.head.appendChild(script);
+        }
+        window.OneSignalDeferred.push(async OneSignal => {
+            await OneSignal.init({ appId, serviceWorkerPath: 'OneSignalSDKWorker.js' });
+            await OneSignal.login(user.id);
+        });
+        return true;
+    },
+
+    async logoutPushNotifications() {
+        if (!window.APP_CONFIG?.oneSignalAppId) return;
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        window.OneSignalDeferred.push(async OneSignal => OneSignal.logout());
     }
 };

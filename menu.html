@@ -57,6 +57,9 @@
                     class="w-full p-5 pl-14 bg-white rounded-[2rem] border-none shadow-xl shadow-slate-200/40 outline-none text-sm font-bold text-slate-900 focus:ring-2 focus:ring-orange-500/20 transition-all">
             </div>
 
+            <button id="map-toggle" onclick="toggleMap()" class="w-full py-3 bg-blue-50 text-blue-600 rounded-2xl font-black text-xs">🗺️ VER RESTAURANTES EN EL MAPA</button>
+            <div id="restaurants-map" class="hidden w-full h-80 rounded-[2rem] overflow-hidden border border-slate-200"></div>
+
             <div id="lista-restaurantes" class="grid gap-5 pt-2">
                 </div>
         </section>
@@ -125,6 +128,7 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app-config.js"></script>
     <script src="app.js"></script>
     <script>
         const _supabase = window.serveYourself.supabase;
@@ -133,6 +137,8 @@
         let currentUser = null;
         let userRole = null;
         let searchTimer = null;
+        let currentRestaurants = [];
+        let mapInstance = null;
 
         function toggleUserMenu() { document.getElementById('user-menu').classList.toggle('hidden'); }
         
@@ -151,6 +157,7 @@
             const user = await window.serveYourself.requireUser();
             if (!user) return;
             currentUser = user;
+            window.serveYourself.initPushNotifications(user);
             const { data: profile, error: profileError } = await _supabase
                 .from('profiles')
                 .select('id, full_name, phone, address, role, business_name, open_time, close_time')
@@ -177,6 +184,7 @@
                 renderMenuOptions(profile.role);
             }
             cargarRestaurantes();
+            activarPedidosRealtime();
         }
 
         function renderMenuOptions(role) {
@@ -239,6 +247,7 @@
         }
 
         function renderizarLista(lista) {
+            currentRestaurants = lista;
             const contenedor = document.getElementById('lista-restaurantes');
             if (lista.length === 0) {
                 contenedor.innerHTML = '<p class="text-center py-10 text-slate-400 font-bold italic">No encontramos resultados...</p>';
@@ -258,6 +267,8 @@
 
                 const imageUrl = safeImageUrl(res.avatar_url);
                 const restaurantId = escapeHtml(res.id);
+                const distance = getDistanceLabel(res);
+                const disponible = abierto && res.accepting_orders !== false;
                 return `
                 <div onclick="window.location.href='restaurante.html?id=${restaurantId}'" class="bg-white p-5 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-pointer relative group ${!abierto ? 'opacity-70 grayscale-[0.3]' : ''}">
                     <div class="flex gap-5 items-center">
@@ -265,7 +276,7 @@
                             <div class="w-20 h-20 rounded-[1.8rem] bg-orange-50 overflow-hidden shadow-inner flex items-center justify-center">
                                 ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="" class="w-full h-full object-cover">` : '<span class="text-4xl">🏪</span>'}
                             </div>
-                            ${abierto ? '<div class="absolute -top-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>' : ''}
+                            ${disponible ? '<div class="absolute -top-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>' : ''}
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start">
@@ -277,13 +288,50 @@
                             </div>
                             <p class="text-slate-400 text-[11px] font-bold uppercase tracking-tight mt-1 truncate">📍 ${escapeHtml(res.address || 'Ubicación Central')}</p>
                             <div class="flex gap-2 mt-3 text-[9px] font-black uppercase tracking-widest">
-                                <span class="${abierto ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100'} px-3 py-1 rounded-full">${abierto ? 'Abierto' : 'Cerrado'}</span>
+                                <span class="${disponible ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100'} px-3 py-1 rounded-full">${disponible ? 'Disponible' : 'No disponible'}</span>
                                 <span class="bg-slate-100 text-slate-400 px-3 py-1 rounded-full">${res.open_time?.slice(0,5)} - ${res.close_time?.slice(0,5)}</span>
+                                ${distance ? `<span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full">${distance}</span>` : ''}
                             </div>
                         </div>
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        function getDistanceLabel(restaurant) {
+            if (!window.userCoordinates || restaurant.latitude == null || restaurant.longitude == null) return '';
+            const toRadians = value => value * Math.PI / 180;
+            const earth = 6371;
+            const dLat = toRadians(Number(restaurant.latitude) - window.userCoordinates.lat);
+            const dLng = toRadians(Number(restaurant.longitude) - window.userCoordinates.lng);
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRadians(window.userCoordinates.lat)) * Math.cos(toRadians(Number(restaurant.latitude))) * Math.sin(dLng / 2) ** 2;
+            return `${(earth * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1)} km`;
+        }
+
+        async function toggleMap() {
+            const mapElement = document.getElementById('restaurants-map');
+            if (!mapElement.classList.contains('hidden')) { mapElement.classList.add('hidden'); return; }
+            try {
+                await window.serveYourself.loadGoogleMaps();
+                mapElement.classList.remove('hidden');
+                const located = currentRestaurants.filter(item => item.latitude != null && item.longitude != null);
+                const center = located.length ? { lat: Number(located[0].latitude), lng: Number(located[0].longitude) } : { lat: 20.6597, lng: -103.3496 };
+                mapInstance = new google.maps.Map(mapElement, { center, zoom: 12, mapTypeControl: false });
+                located.forEach(restaurant => {
+                    const marker = new google.maps.Marker({
+                        map: mapInstance,
+                        position: { lat: Number(restaurant.latitude), lng: Number(restaurant.longitude) },
+                        title: restaurant.business_name
+                    });
+                    marker.addListener('click', () => window.location.href = `restaurante.html?id=${restaurant.id}`);
+                });
+                navigator.geolocation?.getCurrentPosition(position => {
+                    window.userCoordinates = { lat: position.coords.latitude, lng: position.coords.longitude };
+                    new google.maps.Marker({ map: mapInstance, position: window.userCoordinates, title: 'Tu ubicación', icon: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' });
+                    mapInstance.setCenter(window.userCoordinates);
+                    renderizarLista(currentRestaurants);
+                });
+            } catch (error) { alert(error.message); }
         }
 
         async function actualizarPerfil() {
@@ -307,9 +355,13 @@
             const container = document.getElementById('lista-mis-pedidos');
             container.innerHTML = '<p class="text-center py-10 animate-pulse text-xs font-black text-slate-400 uppercase">Consultando...</p>';
             const fechaLimite = new Date(); fechaLimite.setDate(fechaLimite.getDate() - 15);
-            const { data: pedidos, error } = await _supabase.from('orders').select('*').eq('customer_id', currentUser.id).gte('created_at', fechaLimite.toISOString()).order('created_at', { ascending: false });
+            const [{ data: pedidos, error }, { data: ratings }] = await Promise.all([
+                _supabase.from('orders').select('*').eq('customer_id', currentUser.id).gte('created_at', fechaLimite.toISOString()).order('created_at', { ascending: false }),
+                _supabase.from('ratings').select('order_id, rating').eq('customer_id', currentUser.id)
+            ]);
             if (error) { container.innerHTML = '<div class="p-10 text-center text-red-400 text-sm">No se pudo cargar el historial.</div>'; return; }
             if (!pedidos || pedidos.length === 0) { container.innerHTML = '<div class="p-10 text-center text-slate-300 italic text-sm">Sin actividad reciente.</div>'; return; }
+            const ratingsByOrder = new Map((ratings || []).map(item => [item.order_id, item.rating]));
             container.innerHTML = pedidos.map(p => `
                 <div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
                     <div class="flex justify-between mb-3 items-center">
@@ -323,11 +375,44 @@
                         <span class="text-lg font-black text-slate-900">$${p.total}</span>
                         <span class="text-[9px] font-black uppercase px-3 py-1 rounded-full ${p.status === 'pendiente' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}">${escapeHtml(p.status)}</span>
                     </div>
+                    <p class="text-[10px] font-black uppercase text-slate-400 mt-3">Pago: ${escapeHtml(p.payment_method || 'cash')} · ${escapeHtml(p.payment_status || 'not_required')}</p>
+                    ${p.status === 'cancelado' && p.cancellation_reason ? `<p class="text-xs text-red-500 mt-2">Motivo: ${escapeHtml(p.cancellation_reason)}</p>` : ''}
+                    ${p.status === 'pendiente' ? `<button onclick="cancelarMiPedido('${escapeHtml(p.id)}')" class="w-full mt-4 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black">CANCELAR PEDIDO</button>` : ''}
+                    ${p.status === 'entregado' && !ratingsByOrder.has(p.id) ? `<button onclick="calificarPedido('${escapeHtml(p.id)}')" class="w-full mt-4 py-3 bg-amber-50 text-amber-600 rounded-2xl text-xs font-black">⭐ CALIFICAR PEDIDO</button>` : ''}
+                    ${ratingsByOrder.has(p.id) ? `<p class="mt-3 text-center text-amber-500 font-black">${'★'.repeat(ratingsByOrder.get(p.id))}${'☆'.repeat(5 - ratingsByOrder.get(p.id))}</p>` : ''}
                 </div>
             `).join('');
         }
 
-        async function cerrarSesion() { await _supabase.auth.signOut(); window.location.href = 'index.html'; }
+        async function cancelarMiPedido(orderId) {
+            const reason = prompt('¿Por qué deseas cancelar el pedido?');
+            if (!reason) return;
+            const { error } = await _supabase.rpc('cancel_order', { p_order_id: orderId, p_reason: reason });
+            if (error) { alert(error.message); return; }
+            cargarHistorialPedidos();
+        }
+
+        async function calificarPedido(orderId) {
+            const rating = Number(prompt('Califica del 1 al 5:'));
+            if (!Number.isInteger(rating) || rating < 1 || rating > 5) { alert('Escribe un número del 1 al 5.'); return; }
+            const comment = prompt('Comentario opcional:') || '';
+            const { error } = await _supabase.rpc('submit_rating', { p_order_id: orderId, p_rating: rating, p_comment: comment });
+            if (error) { alert(error.message); return; }
+            cargarHistorialPedidos();
+        }
+
+        function activarPedidosRealtime() {
+            _supabase.channel(`customer-orders-${currentUser.id}`)
+                .on('postgres_changes', {
+                    event: 'UPDATE', schema: 'public', table: 'orders',
+                    filter: `customer_id=eq.${currentUser.id}`
+                }, payload => {
+                    if (!document.getElementById('sec-pedidos').classList.contains('hidden')) cargarHistorialPedidos();
+                    if (payload.new.status === 'listo') alert('¡Tu pedido está listo para recoger!');
+                }).subscribe();
+        }
+
+        async function cerrarSesion() { await window.serveYourself.logoutPushNotifications(); await _supabase.auth.signOut(); window.location.href = 'index.html'; }
         inicializar();
     </script>
 </body>
