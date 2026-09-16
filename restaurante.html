@@ -81,27 +81,54 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
     <script>
-        const SUPABASE_URL = 'https://spbgledcjwtqmlqdlpyx.supabase.co'; 
-        const SUPABASE_KEY = 'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY';
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const _supabase = window.serveYourself.supabase;
+        const escapeHtml = window.serveYourself.escapeHtml;
+        const safeImageUrl = window.serveYourself.safeImageUrl;
 
         const params = new URLSearchParams(window.location.search);
         const resId = params.get('id');
         let carrito = [];
+        const productosPorId = new Map();
 
         async function cargarPagina() {
-            if (!resId) { window.location.href = 'menu.html'; return; }
-            const { data: res } = await _supabase.from('profiles').select('*').eq('id', resId).single();
+            const user = await window.serveYourself.requireUser();
+            if (!user) return;
+            if (!resId || !/^[0-9a-f-]{36}$/i.test(resId)) { window.location.href = 'menu.html'; return; }
+
+            const { data: res, error: restaurantError } = await _supabase
+                .from('public_restaurants')
+                .select('id, business_name, address, avatar_url')
+                .eq('id', resId)
+                .single();
+
+            if (restaurantError || !res) {
+                alert('No se pudo encontrar el restaurante.');
+                window.location.href = 'menu.html';
+                return;
+            }
+
             if (res) {
                 document.getElementById('res-name').innerText = res.business_name;
                 document.getElementById('res-address').innerText = res.address || 'Ubicación Premium';
-                if (res.avatar_url) {
+                const imageUrl = safeImageUrl(res.avatar_url);
+                if (imageUrl) {
                     const img = document.getElementById('res-logo');
-                    img.src = res.avatar_url; img.classList.remove('hidden');
+                    img.src = imageUrl; img.classList.remove('hidden');
                 }
             }
-            const { data: productos } = await _supabase.from('products').select('*').eq('restaurant_id', resId);
+
+            const { data: productos, error: productsError } = await _supabase
+                .from('products')
+                .select('id, name, price, category, image_url, is_available')
+                .eq('restaurant_id', resId)
+                .order('category');
+
+            if (productsError) {
+                alert('No se pudo cargar el menú.');
+                return;
+            }
             renderizarProductos(productos);
         }
 
@@ -112,32 +139,39 @@
                 return;
             }
             const categorias = {};
-            productos.forEach(p => { if (!categorias[p.category]) categorias[p.category] = []; categorias[p.category].push(p); });
+            productosPorId.clear();
+            productos.forEach(p => {
+                productosPorId.set(String(p.id), p);
+                if (!categorias[p.category]) categorias[p.category] = [];
+                categorias[p.category].push(p);
+            });
             contenedor.innerHTML = '';
             for (const cat in categorias) {
                 const section = document.createElement('div');
                 section.innerHTML = `
-                    <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-5 ml-2">${cat}</h3>
+                    <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-5 ml-2">${escapeHtml(cat)}</h3>
                     <div class="grid gap-4">
                         ${categorias[cat].map(prod => {
                             const agotado = !prod.is_available;
+                            const imageUrl = safeImageUrl(prod.image_url);
+                            const productId = escapeHtml(prod.id);
                             return `
                             <div class="bg-white p-4 rounded-[2.2rem] border border-slate-100 flex items-center justify-between shadow-sm ${agotado ? 'opacity-60 grayscale-[0.5]' : ''}">
                                 <div class="flex items-center gap-4 flex-1">
-                                    ${prod.image_url 
-                                        ? `<img src="${prod.image_url}" class="w-16 h-16 rounded-2xl object-cover">` 
+                                    ${imageUrl
+                                        ? `<img src="${escapeHtml(imageUrl)}" alt="" class="w-16 h-16 rounded-2xl object-cover">`
                                         : `<div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-xl">🍽️</div>`}
                                     <div>
-                                        <h4 class="font-bold text-slate-900 text-sm leading-tight">${prod.name}</h4>
+                                        <h4 class="font-bold text-slate-900 text-sm leading-tight">${escapeHtml(prod.name)}</h4>
                                         <p class="${agotado ? 'text-slate-400' : 'text-orange-500'} font-black text-sm mt-1">
                                             ${agotado ? 'AGOTADO' : `$${parseFloat(prod.price).toFixed(2)}`}
                                         </p>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-3 bg-slate-50 p-1.5 rounded-full border border-slate-100">
-                                    <button onclick="${agotado ? '' : `cambiarCantidad('${prod.id}', -1, '${prod.name}', ${prod.price})`}" class="w-8 h-8 bg-white text-slate-400 rounded-full flex items-center justify-center font-black shadow-sm ${agotado ? 'cursor-not-allowed opacity-30' : ''}">-</button>
-                                    <span id="qty-${prod.id}" class="font-black text-slate-900 text-xs min-w-[15px] text-center">0</span>
-                                    <button onclick="${agotado ? '' : `cambiarCantidad('${prod.id}', 1, '${prod.name}', ${prod.price})`}" class="w-8 h-8 ${agotado ? 'bg-slate-300' : 'bg-slate-900'} text-white rounded-full flex items-center justify-center font-black ${agotado ? 'cursor-not-allowed' : 'shadow-md'}">+</button>
+                                    <button onclick="${agotado ? '' : `cambiarCantidad('${productId}', -1)`}" class="w-8 h-8 bg-white text-slate-400 rounded-full flex items-center justify-center font-black shadow-sm ${agotado ? 'cursor-not-allowed opacity-30' : ''}">-</button>
+                                    <span id="qty-${productId}" class="font-black text-slate-900 text-xs min-w-[15px] text-center">0</span>
+                                    <button onclick="${agotado ? '' : `cambiarCantidad('${productId}', 1)`}" class="w-8 h-8 ${agotado ? 'bg-slate-300' : 'bg-slate-900'} text-white rounded-full flex items-center justify-center font-black ${agotado ? 'cursor-not-allowed' : 'shadow-md'}">+</button>
                                 </div>
                             </div>
                         `}).join('')}
@@ -147,13 +181,15 @@
             }
         }
 
-        function cambiarCantidad(id, cambio, nombre, precio) {
+        function cambiarCantidad(id, cambio) {
+            const producto = productosPorId.get(String(id));
+            if (!producto || !producto.is_available) return;
             const index = carrito.findIndex(item => item.id === id);
             if (index !== -1) {
                 carrito[index].qty += cambio;
                 if (carrito[index].qty <= 0) carrito.splice(index, 1);
             } else if (cambio > 0) {
-                carrito.push({ id, nombre, price: parseFloat(precio), qty: 1 });
+                carrito.push({ id, nombre: producto.name, price: Number(producto.price), qty: 1 });
             }
             actualizarInterfazCarrito(id);
             if (!document.getElementById('modal-carrito').classList.contains('hidden')) actualizarModalCarrito();
@@ -187,13 +223,13 @@
                 div.className = "flex justify-between items-center";
                 div.innerHTML = `
                     <div class="flex flex-col">
-                        <span class="font-black text-slate-900 text-sm">${item.nombre}</span>
+                        <span class="font-black text-slate-900 text-sm">${escapeHtml(item.nombre)}</span>
                         <span class="text-orange-500 font-bold text-xs">$${item.price.toFixed(2)} x ${item.qty}</span>
                     </div>
                     <div class="flex items-center gap-3 bg-slate-50 p-1 rounded-full border border-slate-100">
-                         <button onclick="cambiarCantidad('${item.id}', -1, '${item.nombre}', ${item.price})" class="w-7 h-7 bg-white text-slate-400 rounded-full flex items-center justify-center font-black">-</button>
+                         <button onclick="cambiarCantidad('${escapeHtml(item.id)}', -1)" class="w-7 h-7 bg-white text-slate-400 rounded-full flex items-center justify-center font-black">-</button>
                          <span class="font-black text-slate-900 text-xs">${item.qty}</span>
-                         <button onclick="cambiarCantidad('${item.id}', 1, '${item.nombre}', ${item.price})" class="w-7 h-7 bg-slate-900 text-white rounded-full flex items-center justify-center font-black">+</button>
+                         <button onclick="cambiarCantidad('${escapeHtml(item.id)}', 1)" class="w-7 h-7 bg-slate-900 text-white rounded-full flex items-center justify-center font-black">+</button>
                     </div>`;
                 lista.appendChild(div);
             });
@@ -204,19 +240,16 @@
             if (carrito.length === 0) return;
             const btn = document.getElementById('btn-confirmar');
             const notas = document.getElementById('order-notes').value;
-            const totalPedido = carrito.reduce((acc, i) => acc + (i.qty * i.price), 0);
-
             btn.disabled = true;
             btn.innerText = "ENVIANDO...";
 
             try {
-                const { error } = await _supabase.from('orders').insert([{
-                    restaurant_id: resId,
-                    items: carrito,
-                    total: totalPedido,
-                    notes: notas,
-                    status: 'pendiente'
-                }]);
+                const items = carrito.map(item => ({ id: item.id, qty: item.qty }));
+                const { error } = await _supabase.rpc('create_order', {
+                    p_restaurant_id: resId,
+                    p_items: items,
+                    p_notes: notas.slice(0, 500)
+                });
 
                 if (error) throw error;
 
