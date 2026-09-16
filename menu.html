@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>serveyourself | Menú</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -128,6 +129,7 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="app-config.js"></script>
     <script src="app.js"></script>
     <script>
@@ -308,27 +310,43 @@
             return `${(earth * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1)} km`;
         }
 
-        async function toggleMap() {
+        function toggleMap() {
             const mapElement = document.getElementById('restaurants-map');
             if (!mapElement.classList.contains('hidden')) { mapElement.classList.add('hidden'); return; }
             try {
-                await window.serveYourself.loadGoogleMaps();
+                if (!window.L) throw new Error('No se pudo cargar el mapa');
                 mapElement.classList.remove('hidden');
+                if (mapInstance) mapInstance.remove();
                 const located = currentRestaurants.filter(item => item.latitude != null && item.longitude != null);
-                const center = located.length ? { lat: Number(located[0].latitude), lng: Number(located[0].longitude) } : { lat: 20.6597, lng: -103.3496 };
-                mapInstance = new google.maps.Map(mapElement, { center, zoom: 12, mapTypeControl: false });
+                const center = located.length
+                    ? [Number(located[0].latitude), Number(located[0].longitude)]
+                    : [20.6597, -103.3496];
+                mapInstance = L.map(mapElement).setView(center, 12);
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(mapInstance);
+                const bounds = [];
                 located.forEach(restaurant => {
-                    const marker = new google.maps.Marker({
-                        map: mapInstance,
-                        position: { lat: Number(restaurant.latitude), lng: Number(restaurant.longitude) },
-                        title: restaurant.business_name
-                    });
-                    marker.addListener('click', () => window.location.href = `restaurante.html?id=${restaurant.id}`);
+                    const position = [Number(restaurant.latitude), Number(restaurant.longitude)];
+                    bounds.push(position);
+                    L.marker(position)
+                        .addTo(mapInstance)
+                        .bindTooltip(escapeHtml(restaurant.business_name || 'Restaurante'))
+                        .on('click', () => {
+                            window.location.href = `restaurante.html?id=${encodeURIComponent(restaurant.id)}`;
+                        });
                 });
+                if (bounds.length > 1) mapInstance.fitBounds(bounds, { padding: [30, 30] });
                 navigator.geolocation?.getCurrentPosition(position => {
                     window.userCoordinates = { lat: position.coords.latitude, lng: position.coords.longitude };
-                    new google.maps.Marker({ map: mapInstance, position: window.userCoordinates, title: 'Tu ubicación', icon: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' });
-                    mapInstance.setCenter(window.userCoordinates);
+                    L.circleMarker([window.userCoordinates.lat, window.userCoordinates.lng], {
+                        radius: 8,
+                        color: '#2563eb',
+                        fillColor: '#3b82f6',
+                        fillOpacity: 1
+                    }).addTo(mapInstance).bindTooltip('Tu ubicación');
+                    mapInstance.setView([window.userCoordinates.lat, window.userCoordinates.lng], 13);
                     renderizarLista(currentRestaurants);
                 });
             } catch (error) { alert(error.message); }
