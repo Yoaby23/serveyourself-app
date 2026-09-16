@@ -34,7 +34,7 @@ alter table public.orders add constraint orders_payment_status_check
 
 create table if not exists public.ratings (
     id uuid primary key default gen_random_uuid(),
-    order_id uuid not null unique references public.orders(id) on delete cascade,
+    order_id bigint not null unique references public.orders(id) on delete cascade,
     customer_id uuid not null references auth.users(id) on delete cascade,
     restaurant_id uuid not null references public.profiles(id) on delete cascade,
     rating integer not null check (rating between 1 and 5),
@@ -221,7 +221,7 @@ $$;
 revoke all on function public.create_order_v2(uuid, jsonb, text, text) from public, anon;
 grant execute on function public.create_order_v2(uuid, jsonb, text, text) to authenticated;
 
-create or replace function public.cancel_order(p_order_id uuid, p_reason text)
+create or replace function public.cancel_order(p_order_id bigint, p_reason text)
 returns jsonb
 language plpgsql
 security definer
@@ -260,11 +260,11 @@ begin
 end;
 $$;
 
-revoke all on function public.cancel_order(uuid, text) from public, anon;
-grant execute on function public.cancel_order(uuid, text) to authenticated;
+revoke all on function public.cancel_order(bigint, text) from public, anon;
+grant execute on function public.cancel_order(bigint, text) to authenticated;
 
 create or replace function public.submit_rating(
-    p_order_id uuid,
+    p_order_id bigint,
     p_rating integer,
     p_comment text default null
 )
@@ -301,7 +301,7 @@ begin
 end;
 $$;
 
-revoke all on function public.submit_rating(uuid, integer, text) from public, anon;
-grant execute on function public.submit_rating(uuid, integer, text) to authenticated;
+revoke all on function public.submit_rating(bigint, integer, text) from public, anon;
+grant execute on function public.submit_rating(bigint, integer, text) to authenticated;
 
 commit;
