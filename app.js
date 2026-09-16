@@ -51,6 +51,21 @@ window.serveYourself = {
         return true;
     },
 
+    async requestPushPermission() {
+        if (!window.APP_CONFIG?.oneSignalAppId) throw new Error('Las notificaciones no están configuradas');
+        return new Promise((resolve, reject) => {
+            window.OneSignalDeferred = window.OneSignalDeferred || [];
+            window.OneSignalDeferred.push(async OneSignal => {
+                try {
+                    await OneSignal.Notifications.requestPermission();
+                    resolve(Boolean(OneSignal.Notifications.permission));
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        });
+    },
+
     async logoutPushNotifications() {
         if (!window.APP_CONFIG?.oneSignalAppId) return;
         window.OneSignalDeferred = window.OneSignalDeferred || [];
