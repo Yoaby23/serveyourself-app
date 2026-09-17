@@ -89,6 +89,17 @@ Si la instalación original tenía `orders.customer_id` como obligatorio, ejecut
 
 Esto permite que un mesero registre pedidos presenciales sin asociarlos a una cuenta de cliente.
 
+### Roles y permisos del restaurante
+
+Ejecuta después:
+
+`supabase/migrations/007_staff_permissions_and_cashier.sql`
+
+Esta migración agrega el rol **Capitán de caja** y permisos individuales para crear
+comandas, operar cocina y cerrar cuentas. El propietario conserva acceso total y puede
+cambiar estos permisos desde **Personal y permisos**. Meseros y cocina también pueden
+cambiar temporalmente a su experiencia de cliente para consultar sus pedidos personales.
+
 ## Servicios externos
 
 ### Mapas

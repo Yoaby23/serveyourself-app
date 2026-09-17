@@ -152,9 +152,7 @@
                     return;
                 }
                 const access = await window.serveYourself.getRestaurantAccess();
-                window.location.href = access
-                    ? (access.staff_role === 'kitchen' ? 'cocina.html' : 'pos.html')
-                    : 'menu.html';
+                window.location.href = window.serveYourself.restaurantHome(access);
 
             } catch (err) {
                 alert("Error: " + err.message);

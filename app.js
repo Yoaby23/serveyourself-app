@@ -46,7 +46,15 @@ window.serveYourself = {
         return Array.isArray(data) ? (data[0] || null) : data;
     },
 
-    async requireRestaurantAccess(allowedRoles = ['owner', 'manager', 'waiter', 'kitchen']) {
+    restaurantHome(access) {
+        if (!access) return 'menu.html';
+        if (access.staff_role === 'owner') return 'admin.html';
+        if (access.can_create_orders || access.can_close_accounts) return 'pos.html';
+        if (access.can_view_kitchen) return 'cocina.html';
+        return 'menu.html';
+    },
+
+    async requireRestaurantAccess(allowedRoles = ['owner', 'manager', 'waiter', 'kitchen', 'cashier']) {
         const user = await this.requireUser();
         if (!user) return null;
         try {
@@ -59,6 +67,25 @@ window.serveYourself = {
             return { user, ...access };
         } catch (error) {
             alert('No fue posible comprobar el acceso del personal: ' + error.message);
+            window.location.replace('index.html');
+            return null;
+        }
+    },
+
+    async requireRestaurantPermission(permission) {
+        const user = await this.requireUser();
+        if (!user) return null;
+        try {
+            const access = await this.getRestaurantAccess();
+            const allowed = access?.staff_role === 'owner' || Boolean(access?.[permission]);
+            if (!allowed) {
+                alert('Tu cuenta no tiene permiso para entrar a esta sección.');
+                window.location.replace('menu.html');
+                return null;
+            }
+            return { user, ...access };
+        } catch (error) {
+            alert('No fue posible comprobar tus permisos: ' + error.message);
             window.location.replace('index.html');
             return null;
         }
