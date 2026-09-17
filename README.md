@@ -100,6 +100,21 @@ comandas, operar cocina y cerrar cuentas. El propietario conserva acceso total y
 cambiar estos permisos desde **Personal y permisos**. Meseros y cocina también pueden
 cambiar temporalmente a su experiencia de cliente para consultar sus pedidos personales.
 
+Las pantallas operativas comparten un menú de navegación con regreso, inicio de trabajo,
+pedidos personales y cierre de sesión. Cuando cocina marca una comanda como lista, el
+mesero que la creó recibe un aviso en tiempo real y, si autorizó notificaciones, también
+una notificación push. Después de actualizar esta función vuelve a desplegar:
+
+```bash
+supabase functions deploy send-order-notification
+```
+
+La validación automatizada de roles y recorridos puede ejecutarse con:
+
+```bash
+node tests/role-flows.test.mjs
+```
+
 ## Servicios externos
 
 ### Mapas

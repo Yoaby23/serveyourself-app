@@ -12,12 +12,16 @@
     <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
             <div><p class="text-xs font-black text-orange-500 uppercase tracking-widest">Punto de venta</p><h1 id="restaurant-name" class="text-xl font-black">ServeYourself</h1></div>
-            <nav class="flex flex-wrap justify-end gap-2"><a href="menu.html" class="px-3 py-3 rounded-xl bg-blue-50 text-blue-700 font-black text-sm">Mis pedidos</a><a id="kitchen-link" href="cocina.html" class="px-3 py-3 rounded-xl bg-orange-50 text-orange-700 font-black text-sm">Cocina</a><a id="admin-link" href="admin.html" class="px-3 py-3 rounded-xl bg-slate-900 text-white font-black text-sm">Panel</a></nav>
+            <div id="restaurant-nav" class="sy-restaurant-nav"></div>
         </div>
     </header>
 
     <main class="max-w-7xl mx-auto p-4 grid lg:grid-cols-[1fr_390px] gap-5">
         <section>
+            <section id="ready-panel" class="hidden bg-green-50 border border-green-200 rounded-3xl p-4 mb-5">
+                <div class="flex items-center justify-between gap-3"><div><p class="text-xs font-black text-green-700 uppercase tracking-wider">Listos para entregar</p><h2 class="font-black text-green-950 mt-1">Mis comandas listas</h2></div><span id="ready-count" class="px-3 py-1 rounded-full bg-green-200 text-green-900 font-black">0</span></div>
+                <div id="ready-orders" class="grid sm:grid-cols-2 gap-3 mt-4"></div>
+            </section>
             <details id="pending-panel" class="hidden bg-amber-50 border border-amber-200 rounded-3xl p-4 mb-5">
                 <summary class="font-black text-amber-900 cursor-pointer">Cuentas pendientes <span id="pending-count" class="ml-2 px-2 py-1 rounded-full bg-amber-200 text-xs">0</span></summary>
                 <div id="pending-orders" class="grid sm:grid-cols-2 gap-3 mt-4"><p class="text-sm text-amber-700">No hay cuentas pendientes.</p></div>
@@ -62,6 +66,8 @@
     </div>
 
     <section id="print-ticket" class="ticket-print" aria-hidden="true"></section>
+    <div id="ready-alert" class="ready-order-alert hidden" role="status" aria-live="assertive"></div>
+    <audio id="ready-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app-config.js"></script><script src="app.js"></script>
@@ -81,8 +87,8 @@
                 return;
             }
             document.getElementById('restaurant-name').textContent = access.business_name;
-            document.getElementById('admin-link').classList.toggle('hidden', access.staff_role !== 'owner');
-            document.getElementById('kitchen-link').classList.toggle('hidden', !access.can_view_kitchen);
+            window.serveYourself.renderRestaurantNavigation(access);
+            window.serveYourself.initPushNotifications(access.user);
             document.getElementById('pending-panel').classList.toggle('hidden', !access.can_close_accounts);
             document.getElementById('command-builder').classList.toggle('hidden', !access.can_create_orders);
             document.getElementById('order-cart').classList.toggle('hidden', !access.can_create_orders);
@@ -97,6 +103,10 @@
             if (!tables.length) setService('pickup');
             renderProducts(); renderCart();
             if (access.can_close_accounts) loadPendingOrders();
+            if (access.can_create_orders) {
+                loadReadyOrders();
+                activateWaiterRealtime();
+            }
         }
 
         function renderProducts() {
@@ -168,6 +178,30 @@
             pendingOrders = data || [];
             document.getElementById('pending-count').textContent = pendingOrders.length;
             document.getElementById('pending-orders').innerHTML = pendingOrders.length ? pendingOrders.map(order => `<article class="bg-white border border-amber-200 rounded-2xl p-4"><div class="flex justify-between gap-3"><div><b>Pedido #${order.id}</b><p class="text-xs text-slate-500">${order.service_type === 'dine_in' ? esc(order.restaurant_tables?.name || 'Mesa') : 'Para llevar'}</p></div><strong>$${Number(order.total).toFixed(2)}</strong></div><select id="pending-method-${order.id}" class="w-full mt-3 p-2 rounded-xl border border-slate-200 text-sm font-bold"><option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="card_terminal">Tarjeta · terminal</option></select><div class="grid grid-cols-2 gap-2 mt-2"><button onclick="printPending(${order.id})" class="p-2 rounded-xl bg-slate-100 text-xs font-black">PRECUENTA</button><button onclick="chargePending(${order.id})" class="p-2 rounded-xl bg-green-600 text-white text-xs font-black">COBRAR</button></div></article>`).join('') : '<p class="text-sm text-amber-700">No hay cuentas pendientes.</p>';
+        }
+        async function loadReadyOrders() {
+            if (!access?.can_create_orders) return;
+            const { data, error } = await db.from('orders').select('id, table_id, service_type, created_at, ready_at, restaurant_tables(name)').eq('restaurant_id', access.restaurant_id).eq('created_by', access.user.id).eq('status', 'listo').order('ready_at');
+            if (error) return;
+            const readyOrders = data || [];
+            document.getElementById('ready-panel').classList.toggle('hidden', !readyOrders.length);
+            document.getElementById('ready-count').textContent = readyOrders.length;
+            document.getElementById('ready-orders').innerHTML = readyOrders.map(order => `<article class="bg-white border border-green-200 rounded-2xl p-4"><div class="flex items-center justify-between gap-3"><div><b class="text-lg">Pedido #${order.id}</b><p class="text-sm text-green-700 font-bold">${order.service_type === 'dine_in' ? esc(order.restaurant_tables?.name || 'Mesa') : 'Para llevar'}</p></div><span class="text-2xl">✅</span></div></article>`).join('');
+        }
+        function activateWaiterRealtime() {
+            db.channel(`waiter-ready-${access.user.id}`).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${access.restaurant_id}` }, payload => {
+                if (payload.new.created_by === access.user.id && payload.new.status === 'listo' && payload.old.status !== 'listo') {
+                    showReadyAlert(payload.new);
+                }
+                loadReadyOrders();
+            }).subscribe();
+        }
+        function showReadyAlert(order) {
+            const alertBox = document.getElementById('ready-alert');
+            alertBox.innerHTML = `<p class="text-xs font-black uppercase tracking-wider">Pedido listo</p><p class="font-black text-lg mt-1">La comanda #${order.id} está lista para entregar.</p>`;
+            alertBox.classList.remove('hidden');
+            document.getElementById('ready-sound').play().catch(() => {});
+            setTimeout(() => alertBox.classList.add('hidden'), 8000);
         }
         function printPending(id) { const order = pendingOrders.find(item => item.id === id); if (!order) return; prepareTicket(order); printTicket(); }
         async function chargePending(id) { const method = document.getElementById(`pending-method-${id}`).value; await chargeOrder(id, method, false); }

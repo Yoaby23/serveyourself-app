@@ -17,11 +17,19 @@ Deno.serve(async (request) => {
 
     const { orderId } = await request.json();
     const { data: order } = await client.from('orders')
-      .select('id, customer_id, restaurant_id, restaurant_name, status')
+      .select('id, customer_id, restaurant_id, restaurant_name, status, order_source, created_by')
       .eq('id', orderId)
       .single();
-    if (!order || order.restaurant_id !== user.id) {
+    if (!order) {
       return jsonResponse(request, { error: 'Pedido no encontrado' }, 404);
+    }
+
+    if (order.restaurant_id !== user.id) {
+      const { data: canOperateKitchen } = await client.rpc('has_restaurant_permission', {
+        p_restaurant_id: order.restaurant_id,
+        p_permission: 'view_kitchen'
+      });
+      if (!canOperateKitchen) return jsonResponse(request, { error: 'Sin permiso para notificar este pedido' }, 403);
     }
 
     const messages: Record<string, string> = {
@@ -32,7 +40,23 @@ Deno.serve(async (request) => {
     };
     if (!messages[order.status]) return jsonResponse(request, { skipped: true });
 
-    const oneSignalResponse = await fetch('https://api.onesignal.com/notifications', {
+    const appUrl = Deno.env.get('APP_URL') ?? 'https://serveyourself-app.vercel.app';
+    const notifications: Array<{ recipient: string; message: string; url: string }> = [];
+    if (order.customer_id) {
+      notifications.push({ recipient: order.customer_id, message: messages[order.status], url: `${appUrl}/menu.html` });
+    }
+    if (order.order_source === 'pos' && order.created_by && ['listo', 'cancelado'].includes(order.status)) {
+      notifications.push({
+        recipient: order.created_by,
+        message: order.status === 'listo'
+          ? `La comanda #${order.id} está lista para entregar.`
+          : `La comanda #${order.id} fue cancelada.`,
+        url: `${appUrl}/pos.html`
+      });
+    }
+    if (!notifications.length) return jsonResponse(request, { skipped: true, reason: 'Sin destinatarios' });
+
+    const results = await Promise.all(notifications.map(notification => fetch('https://api.onesignal.com/notifications', {
       method: 'POST',
       headers: {
         Authorization: `Key ${Deno.env.get('ONESIGNAL_REST_API_KEY')}`,
@@ -40,15 +64,15 @@ Deno.serve(async (request) => {
       },
       body: JSON.stringify({
         app_id: Deno.env.get('ONESIGNAL_APP_ID'),
-        include_aliases: { external_id: [order.customer_id] },
+        include_aliases: { external_id: [notification.recipient] },
         target_channel: 'push',
         headings: { es: order.restaurant_name, en: order.restaurant_name },
-        contents: { es: messages[order.status], en: messages[order.status] },
-        url: `${Deno.env.get('APP_URL') ?? 'https://serveyourself-app.vercel.app'}/menu.html`
+        contents: { es: notification.message, en: notification.message },
+        url: notification.url
       })
-    });
-    if (!oneSignalResponse.ok) throw new Error('No se pudo enviar la notificación');
-    return jsonResponse(request, { sent: true });
+    })));
+    if (results.some(response => !response.ok)) throw new Error('No se pudo enviar una notificación');
+    return jsonResponse(request, { sent: true, recipients: notifications.length });
   } catch (error) {
     return jsonResponse(request, { error: error instanceof Error ? error.message : 'Error interno' }, 500);
   }
