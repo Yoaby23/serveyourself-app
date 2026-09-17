@@ -49,9 +49,9 @@ Deno.serve(async (request) => {
       external_reference: String(order.id),
       statement_descriptor: 'SERVEYOURSELF',
       back_urls: {
-        success: `${appUrl}/menu.html?payment=success`,
-        pending: `${appUrl}/menu.html?payment=pending`,
-        failure: `${appUrl}/menu.html?payment=failure`
+        success: `${appUrl}/menu.html?payment=success&order_id=${encodeURIComponent(order.id)}`,
+        pending: `${appUrl}/menu.html?payment=pending&order_id=${encodeURIComponent(order.id)}`,
+        failure: `${appUrl}/menu.html?payment=failure&order_id=${encodeURIComponent(order.id)}`
       },
       auto_return: 'approved',
       notification_url: `${supabaseUrl}/functions/v1/mercado-pago-webhook?order_id=${encodeURIComponent(order.id)}`
