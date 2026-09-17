@@ -256,6 +256,43 @@ input[type='radio'] {
     font-weight: 900;
 }
 
+.admin-feature-card {
+    display: flex;
+    min-height: 10.5rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.45rem;
+    padding: 1.35rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 1.5rem;
+    color: #0f172a;
+    background: #fff;
+    text-align: left;
+    box-shadow: 0 8px 24px rgb(15 23 42 / 4%);
+}
+
+.admin-feature-card:hover {
+    border-color: #fdba74;
+    box-shadow: 0 14px 32px rgb(249 115 22 / 10%);
+    transform: translateY(-2px);
+}
+
+.admin-feature-card span {
+    font-size: 2rem;
+}
+
+.admin-feature-card b {
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.admin-feature-card small {
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
 @media print {
     body * {
         visibility: hidden !important;

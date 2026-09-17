@@ -179,6 +179,7 @@
         const safeImageUrl = window.serveYourself.safeImageUrl;
         let currentUser = null;
         let userRole = null;
+        let restaurantAccess = null;
         let searchTimer = null;
         let currentRestaurants = [];
         let mapInstance = null;
@@ -200,6 +201,7 @@
             const user = await window.serveYourself.requireUser();
             if (!user) return;
             currentUser = user;
+            try { restaurantAccess = await window.serveYourself.getRestaurantAccess(); } catch { restaurantAccess = null; }
             window.serveYourself.initPushNotifications(user);
             const { data: profile, error: profileError } = await _supabase
                 .from('profiles')
@@ -224,18 +226,19 @@
                     document.getElementById('edit-open').value = profile.open_time || '';
                     document.getElementById('edit-close').value = profile.close_time || '';
                 }
-                renderMenuOptions(profile.role);
+                renderMenuOptions(profile.role, restaurantAccess);
             }
             cargarRestaurantes();
             activarPedidosRealtime();
         }
 
-        function renderMenuOptions(role) {
+        function renderMenuOptions(role, access) {
             const container = document.getElementById('menu-options');
             const linkClass = "text-left px-7 py-3.5 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all flex items-center gap-3";
             let html = `<button onclick="mostrarSeccion('perfil')" class="${linkClass}"><span>👤</span> Mi Perfil</button>`;
             if (role === 'negocio') html += `<button onclick="window.location.href='admin.html'" class="${linkClass}"><span>⚙</span> Mi Panel de Control</button>`;
-            else html += `<button onclick="mostrarSeccion('pedidos')" class="${linkClass}"><span>🛍</span> Mis Pedidos</button>`;
+            else if (access) html += `<button onclick="window.location.href=window.serveYourself.restaurantHome(restaurantAccess)" class="${linkClass}"><span>🏪</span> Volver al restaurante</button>`;
+            html += `<button onclick="mostrarSeccion('pedidos')" class="${linkClass}"><span>🛍</span> Mis pedidos personales</button>`;
             container.innerHTML = html;
         }
 
