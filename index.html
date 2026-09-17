@@ -39,7 +39,7 @@
                 <button onclick="switchView('view-roles')" class="w-full border-2 border-slate-200 text-slate-600 font-bold py-5 rounded-[2rem] hover:border-orange-200 active:scale-95 transition-all uppercase">
                     CREAR CUENTA NUEVA
                 </button>
-                <a href="unirse.html" class="block text-center text-sm font-black text-orange-500 py-3">Tengo un código de personal</a>
+                <a href="index.html?next=unirse.html" class="block text-center text-sm font-black text-orange-500 py-3">Tengo un código de personal</a>
             </div>
         </div>
 
@@ -47,7 +47,7 @@
             <div id="view-login" class="fade-in bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 mt-8">
                 <button onclick="switchView('view-main')" class="text-orange-500 font-bold mb-6 hover:text-orange-600">← Volver</button>
                 <h2 class="text-3xl font-black mb-2 text-slate-900 tracking-tight">Hola de nuevo</h2>
-                <p class="text-slate-500 mb-8 font-medium">Ingresa tus datos para continuar.</p>
+                <p id="login-description" class="text-slate-500 mb-8 font-medium">Ingresa tus datos para continuar.</p>
                 <form id="login-form" class="space-y-4">
                     <input type="email" id="login-email" placeholder="Correo electrónico" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
                     <input type="password" id="login-password" placeholder="Contraseña" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
@@ -55,6 +55,7 @@
                         ENTRAR
                     </button>
                 </form>
+                <p id="staff-register-help" class="hidden text-center text-sm text-slate-500 mt-5">¿Aún no tienes cuenta? <a href="registro.html?role=cliente&next=unirse.html" class="font-black text-orange-500">Créala aquí</a></p>
             </div>
         </div>
 
@@ -82,6 +83,10 @@
     <script src="app.js"></script>
 
     <script>
+        const requestedNextPage = new URLSearchParams(window.location.search).get('next') === 'unirse.html'
+            ? 'unirse.html'
+            : null;
+
         // Función para cambiar de vista
         function switchView(viewId) {
             document.getElementById('view-main').classList.add('hidden');
@@ -93,6 +98,18 @@
             } else {
                 document.getElementById(viewId).classList.remove('hidden');
             }
+        }
+
+        async function openRequestedView() {
+            if (!requestedNextPage) return;
+            const { data: { user } } = await window.serveYourself.supabase.auth.getUser();
+            if (user) {
+                window.location.replace(requestedNextPage);
+                return;
+            }
+            document.getElementById('login-description').textContent = 'Primero inicia sesión; después podrás capturar tu código de personal.';
+            document.getElementById('staff-register-help').classList.remove('hidden');
+            switchView('view-login');
         }
 
         // Manejo del Login
@@ -117,6 +134,11 @@
 
                 if (error) throw error;
 
+                if (requestedNextPage) {
+                    window.location.href = requestedNextPage;
+                    return;
+                }
+
                 const { data: profile, error: profileError } = await _supabase
                     .from('profiles')
                     .select('role')
@@ -140,6 +162,7 @@
                 btn.disabled = false;
             }
         });
+        openRequestedView();
     </script>
 </body>
 </html>

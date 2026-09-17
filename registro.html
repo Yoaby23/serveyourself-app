@@ -59,6 +59,7 @@
         const params = new URLSearchParams(window.location.search);
         const requestedRole = params.get('role');
         const role = ['cliente', 'negocio'].includes(requestedRole) ? requestedRole : 'cliente';
+        const requestedNextPage = params.get('next') === 'unirse.html' ? 'unirse.html' : null;
 
         if (role === 'negocio') {
             document.getElementById('form-title').innerText = "Tu Restaurante";
@@ -95,10 +96,10 @@
                 if (authError) throw authError;
 
                 if (authData.user && authData.session) {
-                    window.location.href = (role === 'negocio') ? 'admin.html' : 'menu.html';
+                    window.location.href = requestedNextPage || ((role === 'negocio') ? 'admin.html' : 'menu.html');
                 } else {
                     alert('Cuenta creada. Revisa tu correo para confirmar el registro y después inicia sesión.');
-                    window.location.href = 'index.html';
+                    window.location.href = requestedNextPage ? 'index.html?next=unirse.html' : 'index.html';
                 }
             } catch (error) {
                 alert("Error: " + error.message);
