@@ -40,11 +40,6 @@
             </label>
             <div id="cart-items" class="my-5 space-y-3 max-h-[38vh] overflow-y-auto"><p class="text-center text-slate-400 py-8">Agrega productos al pedido.</p></div>
             <textarea id="order-notes" maxlength="500" rows="2" placeholder="Notas para cocina" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm"></textarea>
-            <label class="block mt-3 text-xs font-black text-slate-500 uppercase">Forma de pago al cobrar
-                <select id="payment-method" class="w-full mt-2 p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 normal-case font-bold">
-                    <option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="card_terminal">Tarjeta · terminal</option>
-                </select>
-            </label>
             <div class="flex justify-between items-end mt-5 pt-5 border-t border-slate-100"><span class="font-bold text-slate-500">Total</span><strong id="cart-total" class="text-3xl">$0.00</strong></div>
             <button id="submit-order" class="w-full mt-4 py-4 rounded-2xl bg-orange-500 text-white font-black text-sm uppercase tracking-wider">Enviar a cocina</button>
         </aside>
@@ -54,6 +49,11 @@
         <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center">
             <div class="text-5xl mb-3">✅</div><h2 id="success-title" class="text-2xl font-black">Pedido registrado</h2><p id="success-order" class="text-slate-500 mt-2"></p>
             <button id="print-button" onclick="printTicket()" class="w-full mt-5 py-4 rounded-2xl bg-slate-900 text-white font-black">IMPRIMIR PRECUENTA</button>
+            <label id="modal-payment-wrap" class="block mt-4 text-left text-xs font-black text-slate-500 uppercase">Forma de pago
+                <select id="modal-payment-method" class="w-full mt-2 p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 normal-case font-bold">
+                    <option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="card_terminal">Tarjeta · terminal</option>
+                </select>
+            </label>
             <button id="charge-button" onclick="chargeLastOrder()" class="w-full mt-2 py-4 rounded-2xl bg-green-600 text-white font-black">MARCAR COMO PAGADO</button>
             <button onclick="closeSuccess()" class="w-full mt-2 py-4 rounded-2xl bg-orange-50 text-orange-600 font-black">NUEVA VENTA</button>
         </div>
@@ -126,7 +126,7 @@
                 p_notes: document.getElementById('order-notes').value,
                 p_service_type: serviceType,
                 p_table_id: serviceType === 'dine_in' ? Number(tableId) : null,
-                p_payment_method: document.getElementById('payment-method').value
+                p_payment_method: 'cash'
             });
             button.disabled = false; button.textContent = 'ENVIAR A COCINA';
             if (error) return alert(error.message);
@@ -136,6 +136,7 @@
             document.getElementById('success-order').textContent = `Pedido #${lastOrder.id} · $${Number(lastOrder.total).toFixed(2)}`;
             document.getElementById('success-title').textContent = 'Pedido enviado a cocina';
             document.getElementById('print-button').textContent = 'IMPRIMIR PRECUENTA';
+            document.getElementById('modal-payment-wrap').classList.remove('hidden');
             document.getElementById('charge-button').classList.remove('hidden');
             prepareTicket(lastOrder);
             document.getElementById('success-modal').classList.remove('hidden'); document.getElementById('success-modal').classList.add('flex');
@@ -156,7 +157,7 @@
         }
         function printPending(id) { const order = pendingOrders.find(item => item.id === id); if (!order) return; prepareTicket(order); printTicket(); }
         async function chargePending(id) { const method = document.getElementById(`pending-method-${id}`).value; await chargeOrder(id, method, false); }
-        async function chargeLastOrder() { if (lastOrder) await chargeOrder(lastOrder.id, document.getElementById('payment-method').value, true); }
+        async function chargeLastOrder() { if (lastOrder) await chargeOrder(lastOrder.id, document.getElementById('modal-payment-method').value, true); }
         async function chargeOrder(id, method, showModal) {
             const { data, error } = await db.rpc('mark_pos_order_paid', { p_order_id: id, p_payment_method: method });
             if (error) return alert(error.message);
@@ -167,6 +168,7 @@
                 document.getElementById('success-title').textContent = 'Pago registrado';
                 document.getElementById('success-order').textContent = `Pedido #${lastOrder.id} · $${Number(lastOrder.total).toFixed(2)} · ${paymentLabels[method]}`;
                 document.getElementById('print-button').textContent = 'IMPRIMIR COMPROBANTE';
+                document.getElementById('modal-payment-wrap').classList.add('hidden');
                 document.getElementById('charge-button').classList.add('hidden');
             } else {
                 alert(`Pedido #${id} marcado como pagado.`);
