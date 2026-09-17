@@ -44,7 +44,8 @@ create table if not exists public.ratings (
 
 alter table public.ratings enable row level security;
 
-create or replace view public.public_restaurants as
+drop view if exists public.public_restaurants;
+create view public.public_restaurants as
 select
     id, business_name, address, open_time, close_time, avatar_url, rating,
     latitude, longitude, timezone, accepting_orders,

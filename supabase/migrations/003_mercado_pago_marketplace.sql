@@ -34,7 +34,8 @@ revoke all on public.mercado_pago_oauth_states from anon, authenticated;
 grant all on public.restaurant_payment_accounts to service_role;
 grant all on public.mercado_pago_oauth_states to service_role;
 
-create or replace view public.public_restaurants as
+drop view if exists public.public_restaurants;
+create view public.public_restaurants as
 select
     id, business_name, address, open_time, close_time, avatar_url, rating,
     latitude, longitude, timezone, accepting_orders,
