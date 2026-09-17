@@ -24,6 +24,13 @@ window.serveYourself = {
         }
     },
 
+    async reconcileMercadoPagoOrder(orderId, paymentId = null) {
+        const webhookUrl = new URL(`${SUPABASE_URL}/functions/v1/mercado-pago-webhook`);
+        webhookUrl.searchParams.set('order_id', String(orderId));
+        if (paymentId) webhookUrl.searchParams.set('payment_id', String(paymentId));
+        return fetch(webhookUrl.toString(), { method: 'GET' });
+    },
+
     async requireUser() {
         const { data: { user }, error } = await this.supabase.auth.getUser();
         if (error || !user) {
