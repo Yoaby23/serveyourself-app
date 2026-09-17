@@ -8,7 +8,7 @@
 <body class="bg-slate-950 text-white min-h-screen kitchen-screen">
     <header class="sticky top-0 z-30 bg-slate-950/95 border-b border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
         <div><p class="text-xs font-black text-orange-400 uppercase tracking-widest">Pantalla de cocina</p><h1 id="restaurant-name" class="text-xl font-black">ServeYourself</h1></div>
-        <div class="flex flex-wrap gap-2"><button id="sound-button" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">🔇 Activar sonido</button><a href="menu.html" class="px-3 py-3 rounded-xl bg-blue-600 text-white font-black text-sm">Mis pedidos</a><a id="pos-link" href="pos.html" class="px-3 py-3 rounded-xl bg-orange-500 text-white font-black text-sm">POS</a><a id="admin-link" href="admin.html" class="px-3 py-3 rounded-xl bg-white text-slate-950 font-black text-sm">Panel</a></div>
+        <div class="flex items-center gap-2"><button id="sound-button" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">🔇 Activar sonido</button><div id="restaurant-nav" class="sy-restaurant-nav"></div></div>
     </header>
     <main class="p-3 grid xl:grid-cols-3 gap-3 min-h-[calc(100vh-76px)]">
         <section class="kitchen-column"><div class="kitchen-heading bg-orange-500"><span>Nuevos</span><b id="count-pendiente">0</b></div><div id="orders-pendiente" class="kitchen-list"></div></section>
@@ -24,8 +24,8 @@
         async function init() {
             access = await window.serveYourself.requireRestaurantPermission('can_view_kitchen'); if (!access) return;
             document.getElementById('restaurant-name').textContent = access.business_name;
-            document.getElementById('admin-link').classList.toggle('hidden', access.staff_role !== 'owner');
-            document.getElementById('pos-link').classList.toggle('hidden', !access.can_create_orders && !access.can_close_accounts);
+            window.serveYourself.renderRestaurantNavigation(access, { dark: true });
+            window.serveYourself.initPushNotifications(access.user);
             await loadOrders();
             db.channel(`kitchen-${access.restaurant_id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${access.restaurant_id}` }, payload => {
                 if (payload.eventType === 'INSERT' && soundEnabled) document.getElementById('new-order-sound').play().catch(() => {});
@@ -65,7 +65,8 @@
             const { error } = await db.rpc('update_kitchen_order_status', { p_order_id: id, p_status: status });
             if (error) return alert(error.message);
             const order = orders.find(o => o.id === id); if (order) order.status = status; render();
-            db.functions.invoke('send-order-notification', { body: { orderId: id } });
+            const { error: notificationError } = await db.functions.invoke('send-order-notification', { body: { orderId: id } });
+            if (notificationError) console.warn('No se pudo enviar la notificación push:', notificationError.message);
         }
         document.getElementById('sound-button').addEventListener('click', () => { soundEnabled = !soundEnabled; document.getElementById('sound-button').textContent = soundEnabled ? '🔊 Sonido activo' : '🔇 Activar sonido'; if (soundEnabled) document.getElementById('new-order-sound').play().then(a => { a.pause(); a.currentTime = 0; }).catch(() => {}); });
         init();

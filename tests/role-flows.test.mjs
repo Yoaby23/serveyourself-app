@@ -1,0 +1,84 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+
+const read = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+const app = read('app.js');
+const admin = read('admin.html');
+const pos = read('pos.html');
+const kitchen = read('cocina.html');
+const team = read('equipo.html');
+const migration = read('supabase/migrations/007_staff_permissions_and_cashier.sql');
+const notification = read('supabase/functions/send-order-notification/index.ts');
+
+for (const file of ['admin.html', 'cocina.html', 'equipo.html', 'index.html', 'menu.html', 'pos.html', 'qr.html', 'unirse.html']) {
+    const html = read(file);
+    const inlineScripts = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)];
+    inlineScripts.forEach((match, index) => {
+        assert.doesNotThrow(() => new Function(match[1]), `${file}: script ${index + 1} debe compilar`);
+    });
+}
+
+assert.match(admin, /id="view-home"/, 'El dueño debe iniciar en el panel de funciones');
+assert.match(admin, /id="view-pedidos" class="hidden/, 'Pedidos en vivo debe ser una opción secundaria');
+assert.match(app, /renderRestaurantNavigation/, 'Debe existir navegación común');
+for (const page of [pos, kitchen, team, read('qr.html')]) {
+    assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
+}
+
+assert.match(migration, /'cashier'/, 'Debe existir el rol Capitán de caja');
+assert.match(migration, /has_restaurant_permission/, 'Los permisos deben validarse en base de datos');
+assert.match(migration, /Solo caja o el propietario pueden cerrar cuentas/, 'El mesero no debe poder cerrar cuentas');
+assert.match(migration, /p_payment_method not in \('cash', 'transfer', 'card_terminal'\)/, 'Caja solo debe aceptar los tres métodos manuales');
+assert.match(migration, /v_order\.status = 'pendiente' and p_status <> 'preparando'/, 'Cocina debe respetar el avance de estados');
+assert.match(migration, /v_order\.status = 'preparando' and p_status <> 'listo'/, 'Cocina no debe saltar directamente a listo');
+assert.match(migration, /v_order\.status = 'listo' and p_status <> 'entregado'/, 'Cocina debe cerrar la entrega en orden');
+assert.match(pos, /!access\.can_close_accounts/, 'El POS debe ocultar controles de cobro sin permiso');
+assert.match(pos, /IMPRIMIR COMANDA/, 'El mesero debe poder imprimir una comanda');
+assert.match(pos, /IMPRIMIR PRECUENTA/, 'Caja debe poder imprimir antes de cobrar');
+assert.match(kitchen, /requireRestaurantPermission\('can_view_kitchen'\)/, 'Cocina debe exigir su permiso');
+assert.match(team, /set_staff_permissions/, 'El dueño debe poder editar permisos individuales');
+
+assert.match(pos, /waiter-ready-/, 'El mesero debe escuchar comandas listas en tiempo real');
+assert.match(pos, /Mis comandas listas/, 'El mesero debe ver comandas listas dentro del POS');
+assert.match(notification, /created_by/, 'La notificación debe dirigirse al creador de la comanda');
+assert.match(notification, /La comanda #\$\{order\.id\} está lista/, 'La notificación debe indicar qué comanda está lista');
+
+function renderNavigation(access) {
+    const container = { innerHTML: '', contains: () => false };
+    const document = {
+        getElementById: id => id === 'restaurant-nav' ? container : null,
+        addEventListener: () => {},
+        querySelector: () => null,
+        createElement: () => ({ dataset: {}, set src(_value) {}, set defer(_value) {} }),
+        head: { appendChild: () => {} }
+    };
+    const window = {
+        location: { origin: 'https://example.test' },
+        history: { length: 1 },
+        supabase: { createClient: () => ({}) }
+    };
+    window.window = window;
+    vm.runInNewContext(app, { window, document, URL, fetch: () => {}, alert: () => {} });
+    window.serveYourself.renderRestaurantNavigation({ business_name: 'Restaurante prueba', ...access });
+    return container.innerHTML;
+}
+
+const ownerNav = renderNavigation({ staff_role: 'owner', can_create_orders: true, can_view_kitchen: true, can_close_accounts: true });
+assert.match(ownerNav, /admin\.html/, 'El propietario debe regresar a su panel');
+assert.match(ownerNav, /equipo\.html/, 'El propietario debe administrar su personal');
+assert.match(ownerNav, /qr\.html/, 'El propietario debe acceder al QR');
+
+const waiterNav = renderNavigation({ staff_role: 'waiter', can_create_orders: true, can_view_kitchen: false, can_close_accounts: false });
+assert.match(waiterNav, /pos\.html/, 'El mesero debe acceder a comandas');
+assert.doesNotMatch(waiterNav, /cocina\.html|equipo\.html|qr\.html/, 'El mesero no debe ver funciones administrativas o de cocina');
+
+const kitchenNav = renderNavigation({ staff_role: 'kitchen', can_create_orders: false, can_view_kitchen: true, can_close_accounts: false });
+assert.match(kitchenNav, /cocina\.html/, 'Cocina debe acceder a su tablero');
+assert.doesNotMatch(kitchenNav, /pos\.html|equipo\.html|qr\.html/, 'Cocina no debe ver caja ni administración');
+
+const cashierNav = renderNavigation({ staff_role: 'cashier', can_create_orders: false, can_view_kitchen: false, can_close_accounts: true });
+assert.match(cashierNav, /pos\.html/, 'El capitán de caja debe acceder a cuentas pendientes');
+assert.doesNotMatch(cashierNav, /cocina\.html|equipo\.html|qr\.html/, 'Caja no debe ver cocina ni administración');
+
+console.log('Validación de roles, navegación, caja, cocina y notificaciones: OK');

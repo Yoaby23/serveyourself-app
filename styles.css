@@ -293,6 +293,115 @@ input[type='radio'] {
     line-height: 1.4;
 }
 
+.sy-restaurant-nav {
+    position: relative;
+    z-index: 70;
+}
+
+.sy-nav-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.sy-nav-trigger {
+    display: grid;
+    width: 2.75rem;
+    height: 2.75rem;
+    place-items: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.9rem;
+    color: #0f172a;
+    background: #fff;
+    font-size: 1.1rem;
+    font-weight: 900;
+    box-shadow: 0 5px 16px rgb(15 23 42 / 7%);
+}
+
+.sy-nav-trigger-dark {
+    border-color: #334155;
+    color: #fff;
+    background: #1e293b;
+}
+
+.sy-nav-dropdown {
+    position: absolute;
+    top: calc(100% + 0.65rem);
+    right: 0;
+    width: min(19rem, calc(100vw - 2rem));
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 1.25rem;
+    color: #0f172a;
+    background: #fff;
+    box-shadow: 0 24px 60px rgb(15 23 42 / 18%);
+}
+
+.sy-nav-identity {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 1.1rem;
+    border-bottom: 1px solid #f1f5f9;
+    background: #f8fafc;
+}
+
+.sy-nav-identity small {
+    color: #f97316;
+    font-size: 0.65rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.sy-nav-identity b {
+    margin-top: 0.2rem;
+    font-size: 0.9rem;
+}
+
+.sy-nav-dropdown nav {
+    display: flex;
+    flex-direction: column;
+    padding: 0.45rem;
+}
+
+.sy-nav-dropdown a,
+.sy-nav-dropdown > button {
+    display: block;
+    width: 100%;
+    padding: 0.8rem 0.9rem;
+    border-radius: 0.8rem;
+    color: #334155;
+    background: transparent;
+    text-align: left;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.sy-nav-dropdown a:hover,
+.sy-nav-dropdown > button:hover {
+    color: #ea580c;
+    background: #fff7ed;
+}
+
+.sy-nav-dropdown .sy-nav-logout {
+    border-top: 1px solid #f1f5f9;
+    border-radius: 0;
+    color: #dc2626;
+}
+
+.ready-order-alert {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 90;
+    width: min(24rem, calc(100vw - 2rem));
+    padding: 1rem;
+    border: 1px solid #86efac;
+    border-radius: 1.25rem;
+    color: #14532d;
+    background: #f0fdf4;
+    box-shadow: 0 22px 50px rgb(20 83 45 / 22%);
+}
+
 @media print {
     body * {
         visibility: hidden !important;
