@@ -31,5 +31,44 @@ window.serveYourself = {
             return null;
         }
         return user;
+    },
+
+    async initPushNotifications(user) {
+        const appId = window.APP_CONFIG?.oneSignalAppId;
+        if (!appId || !user) return false;
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        if (!document.querySelector('script[data-onesignal]')) {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+            script.defer = true;
+            script.dataset.onesignal = 'true';
+            document.head.appendChild(script);
+        }
+        window.OneSignalDeferred.push(async OneSignal => {
+            await OneSignal.init({ appId, serviceWorkerPath: 'OneSignalSDKWorker.js' });
+            await OneSignal.login(user.id);
+        });
+        return true;
+    },
+
+    async requestPushPermission() {
+        if (!window.APP_CONFIG?.oneSignalAppId) throw new Error('Las notificaciones no están configuradas');
+        return new Promise((resolve, reject) => {
+            window.OneSignalDeferred = window.OneSignalDeferred || [];
+            window.OneSignalDeferred.push(async OneSignal => {
+                try {
+                    await OneSignal.Notifications.requestPermission();
+                    resolve(Boolean(OneSignal.Notifications.permission));
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        });
+    },
+
+    async logoutPushNotifications() {
+        if (!window.APP_CONFIG?.oneSignalAppId) return;
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        window.OneSignalDeferred.push(async OneSignal => OneSignal.logout());
     }
 };
