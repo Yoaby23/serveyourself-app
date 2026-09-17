@@ -83,6 +83,12 @@ Los pedidos del POS quedan pendientes de pago al enviarse a cocina. El mesero pu
 imprimir una precuenta antes de cobrar y, después, marcar el pago como efectivo,
 transferencia o tarjeta en la terminal del restaurante.
 
+Si la instalación original tenía `orders.customer_id` como obligatorio, ejecuta al final:
+
+`supabase/migrations/006_allow_pos_orders_without_customer.sql`
+
+Esto permite que un mesero registre pedidos presenciales sin asociarlos a una cuenta de cliente.
+
 ## Servicios externos
 
 ### Mapas
