@@ -248,6 +248,14 @@ input[type='radio'] {
     font-weight: 900;
 }
 
+.ticket-payment-status {
+    margin: 0.5rem 0 !important;
+    padding: 0.35rem;
+    border: 1px solid #000;
+    text-align: center;
+    font-weight: 900;
+}
+
 @media print {
     body * {
         visibility: hidden !important;

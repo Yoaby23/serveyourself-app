@@ -73,6 +73,16 @@ Después de aplicarla, el propietario puede:
 El empleado debe tener una cuenta normal, iniciar sesión y abrir `unirse.html` para
 capturar el código de invitación.
 
+### Precuentas y cobro manual
+
+Ejecuta después:
+
+`supabase/migrations/005_pos_payment_lifecycle.sql`
+
+Los pedidos del POS quedan pendientes de pago al enviarse a cocina. El mesero puede
+imprimir una precuenta antes de cobrar y, después, marcar el pago como efectivo,
+transferencia o tarjeta en la terminal del restaurante.
+
 ## Servicios externos
 
 ### Mapas

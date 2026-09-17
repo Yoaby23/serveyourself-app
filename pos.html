@@ -18,6 +18,10 @@
 
     <main class="max-w-7xl mx-auto p-4 grid lg:grid-cols-[1fr_390px] gap-5">
         <section>
+            <details id="pending-panel" class="bg-amber-50 border border-amber-200 rounded-3xl p-4 mb-5">
+                <summary class="font-black text-amber-900 cursor-pointer">Cuentas pendientes <span id="pending-count" class="ml-2 px-2 py-1 rounded-full bg-amber-200 text-xs">0</span></summary>
+                <div id="pending-orders" class="grid sm:grid-cols-2 gap-3 mt-4"><p class="text-sm text-amber-700">No hay cuentas pendientes.</p></div>
+            </details>
             <div class="flex flex-col sm:flex-row gap-3 mb-5">
                 <input id="product-search" type="search" placeholder="Buscar producto..." class="flex-1 p-4 rounded-2xl border border-slate-200 bg-white font-bold">
                 <select id="category-filter" class="p-4 rounded-2xl border border-slate-200 bg-white font-bold"><option value="">Todas las categorías</option></select>
@@ -36,20 +40,21 @@
             </label>
             <div id="cart-items" class="my-5 space-y-3 max-h-[38vh] overflow-y-auto"><p class="text-center text-slate-400 py-8">Agrega productos al pedido.</p></div>
             <textarea id="order-notes" maxlength="500" rows="2" placeholder="Notas para cocina" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm"></textarea>
-            <label class="block mt-3 text-xs font-black text-slate-500 uppercase">Forma de cobro
+            <label class="block mt-3 text-xs font-black text-slate-500 uppercase">Forma de pago al cobrar
                 <select id="payment-method" class="w-full mt-2 p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 normal-case font-bold">
                     <option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="card_terminal">Tarjeta · terminal</option>
                 </select>
             </label>
             <div class="flex justify-between items-end mt-5 pt-5 border-t border-slate-100"><span class="font-bold text-slate-500">Total</span><strong id="cart-total" class="text-3xl">$0.00</strong></div>
-            <button id="submit-order" class="w-full mt-4 py-4 rounded-2xl bg-orange-500 text-white font-black text-sm uppercase tracking-wider">Cobrar y enviar a cocina</button>
+            <button id="submit-order" class="w-full mt-4 py-4 rounded-2xl bg-orange-500 text-white font-black text-sm uppercase tracking-wider">Enviar a cocina</button>
         </aside>
     </main>
 
     <div id="success-modal" class="hidden fixed inset-0 z-50 bg-slate-950/60 p-4 items-center justify-center">
         <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center">
-            <div class="text-5xl mb-3">✅</div><h2 class="text-2xl font-black">Venta registrada</h2><p id="success-order" class="text-slate-500 mt-2"></p>
-            <button onclick="printTicket()" class="w-full mt-5 py-4 rounded-2xl bg-slate-900 text-white font-black">IMPRIMIR TICKET</button>
+            <div class="text-5xl mb-3">✅</div><h2 id="success-title" class="text-2xl font-black">Pedido registrado</h2><p id="success-order" class="text-slate-500 mt-2"></p>
+            <button id="print-button" onclick="printTicket()" class="w-full mt-5 py-4 rounded-2xl bg-slate-900 text-white font-black">IMPRIMIR PRECUENTA</button>
+            <button id="charge-button" onclick="chargeLastOrder()" class="w-full mt-2 py-4 rounded-2xl bg-green-600 text-white font-black">MARCAR COMO PAGADO</button>
             <button onclick="closeSuccess()" class="w-full mt-2 py-4 rounded-2xl bg-orange-50 text-orange-600 font-black">NUEVA VENTA</button>
         </div>
     </div>
@@ -61,7 +66,8 @@
     <script>
         const db = window.serveYourself.supabase;
         const esc = window.serveYourself.escapeHtml;
-        let access, products = [], tables = [], serviceType = 'dine_in', lastOrder = null;
+        let access, products = [], tables = [], pendingOrders = [], serviceType = 'dine_in', lastOrder = null, resetCartOnClose = false;
+        const paymentLabels = { cash: 'Efectivo', transfer: 'Transferencia', card_terminal: 'Tarjeta · terminal' };
         const cart = new Map();
 
         async function init() {
@@ -78,7 +84,7 @@
             document.getElementById('category-filter').innerHTML += [...new Set(products.map(p => p.category))].map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
             document.getElementById('table-select').innerHTML += tables.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
             if (!tables.length) setService('pickup');
-            renderProducts(); renderCart();
+            renderProducts(); renderCart(); loadPendingOrders();
         }
 
         function renderProducts() {
@@ -122,17 +128,52 @@
                 p_table_id: serviceType === 'dine_in' ? Number(tableId) : null,
                 p_payment_method: document.getElementById('payment-method').value
             });
-            button.disabled = false; button.textContent = 'COBRAR Y ENVIAR A COCINA';
+            button.disabled = false; button.textContent = 'ENVIAR A COCINA';
             if (error) return alert(error.message);
             lastOrder = data;
-            const table = tables.find(t => t.id === Number(lastOrder.table_id));
-            const paymentLabels = { cash: 'Efectivo', transfer: 'Transferencia', card_terminal: 'Tarjeta · terminal' };
+            lastOrder.restaurant_tables = { name: tables.find(t => t.id === Number(lastOrder.table_id))?.name };
+            resetCartOnClose = true;
             document.getElementById('success-order').textContent = `Pedido #${lastOrder.id} · $${Number(lastOrder.total).toFixed(2)}`;
-            document.getElementById('print-ticket').innerHTML = `<div class="ticket"><h1>${esc(access.business_name)}</h1><p>Pedido #${lastOrder.id}</p><p>${new Date(lastOrder.created_at).toLocaleString('es-MX')}</p><hr><p><b>${serviceType === 'dine_in' ? esc(table?.name || 'Mesa') : 'Para llevar'}</b></p>${lastOrder.items.map(i => `<div class="ticket-row"><span>${Number(i.qty)} x ${esc(i.nombre)}</span><span>$${(Number(i.price) * Number(i.qty)).toFixed(2)}</span></div>`).join('')}<hr><div class="ticket-row ticket-total"><span>TOTAL</span><span>$${Number(lastOrder.total).toFixed(2)}</span></div><p>Pago: ${paymentLabels[lastOrder.payment_method]}</p>${lastOrder.notes ? `<p>Nota: ${esc(lastOrder.notes)}</p>` : ''}<p class="ticket-thanks">¡Gracias por su compra!</p></div>`;
+            document.getElementById('success-title').textContent = 'Pedido enviado a cocina';
+            document.getElementById('print-button').textContent = 'IMPRIMIR PRECUENTA';
+            document.getElementById('charge-button').classList.remove('hidden');
+            prepareTicket(lastOrder);
             document.getElementById('success-modal').classList.remove('hidden'); document.getElementById('success-modal').classList.add('flex');
+            loadPendingOrders();
+        }
+        function prepareTicket(order) {
+            const paid = order.payment_status === 'approved';
+            const location = order.service_type === 'dine_in' ? esc(order.restaurant_tables?.name || 'Mesa') : 'Para llevar';
+            document.getElementById('print-ticket').innerHTML = `<div class="ticket"><h1>${esc(access.business_name)}</h1><p class="ticket-payment-status">${paid ? 'PAGADO' : 'PRECUENTA · PENDIENTE DE PAGO'}</p><p>Pedido #${order.id}</p><p>${new Date(order.created_at).toLocaleString('es-MX')}</p><hr><p><b>${location}</b></p>${order.items.map(i => `<div class="ticket-row"><span>${Number(i.qty)} x ${esc(i.nombre)}</span><span>$${(Number(i.price) * Number(i.qty)).toFixed(2)}</span></div>`).join('')}<hr><div class="ticket-row ticket-total"><span>TOTAL</span><span>$${Number(order.total).toFixed(2)}</span></div><p>${paid ? `Pago: ${paymentLabels[order.payment_method]}` : 'Pago pendiente'}</p>${order.notes ? `<p>Nota: ${esc(order.notes)}</p>` : ''}${paid ? '<p class="ticket-thanks">¡Gracias por su compra!</p>' : ''}</div>`;
+        }
+        async function loadPendingOrders() {
+            if (!access) return;
+            const { data, error } = await db.from('orders').select('*, restaurant_tables(name)').eq('restaurant_id', access.restaurant_id).eq('order_source', 'pos').eq('payment_status', 'pending').neq('status', 'cancelado').order('created_at');
+            if (error) return;
+            pendingOrders = data || [];
+            document.getElementById('pending-count').textContent = pendingOrders.length;
+            document.getElementById('pending-orders').innerHTML = pendingOrders.length ? pendingOrders.map(order => `<article class="bg-white border border-amber-200 rounded-2xl p-4"><div class="flex justify-between gap-3"><div><b>Pedido #${order.id}</b><p class="text-xs text-slate-500">${order.service_type === 'dine_in' ? esc(order.restaurant_tables?.name || 'Mesa') : 'Para llevar'}</p></div><strong>$${Number(order.total).toFixed(2)}</strong></div><select id="pending-method-${order.id}" class="w-full mt-3 p-2 rounded-xl border border-slate-200 text-sm font-bold"><option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="card_terminal">Tarjeta · terminal</option></select><div class="grid grid-cols-2 gap-2 mt-2"><button onclick="printPending(${order.id})" class="p-2 rounded-xl bg-slate-100 text-xs font-black">PRECUENTA</button><button onclick="chargePending(${order.id})" class="p-2 rounded-xl bg-green-600 text-white text-xs font-black">COBRAR</button></div></article>`).join('') : '<p class="text-sm text-amber-700">No hay cuentas pendientes.</p>';
+        }
+        function printPending(id) { const order = pendingOrders.find(item => item.id === id); if (!order) return; prepareTicket(order); printTicket(); }
+        async function chargePending(id) { const method = document.getElementById(`pending-method-${id}`).value; await chargeOrder(id, method, false); }
+        async function chargeLastOrder() { if (lastOrder) await chargeOrder(lastOrder.id, document.getElementById('payment-method').value, true); }
+        async function chargeOrder(id, method, showModal) {
+            const { data, error } = await db.rpc('mark_pos_order_paid', { p_order_id: id, p_payment_method: method });
+            if (error) return alert(error.message);
+            const previous = lastOrder?.id === id ? lastOrder : pendingOrders.find(item => item.id === id);
+            lastOrder = { ...previous, ...data, restaurant_tables: previous?.restaurant_tables };
+            prepareTicket(lastOrder); loadPendingOrders();
+            if (showModal) {
+                document.getElementById('success-title').textContent = 'Pago registrado';
+                document.getElementById('success-order').textContent = `Pedido #${lastOrder.id} · $${Number(lastOrder.total).toFixed(2)} · ${paymentLabels[method]}`;
+                document.getElementById('print-button').textContent = 'IMPRIMIR COMPROBANTE';
+                document.getElementById('charge-button').classList.add('hidden');
+            } else {
+                alert(`Pedido #${id} marcado como pagado.`);
+            }
         }
         function printTicket() { window.print(); }
-        function closeSuccess() { cart.clear(); document.getElementById('order-notes').value = ''; renderCart(); document.getElementById('success-modal').classList.add('hidden'); document.getElementById('success-modal').classList.remove('flex'); }
+        function closeSuccess() { if (resetCartOnClose) { cart.clear(); document.getElementById('order-notes').value = ''; renderCart(); resetCartOnClose = false; } document.getElementById('success-modal').classList.add('hidden'); document.getElementById('success-modal').classList.remove('flex'); }
         document.querySelectorAll('.service-btn').forEach(btn => btn.addEventListener('click', () => setService(btn.dataset.service)));
         document.getElementById('product-search').addEventListener('input', renderProducts); document.getElementById('category-filter').addEventListener('change', renderProducts);
         document.getElementById('clear-cart').addEventListener('click', () => { cart.clear(); renderCart(); }); document.getElementById('submit-order').addEventListener('click', submitOrder);
