@@ -40,6 +40,15 @@ Ejecuta después:
 
 Esta migración agrega ubicación, métodos de pago, cancelaciones, Supabase Storage para fotografías, estadísticas y calificaciones.
 
+### Marketplace de pagos
+
+Ejecuta después:
+
+`supabase/migrations/003_mercado_pago_marketplace.sql`
+
+Esta migración agrega la conexión OAuth privada de cada restaurante, valida que los
+pagos en línea solo se usen con una cuenta conectada y registra el identificador del pago.
+
 ## Servicios externos
 
 ### Mapas
@@ -63,10 +72,14 @@ APP_URL=https://serveyourself-app.vercel.app
 
 ### Mercado Pago
 
+Cada restaurante conecta su propia cuenta mediante OAuth de Mercado Pago Marketplace.
 Configura estos secretos en Supabase Functions:
 
 ```text
-MERCADO_PAGO_ACCESS_TOKEN
+MERCADO_PAGO_CLIENT_ID
+MERCADO_PAGO_CLIENT_SECRET
+MERCADO_PAGO_REDIRECT_URI=https://spbgledcjwtqmlqdlpyx.supabase.co/functions/v1/mercado-pago-oauth-callback
+MERCADO_PAGO_FEE_PERCENT=0
 APP_URL=https://serveyourself-app.vercel.app
 ```
 
@@ -76,9 +89,12 @@ Despliega las funciones:
 supabase functions deploy create-mercado-pago-preference
 supabase functions deploy send-order-notification
 supabase functions deploy mercado-pago-webhook --no-verify-jwt
+supabase functions deploy mercado-pago-connect-url
+supabase functions deploy mercado-pago-oauth-callback --no-verify-jwt
+supabase functions deploy mercado-pago-disconnect
 ```
 
-`SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` son proporcionadas automáticamente por Supabase Functions. Nunca coloques el Access Token de Mercado Pago, la REST API Key de OneSignal o la clave `service_role` en archivos públicos.
+`SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` son proporcionadas automáticamente por Supabase Functions. Nunca coloques Client Secret, tokens OAuth de vendedores, la App API Key de OneSignal o la clave `service_role` en archivos públicos.
 
 ## Ejecución local
 

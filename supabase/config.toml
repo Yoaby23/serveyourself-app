@@ -6,3 +6,12 @@ verify_jwt = false
 
 [functions.send-order-notification]
 verify_jwt = true
+
+[functions.mercado-pago-connect-url]
+verify_jwt = true
+
+[functions.mercado-pago-oauth-callback]
+verify_jwt = false
+
+[functions.mercado-pago-disconnect]
+verify_jwt = true

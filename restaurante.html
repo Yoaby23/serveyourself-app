@@ -148,7 +148,7 @@
             const options = [];
             if (res.payment_cash) options.push('<option value="cash">Efectivo al recoger</option>');
             if (res.payment_transfer) options.push('<option value="transfer">Transferencia bancaria</option>');
-            if (res.payment_online) options.push('<option value="mercado_pago">Mercado Pago</option>');
+            if (res.payment_online && res.mercado_pago_connected) options.push('<option value="mercado_pago">Mercado Pago</option>');
             document.getElementById('payment-method').innerHTML = options.join('');
             if (!options.length) document.getElementById('btn-confirmar').disabled = true;
             mostrarDatosTransferencia();
