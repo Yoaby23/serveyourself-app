@@ -1,0 +1,147 @@
+:root {
+    color-scheme: light;
+    --sy-orange: #f97316;
+    --sy-orange-dark: #ea580c;
+    --sy-slate: #0f172a;
+    --sy-focus: rgba(249, 115, 22, 0.22);
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    min-width: 320px;
+    background: #f8fafc;
+    -webkit-text-size-adjust: 100%;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+body {
+    margin: 0;
+    color: var(--sy-slate);
+    padding-bottom: env(safe-area-inset-bottom);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+img {
+    display: block;
+    max-width: 100%;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+    -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a[href] {
+    touch-action: manipulation;
+}
+
+button:not(:disabled),
+a[href],
+label[for],
+select {
+    cursor: pointer;
+}
+
+button {
+    border: 0;
+}
+
+button,
+a[href] {
+    transition-property: color, background-color, border-color, opacity, box-shadow, filter, transform;
+    transition-duration: 180ms;
+    transition-timing-function: ease;
+}
+
+button:hover:not(:disabled) {
+    filter: brightness(0.97);
+}
+
+button:active:not(:disabled),
+a[href]:active {
+    transform: scale(0.98);
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+button:disabled {
+    filter: grayscale(0.15);
+    transform: none;
+    box-shadow: none;
+}
+
+input,
+select,
+textarea {
+    max-width: 100%;
+    transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+a[href]:focus-visible {
+    outline: 3px solid var(--sy-focus);
+    outline-offset: 2px;
+}
+
+input:not([type='checkbox']):not([type='radio']):focus,
+select:focus,
+textarea:focus {
+    border-color: var(--sy-orange);
+    box-shadow: 0 0 0 4px var(--sy-focus);
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+    flex: 0 0 auto;
+    accent-color: var(--sy-orange);
+}
+
+::selection {
+    color: white;
+    background: var(--sy-orange);
+}
+
+@media (max-width: 360px) {
+    input,
+    select,
+    textarea {
+        font-size: 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
