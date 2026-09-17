@@ -46,6 +46,8 @@
                         <button onclick="mostrarSeccion('productos')" class="text-left px-5 py-2.5 text-sm font-black text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">🍔 Editar Menú</button>
                         <button onclick="mostrarSeccion('dashboard')" class="text-left px-5 py-2.5 text-sm font-black text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">📊 Ventas</button>
                         <button onclick="mostrarSeccion('config')" class="text-left px-5 py-2.5 text-sm font-black text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">⚙️ Configuración</button>
+                        <a href="pos.html" class="text-left px-5 py-2.5 text-sm font-black text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">🧾 Punto de venta</a>
+                        <a href="cocina.html" class="text-left px-5 py-2.5 text-sm font-black text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">👨‍🍳 Pantalla de cocina</a>
                     </div>
                     <div class="p-2 bg-slate-50 border-t border-slate-100">
                         <button onclick="cerrarSesion()" class="block text-center w-full py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors">Cerrar sesión</button>
@@ -130,6 +132,12 @@
                 </div>
                 <button class="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs">GUARDAR CONFIGURACIÓN</button>
             </form>
+            <div class="grid grid-cols-1 gap-3">
+                <a href="equipo.html" class="bg-white p-5 rounded-3xl border border-slate-100 flex items-center gap-4 hover:border-orange-300"><span class="text-3xl">🪑</span><span><b class="block text-slate-900">Mesas y personal</b><small class="text-slate-400">Crea mesas e invita meseros y cocina</small></span></a>
+                <a href="qr.html" class="bg-white p-5 rounded-3xl border border-slate-100 flex items-center gap-4 hover:border-orange-300"><span class="text-3xl">▦</span><span><b class="block text-slate-900">QR imprimible del menú</b><small class="text-slate-400">Descarga o imprime el acceso al menú público</small></span></a>
+                <a href="pos.html" class="bg-white p-5 rounded-3xl border border-slate-100 flex items-center gap-4 hover:border-orange-300"><span class="text-3xl">🧾</span><span><b class="block text-slate-900">Abrir punto de venta</b><small class="text-slate-400">Registra pedidos y cobra manualmente</small></span></a>
+                <a href="cocina.html" class="bg-white p-5 rounded-3xl border border-slate-100 flex items-center gap-4 hover:border-orange-300"><span class="text-3xl">👨‍🍳</span><span><b class="block text-slate-900">Abrir pantalla de cocina</b><small class="text-slate-400">Visualiza y avanza pedidos en tiempo real</small></span></a>
+            </div>
         </section>
     </main>
 

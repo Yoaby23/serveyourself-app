@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Punto de venta | ServeYourself</title>
+    <link rel="icon" href="logo.png" type="image/png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 min-h-screen">
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+            <div><p class="text-xs font-black text-orange-500 uppercase tracking-widest">Punto de venta</p><h1 id="restaurant-name" class="text-xl font-black">ServeYourself</h1></div>
+            <nav class="flex gap-2"><a href="cocina.html" class="px-4 py-3 rounded-xl bg-orange-50 text-orange-700 font-black text-sm">Cocina</a><a id="admin-link" href="admin.html" class="px-4 py-3 rounded-xl bg-slate-900 text-white font-black text-sm">Panel</a></nav>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 grid lg:grid-cols-[1fr_390px] gap-5">
+        <section>
+            <div class="flex flex-col sm:flex-row gap-3 mb-5">
+                <input id="product-search" type="search" placeholder="Buscar producto..." class="flex-1 p-4 rounded-2xl border border-slate-200 bg-white font-bold">
+                <select id="category-filter" class="p-4 rounded-2xl border border-slate-200 bg-white font-bold"><option value="">Todas las categorías</option></select>
+            </div>
+            <div id="product-grid" class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+        </section>
+
+        <aside class="lg:sticky lg:top-24 lg:self-start bg-white rounded-3xl border border-slate-200 shadow-sm p-5">
+            <div class="flex justify-between items-center"><h2 class="text-xl font-black">Pedido</h2><button id="clear-cart" class="text-xs font-black text-red-500">VACIAR</button></div>
+            <div class="grid grid-cols-2 gap-2 mt-4">
+                <button data-service="dine_in" class="service-btn p-3 rounded-xl bg-slate-900 text-white font-black">En mesa</button>
+                <button data-service="pickup" class="service-btn p-3 rounded-xl bg-slate-100 text-slate-600 font-black">Para llevar</button>
+            </div>
+            <label id="table-wrap" class="block mt-3 text-xs font-black text-slate-500 uppercase">Mesa
+                <select id="table-select" class="w-full mt-2 p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 normal-case"><option value="">Selecciona una mesa</option></select>
+            </label>
+            <div id="cart-items" class="my-5 space-y-3 max-h-[38vh] overflow-y-auto"><p class="text-center text-slate-400 py-8">Agrega productos al pedido.</p></div>
+            <textarea id="order-notes" maxlength="500" rows="2" placeholder="Notas para cocina" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm"></textarea>
+            <label class="block mt-3 text-xs font-black text-slate-500 uppercase">Forma de cobro
+                <select id="payment-method" class="w-full mt-2 p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 normal-case font-bold">
+                    <option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="card_terminal">Tarjeta · terminal</option>
+                </select>
+            </label>
+            <div class="flex justify-between items-end mt-5 pt-5 border-t border-slate-100"><span class="font-bold text-slate-500">Total</span><strong id="cart-total" class="text-3xl">$0.00</strong></div>
+            <button id="submit-order" class="w-full mt-4 py-4 rounded-2xl bg-orange-500 text-white font-black text-sm uppercase tracking-wider">Cobrar y enviar a cocina</button>
+        </aside>
+    </main>
+
+    <div id="success-modal" class="hidden fixed inset-0 z-50 bg-slate-950/60 p-4 items-center justify-center">
+        <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center">
+            <div class="text-5xl mb-3">✅</div><h2 class="text-2xl font-black">Venta registrada</h2><p id="success-order" class="text-slate-500 mt-2"></p>
+            <button onclick="printTicket()" class="w-full mt-5 py-4 rounded-2xl bg-slate-900 text-white font-black">IMPRIMIR TICKET</button>
+            <button onclick="closeSuccess()" class="w-full mt-2 py-4 rounded-2xl bg-orange-50 text-orange-600 font-black">NUEVA VENTA</button>
+        </div>
+    </div>
+
+    <section id="print-ticket" class="ticket-print" aria-hidden="true"></section>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app-config.js"></script><script src="app.js"></script>
+    <script>
+        const db = window.serveYourself.supabase;
+        const esc = window.serveYourself.escapeHtml;
+        let access, products = [], tables = [], serviceType = 'dine_in', lastOrder = null;
+        const cart = new Map();
+
+        async function init() {
+            access = await window.serveYourself.requireRestaurantAccess(['owner', 'manager', 'waiter']);
+            if (!access) return;
+            document.getElementById('restaurant-name').textContent = access.business_name;
+            if (access.staff_role === 'waiter') document.getElementById('admin-link').classList.add('hidden');
+            const [{ data: productData, error: productError }, { data: tableData, error: tableError }] = await Promise.all([
+                db.from('products').select('*').eq('restaurant_id', access.restaurant_id).eq('is_available', true).order('category').order('name'),
+                db.from('restaurant_tables').select('*').eq('restaurant_id', access.restaurant_id).eq('is_active', true).order('name')
+            ]);
+            if (productError || tableError) return alert('No se pudo cargar el punto de venta. Aplica primero la migración 004 en Supabase.');
+            products = productData || []; tables = tableData || [];
+            document.getElementById('category-filter').innerHTML += [...new Set(products.map(p => p.category))].map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+            document.getElementById('table-select').innerHTML += tables.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
+            if (!tables.length) setService('pickup');
+            renderProducts(); renderCart();
+        }
+
+        function renderProducts() {
+            const query = document.getElementById('product-search').value.trim().toLowerCase();
+            const category = document.getElementById('category-filter').value;
+            const visible = products.filter(p => (!category || p.category === category) && (!query || `${p.name} ${p.category}`.toLowerCase().includes(query)));
+            document.getElementById('product-grid').innerHTML = visible.length ? visible.map(p => `
+                <button onclick="addProduct('${p.id}')" class="bg-white rounded-3xl border border-slate-200 p-4 text-left hover:border-orange-400 hover:shadow-md">
+                    <img src="${esc(window.serveYourself.safeImageUrl(p.image_url) || 'logo.png')}" class="w-full h-32 object-cover rounded-2xl bg-slate-100" alt="">
+                    <p class="text-[10px] uppercase tracking-wider font-black text-orange-500 mt-3">${esc(p.category)}</p><h3 class="font-black mt-1">${esc(p.name)}</h3><p class="font-black text-lg mt-2">$${Number(p.price).toFixed(2)}</p>
+                </button>`).join('') : '<p class="text-slate-400 col-span-full text-center py-16">No hay productos disponibles.</p>';
+        }
+        function addProduct(id) { cart.set(id, (cart.get(id) || 0) + 1); renderCart(); }
+        function changeQty(id, delta) { const qty = (cart.get(id) || 0) + delta; qty > 0 ? cart.set(id, qty) : cart.delete(id); renderCart(); }
+        function renderCart() {
+            const entries = [...cart.entries()];
+            document.getElementById('cart-items').innerHTML = entries.length ? entries.map(([id, qty]) => {
+                const p = products.find(item => item.id === id); return `<div class="flex gap-3 items-center"><div class="flex-1"><p class="font-black text-sm">${esc(p.name)}</p><p class="text-xs text-slate-400">$${Number(p.price).toFixed(2)} c/u</p></div><button onclick="changeQty('${id}',-1)" class="w-9 h-9 rounded-lg bg-slate-100 font-black">−</button><b>${qty}</b><button onclick="changeQty('${id}',1)" class="w-9 h-9 rounded-lg bg-orange-100 text-orange-600 font-black">+</button></div>`;
+            }).join('') : '<p class="text-center text-slate-400 py-8">Agrega productos al pedido.</p>';
+            const total = entries.reduce((sum, [id, qty]) => sum + Number(products.find(p => p.id === id).price) * qty, 0);
+            document.getElementById('cart-total').textContent = `$${total.toFixed(2)}`;
+        }
+        function setService(type) {
+            serviceType = type;
+            document.querySelectorAll('.service-btn').forEach(btn => {
+                const active = btn.dataset.service === type;
+                btn.className = `service-btn p-3 rounded-xl font-black ${active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'}`;
+            });
+            document.getElementById('table-wrap').classList.toggle('hidden', type !== 'dine_in');
+        }
+        async function submitOrder() {
+            if (!cart.size) return alert('Agrega al menos un producto.');
+            const tableId = document.getElementById('table-select').value;
+            if (serviceType === 'dine_in' && !tableId) return alert('Selecciona una mesa.');
+            const button = document.getElementById('submit-order'); button.disabled = true; button.textContent = 'REGISTRANDO...';
+            const { data, error } = await db.rpc('create_pos_order', {
+                p_restaurant_id: access.restaurant_id,
+                p_items: [...cart].map(([id, qty]) => ({ id, qty })),
+                p_notes: document.getElementById('order-notes').value,
+                p_service_type: serviceType,
+                p_table_id: serviceType === 'dine_in' ? Number(tableId) : null,
+                p_payment_method: document.getElementById('payment-method').value
+            });
+            button.disabled = false; button.textContent = 'COBRAR Y ENVIAR A COCINA';
+            if (error) return alert(error.message);
+            lastOrder = data;
+            const table = tables.find(t => t.id === Number(lastOrder.table_id));
+            const paymentLabels = { cash: 'Efectivo', transfer: 'Transferencia', card_terminal: 'Tarjeta · terminal' };
+            document.getElementById('success-order').textContent = `Pedido #${lastOrder.id} · $${Number(lastOrder.total).toFixed(2)}`;
+            document.getElementById('print-ticket').innerHTML = `<div class="ticket"><h1>${esc(access.business_name)}</h1><p>Pedido #${lastOrder.id}</p><p>${new Date(lastOrder.created_at).toLocaleString('es-MX')}</p><hr><p><b>${serviceType === 'dine_in' ? esc(table?.name || 'Mesa') : 'Para llevar'}</b></p>${lastOrder.items.map(i => `<div class="ticket-row"><span>${Number(i.qty)} x ${esc(i.nombre)}</span><span>$${(Number(i.price) * Number(i.qty)).toFixed(2)}</span></div>`).join('')}<hr><div class="ticket-row ticket-total"><span>TOTAL</span><span>$${Number(lastOrder.total).toFixed(2)}</span></div><p>Pago: ${paymentLabels[lastOrder.payment_method]}</p>${lastOrder.notes ? `<p>Nota: ${esc(lastOrder.notes)}</p>` : ''}<p class="ticket-thanks">¡Gracias por su compra!</p></div>`;
+            document.getElementById('success-modal').classList.remove('hidden'); document.getElementById('success-modal').classList.add('flex');
+        }
+        function printTicket() { window.print(); }
+        function closeSuccess() { cart.clear(); document.getElementById('order-notes').value = ''; renderCart(); document.getElementById('success-modal').classList.add('hidden'); document.getElementById('success-modal').classList.remove('flex'); }
+        document.querySelectorAll('.service-btn').forEach(btn => btn.addEventListener('click', () => setService(btn.dataset.service)));
+        document.getElementById('product-search').addEventListener('input', renderProducts); document.getElementById('category-filter').addEventListener('change', renderProducts);
+        document.getElementById('clear-cart').addEventListener('click', () => { cart.clear(); renderCart(); }); document.getElementById('submit-order').addEventListener('click', submitOrder);
+        init();
+    </script>
+</body>
+</html>

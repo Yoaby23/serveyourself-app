@@ -40,6 +40,30 @@ window.serveYourself = {
         return user;
     },
 
+    async getRestaurantAccess() {
+        const { data, error } = await this.supabase.rpc('get_my_restaurant_access');
+        if (error) throw error;
+        return Array.isArray(data) ? (data[0] || null) : data;
+    },
+
+    async requireRestaurantAccess(allowedRoles = ['owner', 'manager', 'waiter', 'kitchen']) {
+        const user = await this.requireUser();
+        if (!user) return null;
+        try {
+            const access = await this.getRestaurantAccess();
+            if (!access || !allowedRoles.includes(access.staff_role)) {
+                alert('Tu cuenta no tiene permiso para entrar a esta sección.');
+                window.location.replace('menu.html');
+                return null;
+            }
+            return { user, ...access };
+        } catch (error) {
+            alert('No fue posible comprobar el acceso del personal: ' + error.message);
+            window.location.replace('index.html');
+            return null;
+        }
+    },
+
     async initPushNotifications(user) {
         const appId = window.APP_CONFIG?.oneSignalAppId;
         if (!appId || !user) return false;

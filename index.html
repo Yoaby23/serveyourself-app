@@ -39,6 +39,7 @@
                 <button onclick="switchView('view-roles')" class="w-full border-2 border-slate-200 text-slate-600 font-bold py-5 rounded-[2rem] hover:border-orange-200 active:scale-95 transition-all uppercase">
                     CREAR CUENTA NUEVA
                 </button>
+                <a href="unirse.html" class="block text-center text-sm font-black text-orange-500 py-3">Tengo un código de personal</a>
             </div>
         </div>
 
@@ -124,7 +125,14 @@
 
                 if (profileError) throw profileError;
 
-                window.location.href = (profile.role === 'negocio') ? 'admin.html' : 'menu.html';
+                if (profile.role === 'negocio') {
+                    window.location.href = 'admin.html';
+                    return;
+                }
+                const access = await window.serveYourself.getRestaurantAccess();
+                window.location.href = access
+                    ? (access.staff_role === 'kitchen' ? 'cocina.html' : 'pos.html')
+                    : 'menu.html';
 
             } catch (err) {
                 alert("Error: " + err.message);
