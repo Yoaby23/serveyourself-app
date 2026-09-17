@@ -145,3 +145,143 @@ input[type='radio'] {
         transition-duration: 0.01ms !important;
     }
 }
+
+.kitchen-column {
+    min-width: 0;
+    border: 1px solid #1e293b;
+    border-radius: 1.25rem;
+    overflow: hidden;
+    background: #0f172a;
+}
+
+.kitchen-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1rem;
+    font-size: 1.1rem;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.kitchen-heading b {
+    min-width: 2rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    color: #0f172a;
+    background: white;
+    text-align: center;
+}
+
+.kitchen-list {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.75rem;
+}
+
+.kitchen-card {
+    padding: 1rem;
+    border: 1px solid #334155;
+    border-radius: 1rem;
+    background: #1e293b;
+    box-shadow: 0 10px 22px rgb(0 0 0 / 18%);
+}
+
+.kitchen-card.kitchen-late {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 2px rgb(239 68 68 / 25%);
+}
+
+.kitchen-clock {
+    display: inline-block;
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.6rem;
+    color: #fbbf24;
+    background: rgb(15 23 42 / 75%);
+    font-size: 0.9rem;
+    font-weight: 900;
+}
+
+.ticket-print {
+    display: none;
+}
+
+.ticket {
+    width: 72mm;
+    margin: 0 auto;
+    color: #000;
+    background: #fff;
+    font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.ticket h1 {
+    margin: 0 0 0.35rem;
+    text-align: center;
+    font-size: 18px;
+}
+
+.ticket p {
+    margin: 0.3rem 0;
+}
+
+.ticket hr {
+    margin: 0.6rem 0;
+    border: 0;
+    border-top: 1px dashed #000;
+}
+
+.ticket-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin: 0.35rem 0;
+}
+
+.ticket-total {
+    font-size: 15px;
+    font-weight: 900;
+}
+
+.ticket-thanks {
+    padding-top: 1rem;
+    text-align: center;
+    font-weight: 900;
+}
+
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+
+    .ticket-print,
+    .ticket-print *,
+    .qr-sheet,
+    .qr-sheet * {
+        visibility: visible !important;
+    }
+
+    .ticket-print {
+        display: block;
+        position: absolute;
+        inset: 0;
+        width: 80mm;
+        padding: 4mm;
+        background: white;
+    }
+
+    .qr-sheet {
+        position: absolute;
+        inset: 0;
+        max-width: none !important;
+        min-height: 100vh !important;
+        box-shadow: none !important;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    @page {
+        margin: 5mm;
+    }
+}

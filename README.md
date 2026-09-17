@@ -10,6 +10,10 @@ Aplicación web para consultar restaurantes, ordenar comida para recoger y admin
 - Menús, carrito e historial de pedidos.
 - Panel para administrar productos y avanzar el estado de cada pedido.
 - Actualizaciones de pedidos con Supabase Realtime.
+- Punto de venta para pedidos en mesa o para llevar.
+- Cobro manual en efectivo, transferencia o tarjeta en terminal.
+- Tickets imprimibles y pantalla operativa de cocina.
+- Mesas, personal por roles y menú público con QR imprimible.
 
 ## Arquitectura
 
@@ -48,6 +52,26 @@ Ejecuta después:
 
 Esta migración agrega la conexión OAuth privada de cada restaurante, valida que los
 pagos en línea solo se usen con una cuenta conectada y registra el identificador del pago.
+
+### Punto de venta, cocina y QR
+
+Ejecuta al final:
+
+`supabase/migrations/004_pos_kitchen_qr.sql`
+
+Esta migración agrega mesas, roles de mesero/cocina/encargado, invitaciones de un solo
+uso, pedidos creados desde el POS, permisos de cocina y vistas públicas seguras para
+el menú QR. Los cobros del POS son manuales; Mercado Pago se conserva para pedidos en línea.
+
+Después de aplicarla, el propietario puede:
+
+1. Entrar a **Configuración → Mesas y personal** para crear mesas e invitaciones.
+2. Abrir `pos.html` para registrar ventas y emitir tickets.
+3. Abrir `cocina.html` en la pantalla de preparación.
+4. Entrar a **Configuración → QR imprimible del menú** para imprimir el código.
+
+El empleado debe tener una cuenta normal, iniciar sesión y abrir `unirse.html` para
+capturar el código de invitación.
 
 ## Servicios externos
 
