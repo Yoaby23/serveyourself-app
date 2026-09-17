@@ -44,7 +44,7 @@ Deno.serve(async (request) => {
         target_channel: 'push',
         headings: { es: order.restaurant_name, en: order.restaurant_name },
         contents: { es: messages[order.status], en: messages[order.status] },
-        url: `${Deno.env.get('APP_URL')}/menu.html`
+        url: `${Deno.env.get('APP_URL') ?? 'https://serveyourself-app.vercel.app'}/menu.html`
       })
     });
     if (!oneSignalResponse.ok) throw new Error('No se pudo enviar la notificación');

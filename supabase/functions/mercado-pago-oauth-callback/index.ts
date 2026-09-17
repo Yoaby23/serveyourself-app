@@ -5,7 +5,7 @@ function redirect(appUrl: string, status: string) {
 }
 
 Deno.serve(async (request) => {
-  const appUrl = Deno.env.get('APP_URL')!;
+  const appUrl = Deno.env.get('APP_URL') ?? 'https://serveyourself-app.vercel.app';
   try {
     const url = new URL(request.url);
     const code = url.searchParams.get('code');

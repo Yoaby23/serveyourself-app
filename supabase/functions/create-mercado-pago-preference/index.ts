@@ -34,7 +34,7 @@ Deno.serve(async (request) => {
 
     const adminClient = createClient(supabaseUrl, serviceKey);
     const accessToken = await getValidMercadoPagoToken(adminClient, order.restaurant_id);
-    const appUrl = Deno.env.get('APP_URL')!;
+    const appUrl = Deno.env.get('APP_URL') ?? 'https://serveyourself-app.vercel.app';
     const feePercent = Math.max(0, Math.min(100, Number(Deno.env.get('MERCADO_PAGO_FEE_PERCENT') ?? 0)));
     const marketplaceFee = Math.round(Number(order.total) * feePercent) / 100;
     const preferenceBody: Record<string, unknown> = {
