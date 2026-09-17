@@ -100,6 +100,14 @@
             <div><h2 class="text-2xl font-black text-slate-900">Configuración</h2><p class="text-sm text-slate-400 font-semibold">Pedidos, ubicación y cobros.</p></div>
             <form id="business-config-form" class="bg-white p-6 rounded-[2.5rem] border border-slate-100 space-y-5">
                 <label class="flex items-center justify-between font-bold text-sm"><span>Aceptar pedidos</span><input id="cfg-accepting" type="checkbox" class="w-5 h-5 accent-orange-500"></label>
+                <div class="border-t border-slate-100 pt-4 space-y-3">
+                    <p class="text-[10px] font-black text-slate-400 uppercase">Horario de servicio</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="text-xs font-bold text-slate-600">Apertura<input id="cfg-open-time" type="time" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl text-sm font-bold"></label>
+                        <label class="text-xs font-bold text-slate-600">Cierre<input id="cfg-close-time" type="time" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl text-sm font-bold"></label>
+                    </div>
+                    <p class="text-xs text-slate-400">Se aceptan horarios que terminan al día siguiente, por ejemplo 18:00 a 02:00. Deja ambos campos vacíos para operar sin restricción horaria.</p>
+                </div>
                 <div class="grid grid-cols-2 gap-3">
                     <input id="cfg-lat" type="number" step="any" placeholder="Latitud" class="p-4 bg-slate-50 rounded-2xl text-sm font-bold">
                     <input id="cfg-lng" type="number" step="any" placeholder="Longitud" class="p-4 bg-slate-50 rounded-2xl text-sm font-bold">
@@ -335,6 +343,8 @@
 
         function cargarConfiguracion(profile) {
             document.getElementById('cfg-accepting').checked = profile.accepting_orders ?? true;
+            document.getElementById('cfg-open-time').value = profile.open_time ? String(profile.open_time).slice(0, 5) : '';
+            document.getElementById('cfg-close-time').value = profile.close_time ? String(profile.close_time).slice(0, 5) : '';
             document.getElementById('cfg-lat').value = profile.latitude ?? '';
             document.getElementById('cfg-lng').value = profile.longitude ?? '';
             document.getElementById('cfg-cash').checked = profile.payment_cash ?? true;
@@ -375,9 +385,16 @@
         document.getElementById('business-config-form').addEventListener('submit', async event => {
             event.preventDefault();
             const clabe = document.getElementById('cfg-clabe').value.trim();
+            const openTime = document.getElementById('cfg-open-time').value;
+            const closeTime = document.getElementById('cfg-close-time').value;
             if (clabe && !/^\d{18}$/.test(clabe)) { alert('La CLABE debe tener 18 dígitos.'); return; }
+            if ((openTime && !closeTime) || (!openTime && closeTime)) {
+                alert('Indica tanto la hora de apertura como la hora de cierre, o deja ambas vacías.'); return;
+            }
             const updates = {
                 accepting_orders: document.getElementById('cfg-accepting').checked,
+                open_time: openTime || null,
+                close_time: closeTime || null,
                 latitude: Number(document.getElementById('cfg-lat').value) || null,
                 longitude: Number(document.getElementById('cfg-lng').value) || null,
                 payment_cash: document.getElementById('cfg-cash').checked,
@@ -395,6 +412,7 @@
             }
             const { error } = await _supabase.from('profiles').update(updates).eq('id', currentRestaurantId);
             if (error) { alert(error.message); return; }
+            currentProfile = { ...currentProfile, ...updates };
             alert('Configuración actualizada.');
         });
 
