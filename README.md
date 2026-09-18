@@ -149,6 +149,27 @@ y webhook para enviar el vencimiento a Mercado Pago y rechazar pagos fuera de pl
 
 ## Servicios externos
 
+### Inicio de sesión con Google, Facebook y Apple
+
+La portada usa Supabase Auth para los tres proveedores. En **Supabase → Authentication → Providers**, habilita Google, Facebook y Apple y agrega el Client ID y secreto de cada plataforma. No se usa GitHub.
+
+En **Authentication → URL Configuration**, configura:
+
+```text
+Site URL: https://serveyourself-app.vercel.app
+Redirect URL: https://serveyourself-app.vercel.app/**
+```
+
+En las consolas de Google, Meta y Apple registra como URL de retorno del proveedor:
+
+```text
+https://spbgledcjwtqmlqdlpyx.supabase.co/auth/v1/callback
+```
+
+Google necesita una aplicación OAuth web. Facebook necesita una aplicación con Facebook Login, permiso de correo y modo público para usuarios que no sean testers. Apple necesita una cuenta de Apple Developer, un Services ID y una clave; su client secret debe renovarse antes de vencer.
+
+Antes de habilitar los botones en producción, ejecuta `supabase/migrations/011_social_auth_profiles.sql` en el SQL Editor. La migración adapta los metadatos de los tres proveedores al perfil de ServeYourself.
+
 ### Mapas
 
 La vista de restaurantes usa Leaflet con los mosaicos estándar de OpenStreetMap.
