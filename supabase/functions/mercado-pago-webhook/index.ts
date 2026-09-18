@@ -36,7 +36,7 @@ Deno.serve(async (request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
     const { data: order, error: orderError } = await admin.from('orders')
-      .select('id, restaurant_id, total, payment_method, mercado_pago_preference_id')
+      .select('id, restaurant_id, total, payment_method, payment_status, payment_expires_at, created_at, status, cancellation_reason, mercado_pago_preference_id')
       .eq('id', orderId)
       .single();
     if (orderError || !order || order.payment_method !== 'mercado_pago') {
@@ -59,6 +59,14 @@ Deno.serve(async (request) => {
         : null;
       paymentId = matchingPayment?.id ? String(matchingPayment.id) : null;
       if (!searchResponse.ok || !paymentId) {
+        const expiresAt = new Date(order.payment_expires_at ?? new Date(order.created_at).getTime() + 20 * 60 * 1000).getTime();
+        if (expiresAt <= Date.now() && order.payment_status === 'pending') {
+          await admin.from('orders').update({
+            payment_status: 'expired',
+            status: 'cancelado',
+            cancellation_reason: 'Tiempo de pago agotado (20 minutos)'
+          }).eq('id', order.id).eq('payment_status', 'pending');
+        }
         console.log('No Mercado Pago payment found for order', { orderId });
         return new Response('payment not found', { status: 404, headers: corsHeaders(request) });
       }
@@ -80,6 +88,18 @@ Deno.serve(async (request) => {
       return new Response('amount mismatch', { status: 409, headers: corsHeaders(request) });
     }
 
+    const expiresAt = new Date(order.payment_expires_at ?? new Date(order.created_at).getTime() + 20 * 60 * 1000).getTime();
+    const paymentCreatedAt = new Date(payment.date_created ?? Date.now()).getTime();
+    if (paymentCreatedAt > expiresAt) {
+      await admin.from('orders').update({
+        payment_status: 'expired',
+        status: 'cancelado',
+        cancellation_reason: 'Tiempo de pago agotado (20 minutos)',
+        mercado_pago_payment_id: String(paymentId)
+      }).eq('id', order.id);
+      return new Response('payment window expired', { status: 410, headers: corsHeaders(request) });
+    }
+
     const statusMap: Record<string, string> = {
       approved: 'approved',
       rejected: 'rejected',
@@ -88,11 +108,20 @@ Deno.serve(async (request) => {
       charged_back: 'refunded'
     };
     const paymentStatus = statusMap[payment.status] ?? 'pending';
-    const { error: updateError } = await admin.from('orders')
-      .update({
+    const updates: Record<string, unknown> = {
         payment_status: paymentStatus,
         mercado_pago_payment_id: String(paymentId)
-      })
+    };
+    if (paymentStatus === 'approved' && order.cancellation_reason === 'Tiempo de pago agotado (20 minutos)') {
+      updates.status = 'pendiente';
+      updates.cancellation_reason = null;
+    }
+    if (paymentStatus === 'rejected') {
+      updates.status = 'cancelado';
+      updates.cancellation_reason = 'El pago en línea fue rechazado. Crea un pedido nuevo.';
+    }
+    const { error: updateError } = await admin.from('orders')
+      .update(updates)
       .eq('id', orderId);
     if (updateError) {
       console.error('Could not update Mercado Pago order', { orderId, paymentId, updateError });

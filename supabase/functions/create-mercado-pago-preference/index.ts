@@ -22,7 +22,7 @@ Deno.serve(async (request) => {
     const { orderId } = await request.json();
     const { data: order, error: orderError } = await userClient
       .from('orders')
-      .select('id, customer_id, restaurant_id, restaurant_name, items, total, payment_method, payment_status')
+      .select('id, customer_id, restaurant_id, restaurant_name, items, total, payment_method, payment_status, created_at, payment_expires_at')
       .eq('id', orderId)
       .single();
     if (orderError || !order || order.customer_id !== user.id) {
@@ -33,6 +33,15 @@ Deno.serve(async (request) => {
     }
 
     const adminClient = createClient(supabaseUrl, serviceKey);
+    const paymentExpiresAt = new Date(order.payment_expires_at ?? new Date(order.created_at).getTime() + 20 * 60 * 1000);
+    if (paymentExpiresAt.getTime() <= Date.now()) {
+      await adminClient.from('orders').update({
+        payment_status: 'expired',
+        status: 'cancelado',
+        cancellation_reason: 'Tiempo de pago agotado (20 minutos)'
+      }).eq('id', order.id).eq('payment_status', 'pending');
+      return jsonResponse(request, { error: 'El tiempo para pagar terminó. Crea un pedido nuevo.' }, 410);
+    }
     const accessToken = await getValidMercadoPagoToken(adminClient, order.restaurant_id);
     const appUrl = Deno.env.get('APP_URL') ?? 'https://serveyourself-app.vercel.app';
     const feePercent = Math.max(0, Math.min(100, Number(Deno.env.get('MERCADO_PAGO_FEE_PERCENT') ?? 0)));
@@ -54,7 +63,10 @@ Deno.serve(async (request) => {
         failure: `${appUrl}/menu.html?payment=failure&order_id=${encodeURIComponent(order.id)}`
       },
       auto_return: 'approved',
-      notification_url: `${supabaseUrl}/functions/v1/mercado-pago-webhook?order_id=${encodeURIComponent(order.id)}`
+      notification_url: `${supabaseUrl}/functions/v1/mercado-pago-webhook?order_id=${encodeURIComponent(order.id)}`,
+      expires: true,
+      expiration_date_from: new Date().toISOString(),
+      expiration_date_to: paymentExpiresAt.toISOString()
     };
     if (marketplaceFee > 0) preferenceBody.marketplace_fee = marketplaceFee;
     const preferenceResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {

@@ -31,13 +31,15 @@
             stations=stationData||[];products=productData||[];document.getElementById('station-filter').innerHTML += stations.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');renderAvailability();
             await loadOrders();
             db.channel(`kitchen-${access.restaurant_id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${access.restaurant_id}` }, payload => {
-                if (payload.eventType === 'INSERT' && soundEnabled) document.getElementById('new-order-sound').play().catch(() => {});
+                const eligible = payload.new?.payment_method !== 'mercado_pago' || payload.new?.payment_status === 'approved';
+                const newlyPaid = payload.eventType === 'UPDATE' && payload.new?.payment_status === 'approved' && payload.old?.payment_status !== 'approved';
+                if (soundEnabled && eligible && (payload.eventType === 'INSERT' || newlyPaid)) document.getElementById('new-order-sound').play().catch(() => {});
                 loadOrders();
             }).subscribe();
             timer = setInterval(render, 30000);
         }
         async function loadOrders() {
-            const { data, error } = await db.from('orders').select('*, restaurant_tables(name), order_station_statuses(*)').eq('restaurant_id', access.restaurant_id).in('status', ['pendiente', 'preparando', 'listo']).order('created_at');
+            const { data, error } = await db.from('orders').select('*, restaurant_tables(name), order_station_statuses(*)').eq('restaurant_id', access.restaurant_id).in('status', ['pendiente', 'preparando', 'listo']).or('payment_method.neq.mercado_pago,payment_status.eq.approved').order('created_at');
             if (error) return alert('No se pudieron cargar los pedidos: ' + error.message);
             orders = data || []; render();
         }
@@ -48,7 +50,6 @@
         function orderCard(order) {
             const stationState = activeStation === 'all' ? order.status : (order.order_station_statuses?.find(s=>s.station_key===activeStation)?.status || order.status);
             const [status, label] = nextStatus[stationState];
-            const paymentBlocked = order.payment_method === 'mercado_pago' && order.payment_status !== 'approved';
             const location = order.service_type === 'dine_in' ? (order.restaurant_tables?.name || 'Mesa') : 'Para llevar';
             const visibleItems = activeStation === 'all' ? order.items : order.items.filter(item => String(products.find(p=>p.id===item.id)?.kitchen_station_id || 'general') === activeStation);
             return `<article class="kitchen-card ${elapsed(order.created_at).includes(' h') ? 'kitchen-late' : ''}">
@@ -56,7 +57,7 @@
                 <div class="my-4 space-y-2">${visibleItems.map(item => `<div class="flex gap-3 text-lg font-extrabold"><span class="text-orange-400 min-w-8">${Number(item.qty)}×</span><span>${esc(item.nombre)}</span></div>`).join('')}</div>
                 ${order.notes ? `<div class="bg-amber-300 text-slate-950 p-3 rounded-xl font-black">📝 ${esc(order.notes)}</div>` : ''}
                 ${order.waiter_name ? `<p class="text-xs text-slate-400 mt-3">Mesero: ${esc(order.waiter_name)}</p>` : ''}
-                ${paymentBlocked ? '<p class="mt-4 p-3 rounded-xl bg-red-500/20 text-red-300 font-black">Esperando pago en línea</p>' : `<button onclick="moveOrder(${order.id}, '${status}')" class="w-full mt-4 py-4 rounded-xl ${stationState === 'listo' ? 'bg-emerald-500' : 'bg-white text-slate-950'} font-black text-base">${label}</button>`}
+                <button onclick="moveOrder(${order.id}, '${status}')" class="w-full mt-4 py-4 rounded-xl ${stationState === 'listo' ? 'bg-emerald-500' : 'bg-white text-slate-950'} font-black text-base">${label}</button>
             </article>`;
         }
         function render() {

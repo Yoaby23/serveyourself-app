@@ -230,6 +230,9 @@
             }
             cargarRestaurantes();
             activarPedidosRealtime();
+            setInterval(() => {
+                if (!document.getElementById('sec-pedidos').classList.contains('hidden')) cargarHistorialPedidos();
+            }, 30000);
         }
 
         function renderMenuOptions(role, access) {
@@ -416,6 +419,7 @@
         async function cargarHistorialPedidos() {
             const container = document.getElementById('lista-mis-pedidos');
             container.innerHTML = '<p class="text-center py-10 animate-pulse text-xs font-black text-slate-400 uppercase">Consultando...</p>';
+            await _supabase.rpc('expire_unpaid_online_orders', { p_restaurant_id: null });
             const fechaLimite = new Date(); fechaLimite.setDate(fechaLimite.getDate() - 15);
             const [{ data: pedidos, error }, { data: ratings }] = await Promise.all([
                 _supabase.from('orders').select('*').eq('customer_id', currentUser.id).gte('created_at', fechaLimite.toISOString()).order('created_at', { ascending: false }),
@@ -424,7 +428,11 @@
             if (error) { container.innerHTML = '<div class="p-10 text-center text-red-400 text-sm">No se pudo cargar el historial.</div>'; return; }
             if (!pedidos || pedidos.length === 0) { container.innerHTML = '<div class="p-10 text-center text-slate-300 italic text-sm">Sin actividad reciente.</div>'; return; }
             const ratingsByOrder = new Map((ratings || []).map(item => [item.order_id, item.rating]));
-            container.innerHTML = pedidos.map(p => `
+            container.innerHTML = pedidos.map(p => {
+                const pagoPendiente = p.payment_method === 'mercado_pago' && p.payment_status === 'pending';
+                const pagoVencido = p.payment_method === 'mercado_pago' && p.payment_status === 'expired';
+                const pagoProcesando = pagoPendiente && Boolean(p.mercado_pago_payment_id);
+                return `
                 <div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
                     <div class="flex justify-between mb-3 items-center">
                         <h4 class="font-black text-slate-900">${escapeHtml(p.restaurant_name || 'Restaurante')}</h4>
@@ -437,14 +445,20 @@
                         <span class="text-lg font-black text-slate-900">$${p.total}</span>
                         <span class="text-[9px] font-black uppercase px-3 py-1 rounded-full ${p.status === 'pendiente' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}">${escapeHtml(p.status)}</span>
                     </div>
-                    <p class="text-[10px] font-black uppercase text-slate-400 mt-3">Pago: ${escapeHtml(p.payment_method || 'cash')} · ${escapeHtml(p.payment_status || 'not_required')}</p>
-                    ${p.payment_method === 'mercado_pago' && p.payment_status === 'pending' ? `<button onclick="verificarPago('${escapeHtml(p.id)}', this)" class="w-full mt-3 py-3 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-2xl text-[10px] font-black uppercase transition-colors">Verificar pago</button>` : ''}
+                    <p class="text-[10px] font-black uppercase ${pagoVencido ? 'text-red-500' : 'text-slate-400'} mt-3">${pagoVencido ? 'Pago vencido · haz un pedido nuevo' : pagoProcesando ? 'Mercado Pago está procesando el cobro' : `Pago: ${escapeHtml(p.payment_method || 'cash')} · ${escapeHtml(p.payment_status || 'not_required')}${pagoPendiente ? ` · quedan ${tiempoRestantePago(p)}` : ''}`}</p>
+                    ${pagoPendiente ? `<button onclick="verificarPago('${escapeHtml(p.id)}', this)" class="w-full mt-3 py-3 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-2xl text-[10px] font-black uppercase transition-colors">Verificar pago</button>` : ''}
                     ${p.status === 'cancelado' && p.cancellation_reason ? `<p class="text-xs text-red-500 mt-2">Motivo: ${escapeHtml(p.cancellation_reason)}</p>` : ''}
                     ${p.status === 'pendiente' ? `<button onclick="cancelarMiPedido('${escapeHtml(p.id)}')" class="w-full mt-4 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black">CANCELAR PEDIDO</button>` : ''}
                     ${p.status === 'entregado' && !ratingsByOrder.has(p.id) ? `<button onclick="calificarPedido('${escapeHtml(p.id)}')" class="w-full mt-4 py-3 bg-amber-50 text-amber-600 rounded-2xl text-xs font-black">⭐ CALIFICAR PEDIDO</button>` : ''}
                     ${ratingsByOrder.has(p.id) ? `<p class="mt-3 text-center text-amber-500 font-black">${'★'.repeat(ratingsByOrder.get(p.id))}${'☆'.repeat(5 - ratingsByOrder.get(p.id))}</p>` : ''}
                 </div>
-            `).join('');
+            `;}).join('');
+        }
+
+        function tiempoRestantePago(order) {
+            const expiresAt = new Date(order.payment_expires_at || new Date(order.created_at).getTime() + 20 * 60000).getTime();
+            const seconds = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+            return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
         }
 
         async function cancelarMiPedido(orderId) {
@@ -495,12 +509,16 @@
 
             try {
                 let reconciled = false;
+                let paymentExpired = false;
                 if (orderId) {
                     const response = await window.serveYourself.reconcileMercadoPagoOrder(orderId, paymentId);
                     reconciled = response.ok;
+                    paymentExpired = response.status === 410;
                 }
 
-                if (paymentResult === 'success') {
+                if (paymentExpired) {
+                    mostrarEstadoPago('failure', 'Tiempo de pago agotado', 'Este pedido venció. Regresa al restaurante y crea uno nuevo.');
+                } else if (paymentResult === 'success') {
                     mostrarEstadoPago('success', reconciled ? 'Pago confirmado' : 'Pago recibido', reconciled
                         ? 'La orden ya aparece como pagada.'
                         : 'Mercado Pago notificará la confirmación en unos momentos.');
@@ -536,11 +554,14 @@
             button.innerText = 'VERIFICANDO...';
             try {
                 const response = await window.serveYourself.reconcileMercadoPagoOrder(orderId);
+                if (response.status === 410) throw new Error('El tiempo para pagar terminó. Crea un pedido nuevo.');
                 if (!response.ok) throw new Error('Mercado Pago todavía no reporta un pago aprobado.');
                 await cargarHistorialPedidos();
                 mostrarEstadoPago('success', 'Pago actualizado', 'La información del pago se sincronizó correctamente.');
             } catch (error) {
-                mostrarEstadoPago('pending', 'Pago aún pendiente', error.message);
+                await cargarHistorialPedidos();
+                const expired = error.message.includes('tiempo para pagar terminó');
+                mostrarEstadoPago(expired ? 'failure' : 'pending', expired ? 'Pedido vencido' : 'Pago aún pendiente', error.message);
             } finally {
                 button.disabled = false;
                 button.innerText = originalText;
