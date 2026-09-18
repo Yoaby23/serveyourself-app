@@ -431,6 +431,18 @@ input[type='radio'] {
         box-shadow: none !important;
     }
 
+    .report-page main,
+    .report-page main * {
+        visibility: visible !important;
+    }
+
+    .report-page main {
+        position: absolute;
+        inset: 0;
+        max-width: none !important;
+        background: white;
+    }
+
     .no-print {
         display: none !important;
     }

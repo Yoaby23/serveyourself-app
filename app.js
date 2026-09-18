@@ -49,7 +49,8 @@ window.serveYourself = {
     restaurantHome(access) {
         if (!access) return 'menu.html';
         if (access.staff_role === 'owner') return 'admin.html';
-        if (access.can_create_orders || access.can_close_accounts) return 'pos.html';
+        if (access.can_create_orders) return 'pos.html';
+        if (access.can_close_accounts) return 'caja.html';
         if (access.can_view_kitchen) return 'cocina.html';
         return 'menu.html';
     },
@@ -103,10 +104,14 @@ window.serveYourself = {
         const triggerClass = dark ? 'sy-nav-trigger sy-nav-trigger-dark' : 'sy-nav-trigger';
         const links = [];
         links.push(`<a href="${this.restaurantHome(access)}">🏠 Inicio de trabajo</a>`);
-        if (access.can_create_orders || access.can_close_accounts) links.push('<a href="pos.html">🧾 Comandas y caja</a>');
+        if (access.can_create_orders) links.push('<a href="pos.html">🧾 Comandas</a>');
+        if (access.can_close_accounts) links.push('<a href="caja.html">💵 Caja y cuentas</a>');
         if (access.can_view_kitchen) links.push('<a href="cocina.html">👨‍🍳 Cocina</a>');
         if (access.staff_role === 'owner') {
             links.push('<a href="equipo.html">👥 Personal y permisos</a>');
+            links.push('<a href="inventario.html">📦 Inventario y recetas</a>');
+            links.push('<a href="reportes.html">📊 Reportes operativos</a>');
+            links.push('<a href="clientes.html">🎟️ Clientes y promociones</a>');
             links.push('<a href="qr.html">▦ QR del menú</a>');
         }
         links.push('<a href="menu.html">🛍️ Mis pedidos personales</a>');
@@ -119,6 +124,7 @@ window.serveYourself = {
                 <div class="sy-nav-identity"><small>${this.escapeHtml(access.staff_role === 'owner' ? 'Propietario' : 'Personal')}</small><b>${this.escapeHtml(access.business_name)}</b></div>
                 <nav>${links.join('')}</nav>
                 <button type="button" onclick="window.serveYourself.enableWorkNotifications()">🔔 Activar notificaciones</button>
+                <button type="button" onclick="window.serveYourself.installApp()">📲 Instalar aplicación</button>
                 <button type="button" class="sy-nav-logout" onclick="window.serveYourself.signOut()">Cerrar sesión</button>
             </div>`;
         if (!this._restaurantMenuListener) {
@@ -148,6 +154,16 @@ window.serveYourself = {
         }
     },
 
+    async installApp() {
+        if (!this._installPrompt) {
+            alert('En iPhone usa Compartir → Agregar a inicio. En Chrome abre el menú e instala la aplicación.');
+            return;
+        }
+        this._installPrompt.prompt();
+        await this._installPrompt.userChoice;
+        this._installPrompt = null;
+    },
+
     async signOut() {
         await this.logoutPushNotifications();
         await this.supabase.auth.signOut();
@@ -166,7 +182,7 @@ window.serveYourself = {
             document.head.appendChild(script);
         }
         window.OneSignalDeferred.push(async OneSignal => {
-            await OneSignal.init({ appId, serviceWorkerPath: 'OneSignalSDKWorker.js' });
+            await OneSignal.init({ appId, serviceWorkerPath: 'sw.js' });
             await OneSignal.login(user.id);
         });
         return true;
@@ -193,3 +209,17 @@ window.serveYourself = {
         window.OneSignalDeferred.push(async OneSignal => OneSignal.logout());
     }
 };
+
+if (!document.querySelector('link[rel="manifest"]')) {
+    const manifest = document.createElement('link');
+    manifest.rel = 'manifest';
+    manifest.href = 'manifest.webmanifest';
+    document.head.appendChild(manifest);
+}
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    window.serveYourself._installPrompt = event;
+});

@@ -11,7 +11,7 @@ const team = read('equipo.html');
 const migration = read('supabase/migrations/007_staff_permissions_and_cashier.sql');
 const notification = read('supabase/functions/send-order-notification/index.ts');
 
-for (const file of ['admin.html', 'cocina.html', 'equipo.html', 'index.html', 'menu.html', 'pos.html', 'qr.html', 'unirse.html']) {
+for (const file of fs.readdirSync(new URL('..', import.meta.url)).filter(file => file.endsWith('.html'))) {
     const html = read(file);
     const inlineScripts = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)];
     inlineScripts.forEach((match, index) => {
@@ -56,10 +56,11 @@ function renderNavigation(access) {
     const window = {
         location: { origin: 'https://example.test' },
         history: { length: 1 },
+        addEventListener: () => {},
         supabase: { createClient: () => ({}) }
     };
     window.window = window;
-    vm.runInNewContext(app, { window, document, URL, fetch: () => {}, alert: () => {} });
+    vm.runInNewContext(app, { window, document, navigator: {}, location: window.location, URL, fetch: () => {}, alert: () => {} });
     window.serveYourself.renderRestaurantNavigation({ business_name: 'Restaurante prueba', ...access });
     return container.innerHTML;
 }
@@ -78,7 +79,20 @@ assert.match(kitchenNav, /cocina\.html/, 'Cocina debe acceder a su tablero');
 assert.doesNotMatch(kitchenNav, /pos\.html|equipo\.html|qr\.html/, 'Cocina no debe ver caja ni administración');
 
 const cashierNav = renderNavigation({ staff_role: 'cashier', can_create_orders: false, can_view_kitchen: false, can_close_accounts: true });
-assert.match(cashierNav, /pos\.html/, 'El capitán de caja debe acceder a cuentas pendientes');
+assert.match(cashierNav, /caja\.html/, 'El capitán de caja debe acceder a cuentas pendientes');
 assert.doesNotMatch(cashierNav, /cocina\.html|equipo\.html|qr\.html/, 'Caja no debe ver cocina ni administración');
+
+const operations = read('supabase/migrations/008_restaurant_operations_suite.sql');
+for (const feature of ['cash_shifts','order_payments','order_audit_logs','kitchen_stations','ingredients','product_recipes','coupons','reservations','loyalty_customers','invoice_requests']) {
+    assert.match(operations, new RegExp(`public\\.${feature}`), `La migración operativa debe incluir ${feature}`);
+}
+assert.match(operations, /register_pos_payment/, 'Debe soportar pagos parciales y combinados');
+assert.match(operations, /split_pos_order/, 'Debe permitir dividir una cuenta por productos');
+assert.match(operations, /deduct_order_inventory/, 'Debe descontar inventario mediante recetas');
+assert.match(read('caja.html'), /CERRAR TURNO/, 'Caja debe permitir realizar el corte');
+assert.match(read('inventario.html'), /Recetas/, 'Debe existir gestión de recetas');
+assert.match(read('reportes.html'), /EXPORTAR CSV/, 'Los reportes deben poder exportarse');
+assert.match(read('clientes.html'), /Clientes frecuentes/, 'Debe existir el programa de lealtad');
+assert.match(read('factura.html'), /Solicitar factura/, 'El cliente debe poder solicitar factura');
 
 console.log('Validación de roles, navegación, caja, cocina y notificaciones: OK');
