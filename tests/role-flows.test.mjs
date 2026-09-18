@@ -11,6 +11,7 @@ const team = read('equipo.html');
 const migration = read('supabase/migrations/007_staff_permissions_and_cashier.sql');
 const notification = read('supabase/functions/send-order-notification/index.ts');
 const index = read('index.html');
+const registration = read('registro.html');
 const socialAuth = read('supabase/migrations/011_social_auth_profiles.sql');
 
 for (const file of fs.readdirSync(new URL('..', import.meta.url)).filter(file => file.endsWith('.html'))) {
@@ -110,8 +111,11 @@ assert.match(read('supabase/functions/mercado-pago-webhook/index.ts'), /payment 
 
 for (const provider of ['google', 'facebook', 'apple']) {
     assert.match(index, new RegExp(`signInWithProvider\\('${provider}'`), `El inicio debe ofrecer acceso con ${provider}`);
+    assert.match(registration, new RegExp(`registerWithProvider\\('${provider}'`), `El registro debe ofrecer acceso con ${provider}`);
 }
 assert.match(index, /signInWithOAuth/, 'Los proveedores sociales deben usar OAuth de Supabase');
+assert.match(registration, /completeOAuthRegistration/, 'El registro debe completar el retorno de OAuth');
+assert.match(registration, /CREAR MI RESTAURANTE/, 'El registro social de negocio debe solicitar los datos del restaurante');
 assert.doesNotMatch(index, /signInWithProvider\('github'/, 'GitHub no debe mostrarse como proveedor');
 assert.match(socialAuth, /raw_user_meta_data ->> 'name'/, 'El perfil social debe aceptar el nombre del proveedor');
 assert.match(socialAuth, /raw_user_meta_data ->> 'picture'/, 'El perfil social debe aceptar la imagen del proveedor');

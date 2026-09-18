@@ -19,6 +19,26 @@
             <h2 id="form-title" class="text-3xl font-black mb-2 text-slate-900 tracking-tight">Registro</h2>
             <p id="form-subtitle" class="text-slate-500 mb-8 font-medium">Únete a la nueva forma de pedir comida.</p>
 
+            <div id="social-register" class="space-y-3" aria-label="Opciones de registro social">
+                <button type="button" data-provider="google" onclick="registerWithProvider('google', this)" class="w-full min-h-14 flex items-center justify-center gap-3 bg-white text-slate-800 font-bold px-5 py-4 rounded-2xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] transition-all">
+                    <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.4-.18-2.07H12v3.91h5.38a4.6 4.6 0 0 1-2 3.02v2.54h3.24c1.9-1.75 2.98-4.33 2.98-7.4Z"/><path fill="#34A853" d="M12 22c2.7 0 4.97-.9 6.62-2.42l-3.24-2.54c-.9.6-2.05.96-3.38.96-2.61 0-4.82-1.76-5.61-4.13H3.04v2.62A10 10 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.39 13.87A6.02 6.02 0 0 1 6.07 12c0-.65.11-1.29.32-1.87V7.51H3.04A10 10 0 0 0 2 12c0 1.61.39 3.14 1.04 4.49l3.35-2.62Z"/><path fill="#EA4335" d="M12 6c1.47 0 2.79.51 3.83 1.5l2.87-2.87A9.64 9.64 0 0 0 12 2a10 10 0 0 0-8.96 5.51l3.35 2.62C7.18 7.76 9.39 6 12 6Z"/></svg>
+                    <span>Registrarme con Google</span>
+                </button>
+                <button type="button" data-provider="facebook" onclick="registerWithProvider('facebook', this)" class="w-full min-h-14 flex items-center justify-center gap-3 bg-[#1877F2] text-white font-bold px-5 py-4 rounded-2xl border border-[#1877F2] hover:bg-[#166fe5] active:scale-[0.98] transition-all">
+                    <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.03 1.79-4.7 4.53-4.7 1.31 0 2.69.24 2.69.24v2.97h-1.52c-1.49 0-1.96.94-1.96 1.89v2.26h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07Z"/></svg>
+                    <span>Registrarme con Facebook</span>
+                </button>
+                <button type="button" data-provider="apple" onclick="registerWithProvider('apple', this)" class="w-full min-h-14 flex items-center justify-center gap-3 bg-black text-white font-bold px-5 py-4 rounded-2xl border border-black hover:bg-slate-900 active:scale-[0.98] transition-all">
+                    <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.05 12.54c-.03-3 2.45-4.46 2.56-4.53a5.48 5.48 0 0 0-4.3-2.33c-1.81-.19-3.57 1.09-4.49 1.09-.94 0-2.36-1.07-3.89-1.04a5.72 5.72 0 0 0-4.81 2.94c-2.09 3.62-.53 8.94 1.47 11.87 1 1.44 2.16 3.05 3.69 3 1.5-.06 2.06-.96 3.87-.96 1.79 0 2.32.96 3.88.92 1.61-.02 2.63-1.44 3.59-2.89a11.82 11.82 0 0 0 1.64-3.35 5.18 5.18 0 0 1-3.21-4.72ZM14.13 3.75A5.3 5.3 0 0 0 15.35 0a5.4 5.4 0 0 0-3.49 1.78 5.05 5.05 0 0 0-1.25 3.61 4.47 4.47 0 0 0 3.52-1.64Z"/></svg>
+                    <span>Registrarme con Apple</span>
+                </button>
+            </div>
+            <div id="register-divider" class="flex items-center gap-3 my-6" aria-hidden="true">
+                <span class="h-px flex-1 bg-slate-200"></span>
+                <span class="text-xs font-bold uppercase tracking-widest text-slate-400">o usa tu correo</span>
+                <span class="h-px flex-1 bg-slate-200"></span>
+            </div>
+
             <form id="ui-form" class="space-y-4">
                 <input type="text" id="reg-name" placeholder="Nombre completo" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
                 <input type="tel" id="reg-phone" placeholder="WhatsApp / Teléfono" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
@@ -60,12 +80,76 @@
         const requestedRole = params.get('role');
         const role = ['cliente', 'negocio'].includes(requestedRole) ? requestedRole : 'cliente';
         const requestedNextPage = params.get('next') === 'unirse.html' ? 'unirse.html' : null;
+        const isOAuthReturn = params.get('oauth') === '1';
 
         if (role === 'negocio') {
             document.getElementById('form-title').innerText = "Tu Restaurante";
             document.getElementById('biz-section').classList.remove('hidden');
             document.getElementById('biz-name').required = true;
             document.getElementById('biz-address').required = true;
+        }
+
+        function setProviderButtonsDisabled(disabled, activeButton = null) {
+            document.querySelectorAll('[data-provider]').forEach(button => {
+                button.disabled = disabled;
+                button.classList.toggle('opacity-60', disabled && button !== activeButton);
+            });
+            if (activeButton) {
+                activeButton.dataset.label ||= activeButton.querySelector('span').textContent;
+                activeButton.querySelector('span').textContent = disabled ? 'CONECTANDO...' : activeButton.dataset.label;
+            }
+        }
+
+        async function registerWithProvider(provider, button) {
+            if (!['google', 'facebook', 'apple'].includes(provider)) return;
+            setProviderButtonsDisabled(true, button);
+
+            const redirectUrl = new URL('registro.html', window.location.href);
+            redirectUrl.searchParams.set('role', role);
+            redirectUrl.searchParams.set('oauth', '1');
+            if (requestedNextPage) redirectUrl.searchParams.set('next', requestedNextPage);
+
+            const { error } = await _supabase.auth.signInWithOAuth({
+                provider,
+                options: { redirectTo: redirectUrl.toString() }
+            });
+
+            if (error) {
+                alert('No fue posible continuar con el proveedor: ' + error.message);
+                setProviderButtonsDisabled(false, button);
+            }
+        }
+
+        async function completeOAuthRegistration() {
+            if (!isOAuthReturn) return;
+
+            try {
+                const { data: { session }, error } = await _supabase.auth.getSession();
+                if (error) throw error;
+                if (!session?.user) throw new Error('No se recibió una sesión válida del proveedor.');
+
+                if (role !== 'negocio') {
+                    window.location.replace(requestedNextPage || 'menu.html');
+                    return;
+                }
+
+                const metadata = session.user.user_metadata || {};
+                document.getElementById('reg-name').value = metadata.full_name || metadata.name || '';
+                document.getElementById('reg-email').value = session.user.email || '';
+                document.getElementById('reg-email').required = false;
+                document.getElementById('reg-email').classList.add('hidden');
+                document.getElementById('reg-password').required = false;
+                document.getElementById('reg-password').classList.add('hidden');
+                document.getElementById('social-register').classList.add('hidden');
+                document.getElementById('register-divider').classList.add('hidden');
+                document.getElementById('form-title').textContent = 'Completa tu restaurante';
+                document.getElementById('form-subtitle').textContent = 'Tu cuenta ya está conectada. Agrega los datos del negocio para terminar.';
+                document.getElementById('btn-register').textContent = 'CREAR MI RESTAURANTE';
+                document.getElementById('ui-form').dataset.oauth = 'true';
+            } catch (error) {
+                alert('No fue posible completar el registro: ' + error.message);
+                window.location.replace(`registro.html?role=${role}`);
+            }
         }
 
         document.getElementById('ui-form').addEventListener('submit', async (e) => {
@@ -88,6 +172,20 @@
             };
 
             try {
+                if (e.currentTarget.dataset.oauth === 'true') {
+                    const { data: { user }, error: userError } = await _supabase.auth.getUser();
+                    if (userError || !user) throw userError || new Error('La sesión del proveedor terminó.');
+
+                    const { error: profileError } = await _supabase
+                        .from('profiles')
+                        .update(profileData)
+                        .eq('id', user.id);
+                    if (profileError) throw profileError;
+
+                    window.location.replace('admin.html');
+                    return;
+                }
+
                 const { data: authData, error: authError } = await _supabase.auth.signUp({
                     email,
                     password,
@@ -107,6 +205,7 @@
                 btn.disabled = false;
             }
         });
+        completeOAuthRegistration();
     </script>
 </body>
 </html>
