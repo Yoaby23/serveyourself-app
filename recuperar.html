@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="icon" href="logo.png" type="image/png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>serveyourself | Recuperar contraseña</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800;900&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .fade-in { animation: fadeIn .25s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+    <nav class="bg-white/80 backdrop-blur-md p-6 flex justify-center items-center border-b border-slate-100">
+        <div class="flex items-center gap-2">
+            <img src="logo.png" alt="S" class="w-8 h-8 object-contain">
+            <h1 class="text-xl font-black tracking-tighter text-slate-900">serve<span class="text-orange-500">yourself</span></h1>
+        </div>
+    </nav>
+
+    <main class="max-w-md mx-auto p-6 min-h-[calc(100vh-82px)] flex items-center">
+        <section class="w-full bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 fade-in">
+            <a href="index.html" class="inline-block text-orange-500 font-bold mb-6 hover:text-orange-600">← Volver al inicio</a>
+
+            <div id="request-view">
+                <div class="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center text-2xl mb-5" aria-hidden="true">🔐</div>
+                <h2 class="text-3xl font-black mb-2 text-slate-900 tracking-tight">Recupera tu acceso</h2>
+                <p class="text-slate-500 mb-7 font-medium">Escribe el correo de tu cuenta y te enviaremos un enlace seguro.</p>
+                <form id="request-form" class="space-y-4">
+                    <label for="recovery-email" class="block text-xs font-black uppercase tracking-widest text-slate-500">Correo electrónico</label>
+                    <input type="email" id="recovery-email" autocomplete="email" placeholder="tu@correo.com" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
+                    <button type="submit" id="request-button" class="w-full bg-orange-500 text-white font-black py-5 rounded-[2rem] shadow-lg shadow-orange-100 uppercase tracking-widest active:scale-95 transition-all hover:bg-orange-600">ENVIAR ENLACE</button>
+                </form>
+                <div id="sent-message" class="hidden mt-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-800 text-sm font-semibold" role="status"></div>
+            </div>
+
+            <div id="update-view" class="hidden">
+                <div class="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center text-2xl mb-5" aria-hidden="true">✓</div>
+                <h2 class="text-3xl font-black mb-2 text-slate-900 tracking-tight">Crea una contraseña nueva</h2>
+                <p class="text-slate-500 mb-7 font-medium">Debe contener al menos 8 caracteres.</p>
+                <form id="update-form" class="space-y-4">
+                    <label for="new-password" class="block text-xs font-black uppercase tracking-widest text-slate-500">Contraseña nueva</label>
+                    <input type="password" id="new-password" autocomplete="new-password" minlength="8" placeholder="Mínimo 8 caracteres" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
+                    <label for="confirm-password" class="block text-xs font-black uppercase tracking-widest text-slate-500">Confirmar contraseña</label>
+                    <input type="password" id="confirm-password" autocomplete="new-password" minlength="8" placeholder="Repite la contraseña" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
+                    <button type="submit" id="update-button" class="w-full bg-slate-900 text-white font-black py-5 rounded-[2rem] shadow-lg uppercase tracking-widest active:scale-95 transition-all hover:bg-slate-800">GUARDAR CONTRASEÑA</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app-config.js"></script>
+    <script src="app.js"></script>
+    <script>
+        const auth = window.serveYourself.supabase.auth;
+        const requestView = document.getElementById('request-view');
+        const updateView = document.getElementById('update-view');
+
+        function showUpdateView() {
+            requestView.classList.add('hidden');
+            updateView.classList.remove('hidden');
+        }
+
+        function resetRedirectUrl() {
+            const url = new URL('recuperar.html', window.location.href);
+            url.searchParams.set('mode', 'update');
+            return url.toString();
+        }
+
+        document.getElementById('request-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            const button = document.getElementById('request-button');
+            const email = document.getElementById('recovery-email').value.trim();
+            button.disabled = true;
+            button.textContent = 'ENVIANDO...';
+
+            const { error } = await auth.resetPasswordForEmail(email, { redirectTo: resetRedirectUrl() });
+            if (error) {
+                alert('No fue posible enviar el enlace: ' + error.message);
+                button.disabled = false;
+                button.textContent = 'ENVIAR ENLACE';
+                return;
+            }
+
+            const message = document.getElementById('sent-message');
+            message.textContent = 'Si existe una cuenta con ese correo, recibirás un enlace para cambiar la contraseña. Revisa también spam.';
+            message.classList.remove('hidden');
+            button.textContent = 'ENLACE ENVIADO';
+        });
+
+        document.getElementById('update-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            const password = document.getElementById('new-password').value;
+            const confirmation = document.getElementById('confirm-password').value;
+            if (password !== confirmation) {
+                alert('Las contraseñas no coinciden.');
+                return;
+            }
+
+            const button = document.getElementById('update-button');
+            button.disabled = true;
+            button.textContent = 'GUARDANDO...';
+
+            const { error } = await auth.updateUser({ password });
+            if (error) {
+                alert('No fue posible cambiar la contraseña: ' + error.message);
+                button.disabled = false;
+                button.textContent = 'GUARDAR CONTRASEÑA';
+                return;
+            }
+
+            await auth.signOut();
+            alert('Contraseña actualizada. Ya puedes iniciar sesión.');
+            window.location.replace('index.html');
+        });
+
+        auth.onAuthStateChange(event => {
+            if (event === 'PASSWORD_RECOVERY') showUpdateView();
+        });
+
+        (async function initializeRecovery() {
+            if (new URLSearchParams(window.location.search).get('mode') !== 'update') return;
+            const { data: { session } } = await auth.getSession();
+            if (session) {
+                showUpdateView();
+                return;
+            }
+            alert('El enlace de recuperación venció o ya fue utilizado. Solicita uno nuevo.');
+            window.history.replaceState({}, '', 'recuperar.html');
+        })();
+    </script>
+</body>
+</html>

@@ -170,6 +170,16 @@ Google necesita una aplicación OAuth web. Facebook necesita una aplicación con
 
 Antes de habilitar los botones en producción, ejecuta `supabase/migrations/011_social_auth_profiles.sql` en el SQL Editor. La migración adapta los metadatos de los tres proveedores al perfil de ServeYourself.
 
+### Recuperación de contraseña
+
+El acceso por correo incluye recuperación mediante Supabase Auth. Agrega esta dirección a **Authentication → URL Configuration → Redirect URLs** si no utilizas ya el comodín del dominio:
+
+```text
+https://serveyourself-app.vercel.app/recuperar.html
+```
+
+El enlace enviado por correo abre `recuperar.html`, valida la sesión temporal y permite establecer una contraseña nueva de al menos 8 caracteres.
+
 ### Mapas
 
 La vista de restaurantes usa Leaflet con los mosaicos estándar de OpenStreetMap.

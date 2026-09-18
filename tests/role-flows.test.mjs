@@ -12,6 +12,7 @@ const migration = read('supabase/migrations/007_staff_permissions_and_cashier.sq
 const notification = read('supabase/functions/send-order-notification/index.ts');
 const index = read('index.html');
 const registration = read('registro.html');
+const recovery = read('recuperar.html');
 const socialAuth = read('supabase/migrations/011_social_auth_profiles.sql');
 
 for (const file of fs.readdirSync(new URL('..', import.meta.url)).filter(file => file.endsWith('.html'))) {
@@ -120,5 +121,10 @@ assert.doesNotMatch(index, /signInWithProvider\('github'/, 'GitHub no debe mostr
 assert.match(socialAuth, /raw_user_meta_data ->> 'name'/, 'El perfil social debe aceptar el nombre del proveedor');
 assert.match(socialAuth, /raw_user_meta_data ->> 'picture'/, 'El perfil social debe aceptar la imagen del proveedor');
 assert.match(socialAuth, /split_part\(coalesce\(new\.email/, 'Apple debe tener un nombre alternativo si no comparte el nombre');
+assert.match(index, /href="recuperar\.html"/, 'El inicio de sesión debe enlazar la recuperación de contraseña');
+assert.match(recovery, /resetPasswordForEmail/, 'La recuperación debe enviar el correo mediante Supabase Auth');
+assert.match(recovery, /updateUser\(\{ password \}\)/, 'El enlace de recuperación debe permitir guardar la contraseña nueva');
+assert.match(recovery, /PASSWORD_RECOVERY/, 'La pantalla debe reconocer el evento de recuperación de Supabase');
+assert.match(recovery, /password !== confirmation/, 'Las dos contraseñas deben coincidir');
 
 console.log('Validación de roles, navegación, caja, cocina y notificaciones: OK');
