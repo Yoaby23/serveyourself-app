@@ -1,5 +1,5 @@
 -- Suite operativa: cuentas abiertas, caja, auditoria, estaciones, inventario,
--- promociones, reservaciones, lealtad y solicitudes de factura.
+-- promociones, reservaciones y lealtad.
 -- Ejecutar despues de 007_staff_permissions_and_cashier.sql.
 
 begin;
@@ -159,23 +159,6 @@ create table if not exists public.loyalty_customers (
     unique (restaurant_id, phone)
 );
 
-create table if not exists public.invoice_requests (
-    id uuid primary key default gen_random_uuid(),
-    restaurant_id uuid not null references public.profiles(id) on delete cascade,
-    order_id bigint not null references public.orders(id) on delete cascade,
-    requested_by uuid references auth.users(id) on delete set null,
-    rfc text not null,
-    legal_name text not null,
-    tax_regime text not null,
-    cfdi_use text not null,
-    postal_code text not null,
-    email text not null,
-    status text not null default 'pending' check (status in ('pending', 'issued', 'rejected')),
-    provider_reference text,
-    created_at timestamptz not null default now(),
-    unique (order_id)
-);
-
 alter table public.cash_shifts enable row level security;
 alter table public.cash_movements enable row level security;
 alter table public.order_payments enable row level security;
@@ -188,7 +171,6 @@ alter table public.inventory_movements enable row level security;
 alter table public.coupons enable row level security;
 alter table public.reservations enable row level security;
 alter table public.loyalty_customers enable row level security;
-alter table public.invoice_requests enable row level security;
 
 -- Lectura operativa; las escrituras sensibles pasan por RPC o quedan limitadas al propietario.
 drop policy if exists "cash_shifts_read" on public.cash_shifts;
@@ -231,27 +213,13 @@ using (restaurant_id = auth.uid()) with check (restaurant_id = auth.uid());
 drop policy if exists "loyalty_owner" on public.loyalty_customers;
 create policy "loyalty_owner" on public.loyalty_customers for all to authenticated
 using (restaurant_id = auth.uid()) with check (restaurant_id = auth.uid());
-drop policy if exists "invoice_participants_read" on public.invoice_requests;
-create policy "invoice_participants_read" on public.invoice_requests for select to authenticated
-using (restaurant_id = auth.uid() or requested_by = auth.uid());
-drop policy if exists "invoice_customer_insert" on public.invoice_requests;
-create policy "invoice_customer_insert" on public.invoice_requests for insert to authenticated
-with check (requested_by = auth.uid() and exists (
-    select 1 from public.orders o where o.id = order_id and o.customer_id = auth.uid()
-));
-drop policy if exists "invoice_owner_update" on public.invoice_requests;
-create policy "invoice_owner_update" on public.invoice_requests for update to authenticated
-using (restaurant_id = auth.uid()) with check (restaurant_id = auth.uid());
-
 grant select on public.cash_shifts, public.cash_movements, public.order_payments,
     public.order_audit_logs, public.kitchen_stations, public.ingredients,
     public.order_station_statuses, public.product_recipes, public.inventory_movements, public.coupons,
-    public.reservations, public.loyalty_customers, public.invoice_requests to authenticated;
+    public.reservations, public.loyalty_customers to authenticated;
 grant insert, update, delete on public.kitchen_stations, public.ingredients,
     public.product_recipes, public.coupons, public.reservations,
     public.loyalty_customers to authenticated;
-grant insert on public.invoice_requests to authenticated;
-grant update on public.invoice_requests to authenticated;
 grant usage, select on all sequences in schema public to authenticated;
 
 create or replace function public.open_cash_shift(p_restaurant_id uuid, p_opening_cash numeric)

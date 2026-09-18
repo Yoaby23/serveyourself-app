@@ -83,7 +83,7 @@ assert.match(cashierNav, /caja\.html/, 'El capitán de caja debe acceder a cuent
 assert.doesNotMatch(cashierNav, /cocina\.html|equipo\.html|qr\.html/, 'Caja no debe ver cocina ni administración');
 
 const operations = read('supabase/migrations/008_restaurant_operations_suite.sql');
-for (const feature of ['cash_shifts','order_payments','order_audit_logs','kitchen_stations','ingredients','product_recipes','coupons','reservations','loyalty_customers','invoice_requests']) {
+for (const feature of ['cash_shifts','order_payments','order_audit_logs','kitchen_stations','ingredients','product_recipes','coupons','reservations','loyalty_customers']) {
     assert.match(operations, new RegExp(`public\\.${feature}`), `La migración operativa debe incluir ${feature}`);
 }
 assert.match(operations, /register_pos_payment/, 'Debe soportar pagos parciales y combinados');
@@ -93,6 +93,5 @@ assert.match(read('caja.html'), /CERRAR TURNO/, 'Caja debe permitir realizar el 
 assert.match(read('inventario.html'), /Recetas/, 'Debe existir gestión de recetas');
 assert.match(read('reportes.html'), /EXPORTAR CSV/, 'Los reportes deben poder exportarse');
 assert.match(read('clientes.html'), /Clientes frecuentes/, 'Debe existir el programa de lealtad');
-assert.match(read('factura.html'), /Solicitar factura/, 'El cliente debe poder solicitar factura');
 
 console.log('Validación de roles, navegación, caja, cocina y notificaciones: OK');
