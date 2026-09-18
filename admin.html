@@ -211,6 +211,7 @@
             cargarPedidos();
             cargarProductos();
             activarRealtime();
+            setInterval(cargarPedidos, 30000);
         }
 
         function activarRealtime() {
@@ -237,6 +238,7 @@
 
         async function cargarPedidos() {
             const container = document.getElementById('lista-pedidos');
+            await _supabase.rpc('expire_unpaid_online_orders', { p_restaurant_id: currentRestaurantId });
             const { data: orders, error } = await _supabase.from('orders')
                 .select('*').eq('restaurant_id', currentRestaurantId).order('created_at', { ascending: false });
 
@@ -260,8 +262,12 @@
                     cancelado: ['CANCELADO', 'bg-red-100 text-red-600']
                 };
                 const [estadoTexto, estadoClase] = estados[o.status] || [String(o.status).toUpperCase(), 'bg-slate-100 text-slate-500'];
-                const pagoPendiente = o.payment_method === 'mercado_pago' && o.payment_status !== 'approved';
-                const siguienteAccion = pagoPendiente ? '' : o.status === 'pendiente'
+                const pagoPendiente = o.payment_method === 'mercado_pago' && o.payment_status === 'pending';
+                const pagoVencido = o.payment_method === 'mercado_pago' && o.payment_status === 'expired';
+                const pagoBloqueado = o.payment_method === 'mercado_pago' && o.payment_status !== 'approved';
+                const pagoProcesando = pagoPendiente && Boolean(o.mercado_pago_payment_id);
+                const venceEn = pagoPendiente && !pagoProcesando ? tiempoRestantePago(o) : '';
+                const siguienteAccion = pagoBloqueado ? '' : o.status === 'pendiente'
                     ? `<button onclick="cambiarEstado('${escapeHtml(o.id)}', 'preparando')" class="bg-slate-900 text-white px-5 py-3 rounded-2xl font-black text-[10px] uppercase">Preparar</button>`
                     : o.status === 'preparando'
                         ? `<button onclick="cambiarEstado('${escapeHtml(o.id)}', 'listo')" class="bg-green-600 text-white px-5 py-3 rounded-2xl font-black text-[10px] uppercase">Marcar listo</button>`
@@ -280,7 +286,7 @@
                             ${o.items.map(i => `<p class="text-sm font-bold text-slate-800"><span class="text-orange-500">${Number(i.qty)}x</span> ${escapeHtml(i.nombre)}</p>`).join('')}
                         </div>
                         ${o.notes ? `<div class="bg-orange-50 p-3 rounded-2xl mb-4 border border-orange-100 text-[11px] font-semibold text-slate-600 italic">"${escapeHtml(o.notes)}"</div>` : ''}
-                        <p class="text-[10px] font-black uppercase text-slate-400 mb-3">Pago: ${escapeHtml(o.payment_method || 'cash')} · ${escapeHtml(o.payment_status || 'not_required')}</p>
+                        <p class="text-[10px] font-black uppercase ${pagoVencido ? 'text-red-500' : 'text-slate-400'} mb-3">${pagoVencido ? 'Pago vencido · el cliente debe crear otro pedido' : pagoProcesando ? 'Mercado Pago está procesando el cobro' : `Pago: ${escapeHtml(o.payment_method || 'cash')} · ${escapeHtml(o.payment_status || 'not_required')}${venceEn ? ` · vence en ${venceEn}` : ''}`}</p>
                         <div class="flex items-center justify-between pt-4 border-t border-slate-50">
                             <p class="text-lg font-black text-slate-900">$${o.total}</p>
                             <div class="flex gap-2">
@@ -292,6 +298,12 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        function tiempoRestantePago(order) {
+            const expiresAt = new Date(order.payment_expires_at || new Date(order.created_at).getTime() + 20 * 60000).getTime();
+            const seconds = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+            return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
         }
 
         async function cambiarEstado(id, status) {

@@ -94,4 +94,16 @@ assert.match(read('inventario.html'), /Recetas/, 'Debe existir gestión de recet
 assert.match(read('reportes.html'), /EXPORTAR CSV/, 'Los reportes deben poder exportarse');
 assert.match(read('clientes.html'), /Clientes frecuentes/, 'Debe existir el programa de lealtad');
 
+const paymentExpiration = read('supabase/migrations/010_online_payment_expiration.sql');
+assert.match(paymentExpiration, /interval '20 minutes'/, 'El pago en línea debe vencer a los 20 minutos');
+assert.match(paymentExpiration, /payment_status = 'expired'/, 'Los pedidos sin pago deben marcarse como vencidos');
+assert.match(paymentExpiration, /protect_unpaid_online_order/, 'La base de datos debe impedir enviar pedidos sin pago a cocina');
+assert.match(paymentExpiration, /mercado_pago_payment_id is null/, 'Un pago que Mercado Pago ya procesa no debe vencer como impago');
+assert.match(read('cocina.html'), /payment_method\.neq\.mercado_pago,payment_status\.eq\.approved/, 'Cocina solo debe consultar pedidos en línea pagados');
+assert.doesNotMatch(read('cocina.html'), /Esperando pago en línea/, 'Cocina no debe mostrar tarjetas de pagos pendientes');
+assert.match(read('caja.html'), /Pagos en línea por confirmar/, 'Caja debe poder revisar pagos en línea pendientes');
+assert.match(read('menu.html'), /Pago vencido · haz un pedido nuevo/, 'El cliente debe saber que necesita crear otro pedido');
+assert.match(read('supabase/functions/create-mercado-pago-preference/index.ts'), /expiration_date_to/, 'La preferencia debe vencer junto con el pedido');
+assert.match(read('supabase/functions/mercado-pago-webhook/index.ts'), /payment window expired/, 'El webhook debe rechazar pagos creados fuera del plazo');
+
 console.log('Validación de roles, navegación, caja, cocina y notificaciones: OK');

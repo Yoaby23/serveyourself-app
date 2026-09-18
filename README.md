@@ -133,6 +133,20 @@ frecuentes. Las nuevas pantallas son:
 
 La aplicación incluye manifiesto y service worker para instalarse como PWA.
 
+### Vencimiento de pagos en línea
+
+Ejecuta después:
+
+`supabase/migrations/010_online_payment_expiration.sql`
+
+Los pedidos de Mercado Pago disponen de 20 minutos para iniciar el pago. Mientras
+el cobro no esté aprobado se muestran únicamente en administración, caja y el
+historial del cliente; nunca aparecen en cocina. Si el plazo termina sin que
+Mercado Pago registre un cobro, la orden se cancela y el cliente debe crear una nueva.
+
+Después de aplicar esta migración vuelve a desplegar las funciones de preferencia
+y webhook para enviar el vencimiento a Mercado Pago y rechazar pagos fuera de plazo.
+
 ## Servicios externos
 
 ### Mapas
