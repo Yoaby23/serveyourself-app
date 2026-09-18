@@ -44,6 +44,10 @@
             <label id="table-wrap" class="block mt-3 text-xs font-black text-slate-500 uppercase">Mesa
                 <select id="table-select" class="w-full mt-2 p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 normal-case"><option value="">Selecciona una mesa</option></select>
             </label>
+            <label class="block mt-3 text-xs font-black text-slate-500 uppercase">Cuenta
+                <select id="open-account" class="w-full mt-2 p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 normal-case"><option value="">Nueva cuenta</option></select>
+                <small class="block mt-1 normal-case font-medium text-slate-400">Selecciona una cuenta para agregar una nueva ronda.</small>
+            </label>
             <div id="cart-items" class="my-5 space-y-3 max-h-[38vh] overflow-y-auto"><p class="text-center text-slate-400 py-8">Agrega productos al pedido.</p></div>
             <textarea id="order-notes" maxlength="500" rows="2" placeholder="Notas para cocina" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm"></textarea>
             <div class="flex justify-between items-end mt-5 pt-5 border-t border-slate-100"><span class="font-bold text-slate-500">Total</span><strong id="cart-total" class="text-3xl">$0.00</strong></div>
@@ -74,8 +78,8 @@
     <script>
         const db = window.serveYourself.supabase;
         const esc = window.serveYourself.escapeHtml;
-        let access, products = [], tables = [], pendingOrders = [], serviceType = 'dine_in', lastOrder = null, resetCartOnClose = false;
-        const paymentLabels = { cash: 'Efectivo', transfer: 'Transferencia', card_terminal: 'Tarjeta · terminal' };
+        let access, products = [], tables = [], pendingOrders = [], openAccounts = [], serviceType = 'dine_in', lastOrder = null, resetCartOnClose = false;
+        const paymentLabels = { cash: 'Efectivo', transfer: 'Transferencia', card_terminal: 'Tarjeta · terminal', mixed: 'Pago combinado' };
         const cart = new Map();
 
         async function init() {
@@ -101,6 +105,7 @@
             document.getElementById('category-filter').innerHTML += [...new Set(products.map(p => p.category))].map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
             document.getElementById('table-select').innerHTML += tables.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
             if (!tables.length) setService('pickup');
+            await loadOpenAccounts();
             renderProducts(); renderCart();
             if (access.can_close_accounts) loadPendingOrders();
             if (access.can_create_orders) {
@@ -140,29 +145,34 @@
         async function submitOrder() {
             if (!cart.size) return alert('Agrega al menos un producto.');
             const tableId = document.getElementById('table-select').value;
-            if (serviceType === 'dine_in' && !tableId) return alert('Selecciona una mesa.');
+            const selectedAccount = Number(document.getElementById('open-account').value || 0);
+            if (!selectedAccount && serviceType === 'dine_in' && !tableId) return alert('Selecciona una mesa.');
             const button = document.getElementById('submit-order'); button.disabled = true; button.textContent = 'REGISTRANDO...';
-            const { data, error } = await db.rpc('create_pos_order', {
-                p_restaurant_id: access.restaurant_id,
-                p_items: [...cart].map(([id, qty]) => ({ id, qty })),
-                p_notes: document.getElementById('order-notes').value,
-                p_service_type: serviceType,
-                p_table_id: serviceType === 'dine_in' ? Number(tableId) : null,
-                p_payment_method: 'cash'
-            });
+            const request = selectedAccount
+                ? db.rpc('append_pos_order_items', { p_order_id: selectedAccount, p_items: [...cart].map(([id, qty]) => ({ id, qty })), p_notes: document.getElementById('order-notes').value })
+                : db.rpc('create_pos_order', { p_restaurant_id: access.restaurant_id, p_items: [...cart].map(([id, qty]) => ({ id, qty })), p_notes: document.getElementById('order-notes').value, p_service_type: serviceType, p_table_id: serviceType === 'dine_in' ? Number(tableId) : null, p_payment_method: 'cash' });
+            const { data, error } = await request;
             button.disabled = false; button.textContent = 'ENVIAR A COCINA';
             if (error) return alert(error.message);
             lastOrder = data;
             lastOrder.restaurant_tables = { name: tables.find(t => t.id === Number(lastOrder.table_id))?.name };
             resetCartOnClose = true;
             document.getElementById('success-order').textContent = `Pedido #${lastOrder.id} · $${Number(lastOrder.total).toFixed(2)}`;
-            document.getElementById('success-title').textContent = 'Pedido enviado a cocina';
+            document.getElementById('success-title').textContent = selectedAccount ? 'Nueva ronda enviada a cocina' : 'Pedido enviado a cocina';
             document.getElementById('print-button').textContent = access.can_close_accounts ? 'IMPRIMIR PRECUENTA' : 'IMPRIMIR COMANDA';
             document.getElementById('modal-payment-wrap').classList.toggle('hidden', !access.can_close_accounts);
             document.getElementById('charge-button').classList.toggle('hidden', !access.can_close_accounts);
             prepareTicket(lastOrder, !access.can_close_accounts);
             document.getElementById('success-modal').classList.remove('hidden'); document.getElementById('success-modal').classList.add('flex');
             if (access.can_close_accounts) loadPendingOrders();
+            loadOpenAccounts();
+        }
+        async function loadOpenAccounts() {
+            if (!access?.can_create_orders) return;
+            const { data, error } = await db.from('orders').select('id,total,table_id,service_type,waiter_name,restaurant_tables(name)').eq('restaurant_id', access.restaurant_id).eq('order_source','pos').eq('payment_status','pending').neq('status','cancelado').order('created_at');
+            if (error) return;
+            openAccounts = data || [];
+            document.getElementById('open-account').innerHTML = '<option value="">Nueva cuenta</option>' + openAccounts.map(o => `<option value="${o.id}">#${o.id} · ${o.service_type === 'dine_in' ? esc(o.restaurant_tables?.name || 'Mesa') : 'Para llevar'} · $${Number(o.total).toFixed(2)}</option>`).join('');
         }
         function prepareTicket(order, commandOnly = false) {
             const paid = order.payment_status === 'approved';
@@ -207,9 +217,12 @@
         async function chargePending(id) { const method = document.getElementById(`pending-method-${id}`).value; await chargeOrder(id, method, false); }
         async function chargeLastOrder() { if (lastOrder) await chargeOrder(lastOrder.id, document.getElementById('modal-payment-method').value, true); }
         async function chargeOrder(id, method, showModal) {
-            const { data, error } = await db.rpc('mark_pos_order_paid', { p_order_id: id, p_payment_method: method });
+            const sourceOrder = lastOrder?.id === id ? lastOrder : pendingOrders.find(item => item.id === id);
+            const { data: existingPayments } = await db.from('order_payments').select('amount').eq('order_id', id);
+            const remaining = Math.max(0, Number(sourceOrder?.total || 0) - (existingPayments || []).reduce((sum, payment) => sum + Number(payment.amount), 0));
+            const { data, error } = await db.rpc('register_pos_payment', { p_order_id: id, p_payment_method: method, p_amount: remaining, p_tip: 0 });
             if (error) return alert(error.message);
-            const previous = lastOrder?.id === id ? lastOrder : pendingOrders.find(item => item.id === id);
+            const previous = sourceOrder;
             lastOrder = { ...previous, ...data, restaurant_tables: previous?.restaurant_tables };
             prepareTicket(lastOrder); loadPendingOrders();
             if (showModal) {

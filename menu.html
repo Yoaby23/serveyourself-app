@@ -239,6 +239,7 @@
             if (role === 'negocio') html += `<button onclick="window.location.href='admin.html'" class="${linkClass}"><span>⚙</span> Mi Panel de Control</button>`;
             else if (access) html += `<button onclick="window.location.href=window.serveYourself.restaurantHome(restaurantAccess)" class="${linkClass}"><span>🏪</span> Volver al restaurante</button>`;
             html += `<button onclick="mostrarSeccion('pedidos')" class="${linkClass}"><span>🛍</span> Mis pedidos personales</button>`;
+            html += `<button onclick="window.location.href='factura.html'" class="${linkClass}"><span>🧾</span> Solicitar factura</button>`;
             container.innerHTML = html;
         }
 

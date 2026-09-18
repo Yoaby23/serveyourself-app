@@ -115,6 +115,27 @@ La validación automatizada de roles y recorridos puede ejecutarse con:
 node tests/role-flows.test.mjs
 ```
 
+### Suite operativa del restaurante
+
+Ejecuta después:
+
+`supabase/migrations/008_restaurant_operations_suite.sql`
+
+Esta migración agrega cuentas abiertas y divisibles, pagos parciales o combinados,
+propinas, turnos y cortes de caja, movimientos de efectivo, cancelaciones auditadas,
+estaciones de cocina, inventario por recetas, cupones, reservaciones, clientes
+frecuentes y solicitudes de factura. Las nuevas pantallas son:
+
+- `caja.html`: turnos, precuentas, abonos, división, traslado y cancelación.
+- `inventario.html`: ingredientes, existencias, recetas y estaciones.
+- `reportes.html`: ventas, meseros, productos, caja y exportación CSV/PDF.
+- `clientes.html`: cupones, reservaciones, lealtad y solicitudes fiscales.
+- `factura.html`: captura de datos fiscales por parte del cliente.
+
+La aplicación incluye manifiesto y service worker para instalarse como PWA. La
+emisión fiscal real requiere conectar `invoice_requests` con un PAC autorizado;
+la aplicación no genera CFDI por sí sola.
+
 ## Servicios externos
 
 ### Mapas
