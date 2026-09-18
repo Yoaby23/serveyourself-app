@@ -123,18 +123,15 @@ Ejecuta después:
 
 Esta migración agrega cuentas abiertas y divisibles, pagos parciales o combinados,
 propinas, turnos y cortes de caja, movimientos de efectivo, cancelaciones auditadas,
-estaciones de cocina, inventario por recetas, cupones, reservaciones, clientes
-frecuentes y solicitudes de factura. Las nuevas pantallas son:
+estaciones de cocina, inventario por recetas, cupones, reservaciones y clientes
+frecuentes. Las nuevas pantallas son:
 
 - `caja.html`: turnos, precuentas, abonos, división, traslado y cancelación.
 - `inventario.html`: ingredientes, existencias, recetas y estaciones.
 - `reportes.html`: ventas, meseros, productos, caja y exportación CSV/PDF.
-- `clientes.html`: cupones, reservaciones, lealtad y solicitudes fiscales.
-- `factura.html`: captura de datos fiscales por parte del cliente.
+- `clientes.html`: cupones, reservaciones y lealtad.
 
-La aplicación incluye manifiesto y service worker para instalarse como PWA. La
-emisión fiscal real requiere conectar `invoice_requests` con un PAC autorizado;
-la aplicación no genera CFDI por sí sola.
+La aplicación incluye manifiesto y service worker para instalarse como PWA.
 
 ## Servicios externos
 
