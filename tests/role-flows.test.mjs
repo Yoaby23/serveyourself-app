@@ -122,6 +122,9 @@ assert.match(socialAuth, /raw_user_meta_data ->> 'name'/, 'El perfil social debe
 assert.match(socialAuth, /raw_user_meta_data ->> 'picture'/, 'El perfil social debe aceptar la imagen del proveedor');
 assert.match(socialAuth, /split_part\(coalesce\(new\.email/, 'Apple debe tener un nombre alternativo si no comparte el nombre');
 assert.match(index, /href="recuperar\.html"/, 'El inicio de sesión debe enlazar la recuperación de contraseña');
+assert.match(index, /Pide fácil\./, 'La portada debe comunicar una experiencia sencilla para clientes');
+assert.match(index, /Atiende mejor\./, 'La portada debe representar también al equipo del restaurante');
+assert.match(index, /Pedidos · Punto de venta · Cocina/, 'La portada debe resumir las funciones principales');
 assert.match(recovery, /resetPasswordForEmail/, 'La recuperación debe enviar el correo mediante Supabase Auth');
 assert.match(recovery, /updateUser\(\{ password \}\)/, 'El enlace de recuperación debe permitir guardar la contraseña nueva');
 assert.match(recovery, /PASSWORD_RECOVERY/, 'La pantalla debe reconocer el evento de recuperación de Supabase');
