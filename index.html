@@ -1,196 +1,165 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <link rel="icon" href="logo.png" type="image/png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#fffaf5">
-    <meta name="description" content="ServeYourself conecta clientes y restaurantes con pedidos, punto de venta, cocina y caja en tiempo real.">
-    <link rel="icon" href="logo.png" type="image/png">
-    <title>ServeYourself | Pedidos y operación para restaurantes</title>
+    <title>serveyourself | Bienvenido</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="styles.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        :root { --landing-ink: #172033; --landing-muted: #64748b; --landing-orange: #f97316; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #fffaf5; color: var(--landing-ink); }
-        .landing-shell { position: relative; min-height: 100vh; overflow: hidden; }
-        .landing-shell::before, .landing-shell::after { content: ''; position: fixed; z-index: -1; border-radius: 999px; filter: blur(10px); pointer-events: none; }
-        .landing-shell::before { width: 28rem; height: 28rem; top: -14rem; right: -8rem; background: rgba(251, 146, 60, .13); }
-        .landing-shell::after { width: 22rem; height: 22rem; bottom: -12rem; left: -10rem; background: rgba(254, 215, 170, .28); }
-        .topbar { background: rgba(255, 250, 245, .82); backdrop-filter: blur(18px); }
-        .brand-mark { box-shadow: 0 10px 28px rgba(249, 115, 22, .18); }
-        .hero-grid { display: grid; grid-template-columns: minmax(0, 1.04fr) minmax(420px, .96fr); align-items: center; gap: clamp(3rem, 7vw, 7rem); }
-        .eyebrow { display: inline-flex; align-items: center; gap: .55rem; padding: .48rem .78rem; border: 1px solid #fed7aa; border-radius: 999px; color: #c2410c; background: rgba(255, 247, 237, .9); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-        .eyebrow-dot { width: .5rem; height: .5rem; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 4px rgba(34, 197, 94, .12); }
-        .hero-title { max-width: 720px; font-size: clamp(2.75rem, 5.6vw, 5.6rem); line-height: .98; letter-spacing: -.065em; }
-        .hero-title span { color: var(--landing-orange); }
-        .hero-copy { max-width: 610px; color: var(--landing-muted); font-size: clamp(1rem, 1.5vw, 1.18rem); line-height: 1.75; }
-        .primary-action { box-shadow: 0 16px 35px rgba(249, 115, 22, .24); }
-        .visual-card { position: relative; padding: .7rem; border: 1px solid rgba(255,255,255,.9); border-radius: 2.1rem; background: rgba(255,255,255,.82); box-shadow: 0 35px 80px rgba(120, 53, 15, .14); transform: rotate(1.2deg); }
-        .visual-card img { width: 100%; aspect-ratio: 1.36; object-fit: cover; border-radius: 1.55rem; }
-        .visual-float { position: absolute; display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem; border: 1px solid rgba(226,232,240,.9); border-radius: 1rem; background: rgba(255,255,255,.94); box-shadow: 0 16px 38px rgba(15,23,42,.14); backdrop-filter: blur(12px); }
-        .visual-float strong { display: block; font-size: .78rem; }
-        .visual-float small { display: block; margin-top: .12rem; color: #64748b; font-size: .66rem; }
-        .float-order { left: -2.2rem; bottom: 2.2rem; }
-        .float-kitchen { right: -1.8rem; top: 2rem; }
-        .float-icon { display: grid; place-items: center; width: 2.35rem; height: 2.35rem; border-radius: .8rem; background: #fff7ed; font-size: 1.1rem; flex: 0 0 auto; }
-        .feature-strip { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid #ffedd5; border-radius: 1.4rem; background: rgba(255,255,255,.72); }
-        .feature-item { display: flex; align-items: center; gap: .8rem; min-width: 0; padding: 1rem 1.1rem; }
-        .feature-item + .feature-item { border-left: 1px solid #ffedd5; }
-        .feature-item b { display: block; font-size: .78rem; }
-        .feature-item span:not(.float-icon) { display: block; margin-top: .12rem; color: #94a3b8; font-size: .68rem; }
-        .auth-panel { max-width: 500px; margin: 3.5rem auto 0; border: 1px solid #f1f5f9; border-radius: 2rem; background: rgba(255,255,255,.96); box-shadow: 0 28px 70px rgba(15,23,42,.1); }
-        .role-card { position: relative; overflow: hidden; }
-        .role-card::after { content: '→'; position: absolute; right: 1.35rem; top: 50%; color: #f97316; font-size: 1.3rem; font-weight: 800; transform: translateY(-50%); }
-        .fade-in { animation: fadeIn .35s ease both; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        @media (max-width: 980px) {
-            .hero-grid { grid-template-columns: 1fr; gap: 3rem; }
-            .hero-copy { max-width: 720px; }
-            .visual-wrap { width: min(100%, 660px); margin: 0 auto; }
-        }
-        @media (max-width: 640px) {
-            .hero-title { font-size: clamp(2.55rem, 13vw, 4rem); }
-            .visual-card { border-radius: 1.5rem; transform: none; }
-            .visual-card img { border-radius: 1.05rem; }
-            .visual-float { display: none; }
-            .feature-strip { grid-template-columns: 1fr; }
-            .feature-item + .feature-item { border-top: 1px solid #ffedd5; border-left: 0; }
-            .auth-panel { margin-top: 1.5rem; border-radius: 1.5rem; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800;900&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
-<body>
-    <div class="landing-shell">
-        <header class="topbar sticky top-0 z-50 border-b border-orange-100/70">
-            <nav class="max-w-7xl mx-auto px-5 sm:px-8 h-[72px] flex items-center justify-between" aria-label="Navegación principal">
-                <a href="index.html" class="flex items-center gap-3" aria-label="ServeYourself, inicio">
-                    <span class="brand-mark w-10 h-10 rounded-xl bg-white p-1.5 flex items-center justify-center"><img src="logo.png" alt="" class="w-full h-full object-contain"></span>
-                    <span class="text-lg sm:text-xl font-extrabold tracking-[-0.04em] text-slate-900">serve<span class="text-orange-500">yourself</span></span>
+<body class="bg-slate-50 min-h-screen">
+
+    <nav class="bg-white/80 backdrop-blur-md p-6 flex justify-center items-center sticky top-0 z-50 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+            <img src="logo.png" alt="S" class="w-8 h-8 object-contain">
+            <h1 class="text-xl font-black tracking-tighter text-slate-900">serve<span class="text-orange-500">yourself</span></h1>
+        </div>
+    </nav>
+
+    <main class="max-w-md mx-auto p-6 mt-4">
+        <div id="view-main" class="fade-in text-center">
+            <h2 class="text-4xl font-black mb-4 leading-tight text-slate-900">Pide y recoge <br><span class="text-orange-500">sin filas.</span></h2>
+            <div class="mb-10 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-orange-50 border-4 border-white">
+                <img src="welcome-image.png" alt="Comida lista" class="w-full">
+            </div>
+            <div class="space-y-4">
+                <button onclick="switchView('view-login')" class="w-full bg-orange-500 text-white font-black py-5 rounded-[2rem] shadow-xl shadow-orange-100 uppercase tracking-widest active:scale-95 transition-all hover:bg-orange-600">
+                    INICIAR SESIÓN
+                </button>
+                <button onclick="switchView('view-roles')" class="w-full border-2 border-slate-200 text-slate-600 font-bold py-5 rounded-[2rem] hover:border-orange-200 active:scale-95 transition-all uppercase">
+                    CREAR CUENTA NUEVA
+                </button>
+                <a href="index.html?next=unirse.html" class="block text-center text-sm font-black text-orange-500 py-3">Tengo un código de personal</a>
+            </div>
+        </div>
+
+        <div id="id-login-container" class="hidden">
+            <div id="view-login" class="fade-in bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 mt-8">
+                <button onclick="switchView('view-main')" class="text-orange-500 font-bold mb-6 hover:text-orange-600">← Volver</button>
+                <h2 class="text-3xl font-black mb-2 text-slate-900 tracking-tight">Hola de nuevo</h2>
+                <p id="login-description" class="text-slate-500 mb-8 font-medium">Ingresa tus datos para continuar.</p>
+                <form id="login-form" class="space-y-4">
+                    <input type="email" id="login-email" placeholder="Correo electrónico" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
+                    <input type="password" id="login-password" placeholder="Contraseña" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
+                    <button type="submit" id="btn-login" class="w-full bg-slate-900 text-white font-black py-5 rounded-[2rem] shadow-lg mt-6 uppercase tracking-widest active:scale-95 transition-all">
+                        ENTRAR
+                    </button>
+                </form>
+                <p id="staff-register-help" class="hidden text-center text-sm text-slate-500 mt-5">¿Aún no tienes cuenta? <a href="registro.html?role=cliente&next=unirse.html" class="font-black text-orange-500">Créala aquí</a></p>
+            </div>
+        </div>
+
+        <div id="view-roles" class="hidden fade-in mt-8">
+            <button onclick="switchView('view-main')" class="text-orange-500 font-bold mb-6 px-2 hover:text-orange-600">← Volver</button>
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-black mb-2 text-slate-900 tracking-tight">¿Cómo usarás la app?</h2>
+                <p class="text-slate-500 font-medium">Elige tu tipo de cuenta.</p>
+            </div>
+            <div class="space-y-4">
+                <a href="registro.html?role=cliente" class="block w-full bg-white p-6 rounded-[2rem] border-2 border-slate-100 hover:border-orange-500 active:scale-95 transition-all text-left shadow-sm">
+                    <h3 class="font-black text-xl text-slate-900">Quiero comprar 🍔</h3>
+                    <p class="text-slate-500 text-sm mt-1">Explorar restaurantes y hacer pedidos.</p>
                 </a>
-                <button type="button" onclick="switchView('view-login')" class="px-4 sm:px-5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs sm:text-sm font-extrabold text-slate-700 hover:border-orange-300 hover:text-orange-600">Iniciar sesión</button>
-            </nav>
-        </header>
-
-        <main>
-            <section id="view-main" class="fade-in max-w-7xl mx-auto px-5 sm:px-8 py-10 sm:py-16 lg:py-20">
-                <div class="hero-grid">
-                    <div>
-                        <div class="eyebrow"><span class="eyebrow-dot"></span>Pedidos y operación en un solo lugar</div>
-                        <h1 class="hero-title mt-6 font-extrabold text-slate-950">Tu pedido.<br>Tu restaurante.<br><span>Todo fluye.</span></h1>
-                        <p class="hero-copy mt-6">Pide desde tu celular sin hacer filas o administra ventas, comandas, cocina y caja con una plataforma hecha para trabajar rápido.</p>
-                        <div class="flex flex-col sm:flex-row gap-3 mt-8">
-                            <button type="button" onclick="openRegistration('cliente')" class="primary-action px-7 py-4 rounded-2xl bg-orange-500 text-white text-sm font-extrabold hover:bg-orange-600">Quiero pedir comida</button>
-                            <button type="button" onclick="openRegistration('negocio')" class="px-7 py-4 rounded-2xl bg-white border border-slate-200 text-slate-800 text-sm font-extrabold hover:border-orange-300">Gestionar mi restaurante</button>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-x-5 gap-y-3 mt-6 text-sm">
-                            <button type="button" onclick="switchView('view-login')" class="font-bold text-slate-600 hover:text-orange-600">Ya tengo una cuenta →</button>
-                            <a href="index.html?next=unirse.html" class="font-bold text-orange-600 hover:text-orange-700">Tengo un código de personal</a>
-                        </div>
-                    </div>
-                    <div class="visual-wrap px-0 sm:px-5 lg:px-0" aria-hidden="true">
-                        <div class="visual-card">
-                            <img src="welcome-image.png" alt="" loading="eager">
-                            <div class="visual-float float-order"><span class="float-icon">✓</span><span><strong>Pedido confirmado</strong><small>Listo para preparar</small></span></div>
-                            <div class="visual-float float-kitchen"><span class="float-icon">👨‍🍳</span><span><strong>Cocina en tiempo real</strong><small>Sin comandas perdidas</small></span></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="feature-strip mt-12 lg:mt-20">
-                    <div class="feature-item"><span class="float-icon">⚡</span><div><b>Pedidos ágiles</b><span>Compra y recoge sin filas</span></div></div>
-                    <div class="feature-item"><span class="float-icon">🧾</span><div><b>Punto de venta</b><span>Comandas, cuentas y tickets</span></div></div>
-                    <div class="feature-item"><span class="float-icon">📊</span><div><b>Control del negocio</b><span>Cocina, inventario y reportes</span></div></div>
-                </div>
-            </section>
-
-            <section id="id-login-container" class="hidden max-w-7xl mx-auto px-5 sm:px-8 pb-16">
-                <div id="view-login" class="auth-panel fade-in p-6 sm:p-9">
-                    <button type="button" onclick="switchView('view-main')" class="inline-flex items-center gap-2 text-sm text-slate-500 font-bold hover:text-orange-600">← Volver al inicio</button>
-                    <div class="mt-7">
-                        <span class="eyebrow">Acceso seguro</span>
-                        <h2 class="text-3xl sm:text-4xl font-extrabold tracking-[-0.045em] text-slate-950 mt-4">Bienvenido de nuevo</h2>
-                        <p id="login-description" class="text-slate-500 mt-2">Ingresa tus datos para continuar.</p>
-                    </div>
-                    <form id="login-form" class="space-y-4 mt-8">
-                        <div><label for="login-email" class="block text-xs font-extrabold text-slate-600 mb-2">Correo electrónico</label><input type="email" id="login-email" autocomplete="email" placeholder="nombre@correo.com" class="w-full p-4 bg-slate-50 rounded-xl border border-slate-200 outline-none focus:bg-white font-medium" required></div>
-                        <div><label for="login-password" class="block text-xs font-extrabold text-slate-600 mb-2">Contraseña</label><input type="password" id="login-password" autocomplete="current-password" placeholder="Tu contraseña" class="w-full p-4 bg-slate-50 rounded-xl border border-slate-200 outline-none focus:bg-white font-medium" required></div>
-                        <button type="submit" id="btn-login" class="w-full bg-slate-950 text-white font-extrabold py-4 rounded-xl shadow-lg mt-2 hover:bg-slate-800">Entrar a mi cuenta</button>
-                    </form>
-                    <button type="button" onclick="switchView('view-roles')" class="w-full text-center text-sm text-slate-500 mt-6 font-semibold">¿No tienes una cuenta? <span class="text-orange-600 font-extrabold">Regístrate</span></button>
-                    <p id="staff-register-help" class="hidden text-center text-sm text-slate-500 mt-4">¿Aún no tienes cuenta? <a href="registro.html?role=cliente&next=unirse.html" class="font-extrabold text-orange-600">Créala aquí</a></p>
-                </div>
-            </section>
-
-            <section id="view-roles" class="hidden fade-in max-w-3xl mx-auto px-5 sm:px-8 pb-16 pt-8">
-                <button type="button" onclick="switchView('view-main')" class="inline-flex items-center gap-2 text-sm text-slate-500 font-bold hover:text-orange-600">← Volver al inicio</button>
-                <div class="text-center mt-8 mb-8"><span class="eyebrow">Crea tu cuenta</span><h2 class="text-3xl sm:text-4xl font-extrabold tracking-[-0.045em] text-slate-950 mt-4">¿Cómo usarás ServeYourself?</h2><p class="text-slate-500 mt-2">Elige una opción para personalizar tu experiencia.</p></div>
-                <div class="grid sm:grid-cols-2 gap-4">
-                    <a href="registro.html?role=cliente" class="role-card block bg-white p-6 pr-14 rounded-2xl border border-slate-200 hover:border-orange-400 hover:shadow-xl"><span class="float-icon">🍔</span><h3 class="font-extrabold text-lg text-slate-950 mt-5">Quiero hacer pedidos</h3><p class="text-slate-500 text-sm mt-2 leading-6">Descubre restaurantes, ordena y consulta el estado de tu pedido.</p></a>
-                    <a href="registro.html?role=negocio" class="role-card block bg-white p-6 pr-14 rounded-2xl border border-slate-200 hover:border-orange-400 hover:shadow-xl"><span class="float-icon">🏪</span><h3 class="font-extrabold text-lg text-slate-950 mt-5">Tengo un restaurante</h3><p class="text-slate-500 text-sm mt-2 leading-6">Configura tu menú, personal, punto de venta, cocina y caja.</p></a>
-                </div>
-                <p class="text-center text-sm text-slate-500 mt-7">¿Eres parte del personal? <a href="index.html?next=unirse.html" class="font-extrabold text-orange-600">Usa tu código de invitación</a></p>
-            </section>
-        </main>
-
-        <footer class="max-w-7xl mx-auto px-5 sm:px-8 py-8 border-t border-orange-100 text-center sm:text-left text-xs text-slate-400">
-            <div class="flex flex-col sm:flex-row items-center justify-between gap-3"><span>© 2026 ServeYourself</span><span>Pedidos simples. Restaurantes mejor conectados.</span></div>
-        </footer>
-    </div>
+                <a href="registro.html?role=negocio" class="block w-full bg-white p-6 rounded-[2rem] border-2 border-slate-100 hover:border-orange-500 active:scale-95 transition-all text-left shadow-sm">
+                    <h3 class="font-black text-xl text-slate-900">Tengo un negocio 🏪</h3>
+                    <p class="text-slate-500 text-sm mt-1">Subir mi menú y recibir pedidos.</p>
+                </a>
+            </div>
+        </div>
+    </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app-config.js"></script>
     <script src="app.js"></script>
-    <script>
-        const requestedNextPage = new URLSearchParams(window.location.search).get('next') === 'unirse.html' ? 'unirse.html' : null;
 
+    <script>
+        const requestedNextPage = new URLSearchParams(window.location.search).get('next') === 'unirse.html'
+            ? 'unirse.html'
+            : null;
+
+        // Función para cambiar de vista
         function switchView(viewId) {
             document.getElementById('view-main').classList.add('hidden');
             document.getElementById('id-login-container').classList.add('hidden');
             document.getElementById('view-roles').classList.add('hidden');
-            if (viewId === 'view-login') {
+            
+            if(viewId === 'view-login') {
                 document.getElementById('id-login-container').classList.remove('hidden');
-                setTimeout(() => document.getElementById('login-email').focus(), 80);
             } else {
                 document.getElementById(viewId).classList.remove('hidden');
             }
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-
-        function openRegistration(role) { window.location.href = `registro.html?role=${role}`; }
 
         async function openRequestedView() {
             if (!requestedNextPage) return;
             const { data: { user } } = await window.serveYourself.supabase.auth.getUser();
-            if (user) { window.location.replace(requestedNextPage); return; }
+            if (user) {
+                window.location.replace(requestedNextPage);
+                return;
+            }
             document.getElementById('login-description').textContent = 'Primero inicia sesión; después podrás capturar tu código de personal.';
             document.getElementById('staff-register-help').classList.remove('hidden');
             switchView('view-login');
         }
 
-        document.getElementById('login-form').addEventListener('submit', async function (event) {
-            event.preventDefault();
+        // Manejo del Login
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
-            const button = document.getElementById('btn-login');
-            button.textContent = 'Ingresando…';
-            button.disabled = true;
+            const btn = document.getElementById('btn-login');
+
+            btn.innerText = "CARGANDO...";
+            btn.disabled = true;
+
             try {
-                const database = window.serveYourself.supabase;
-                const { data, error } = await database.auth.signInWithPassword({ email, password });
+                // LLAMADA DIRECTA SIN VARIABLES EXTERNAS
+                const _supabase = window.serveYourself.supabase;
+
+                const { data, error } = await _supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+
                 if (error) throw error;
-                if (requestedNextPage) { window.location.href = requestedNextPage; return; }
-                const { data: profile, error: profileError } = await database.from('profiles').select('role').eq('id', data.user.id).single();
+
+                if (requestedNextPage) {
+                    window.location.href = requestedNextPage;
+                    return;
+                }
+
+                const { data: profile, error: profileError } = await _supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', data.user.id)
+                    .single();
+
                 if (profileError) throw profileError;
-                if (profile.role === 'negocio') { window.location.href = 'admin.html'; return; }
+
+                if (profile.role === 'negocio') {
+                    window.location.href = 'admin.html';
+                    return;
+                }
                 const access = await window.serveYourself.getRestaurantAccess();
                 window.location.href = window.serveYourself.restaurantHome(access);
-            } catch (error) {
-                alert(`No se pudo iniciar sesión: ${error.message}`);
-                button.textContent = 'Entrar a mi cuenta';
-                button.disabled = false;
+
+            } catch (err) {
+                alert("Error: " + err.message);
+                btn.innerText = "ENTRAR";
+                btn.disabled = false;
             }
         });
-
         openRequestedView();
     </script>
 </body>
