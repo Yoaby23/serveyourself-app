@@ -154,6 +154,82 @@ input[type='radio'] {
     background: #0f172a;
 }
 
+.kitchen-screen {
+    width: 100%;
+    overflow-x: hidden;
+}
+
+.kitchen-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.kitchen-identity,
+.kitchen-toolbar {
+    min-width: 0;
+}
+
+.kitchen-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.kitchen-toolbar select,
+.kitchen-toolbar button {
+    min-width: 0;
+}
+
+@media (max-width: 767px) {
+    .kitchen-header {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+    }
+
+    .kitchen-identity {
+        grid-column: 1;
+        overflow: hidden;
+    }
+
+    .kitchen-identity h1 {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .kitchen-navigation {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    .kitchen-toolbar {
+        display: grid;
+        grid-column: 1 / -1;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        width: 100%;
+    }
+
+    .kitchen-toolbar select {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+
+    .kitchen-toolbar button {
+        width: 100%;
+        min-height: 3rem;
+        padding-right: 0.5rem;
+        padding-left: 0.5rem;
+        white-space: normal;
+    }
+
+    .kitchen-column {
+        width: 100%;
+    }
+}
+
 .kitchen-heading {
     display: flex;
     align-items: center;
