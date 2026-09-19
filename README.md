@@ -164,9 +164,9 @@ Ejecuta después:
 
 `supabase/migrations/013_pending_kitchen_queue.sql`
 
-Esta corrección recupera las comandas activas que quedaron ocultas y acumula todas
-las rondas pendientes de una cuenta en cocina. La cola se limpia únicamente cuando
-la comanda completa se marca como entregada; el historial de la cuenta se conserva.
+Esta corrección recupera de forma segura las comandas activas sin entregas anteriores
+y acumula todas las rondas pendientes de una cuenta en cocina. La cola se limpia
+cuando la comanda completa se marca como entregada; el historial se conserva.
 
 ## Servicios externos
 

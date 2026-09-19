@@ -7,6 +7,8 @@ set kitchen_items=items
 where order_source='pos'
   and status in ('pendiente','preparando')
   and payment_status='pending'
+  and ready_at is null
+  and delivered_at is null
   and coalesce(jsonb_array_length(kitchen_items),0) < jsonb_array_length(items);
 
 -- Cada ronda nueva se suma a la cola visible de cocina, sin reemplazar las
@@ -28,7 +30,7 @@ begin
     end loop;
     update public.orders set
       items=items||v_added,
-      kitchen_items=coalesce(kitchen_items,'[]'::jsonb)||v_added,
+      kitchen_items=case when v_order.status in ('listo','entregado') then v_added else coalesce(kitchen_items,'[]'::jsonb)||v_added end,
       total=total+v_total,
       notes=coalesce(nullif(left(trim(coalesce(p_notes,'')),500),''),notes),
       status='pendiente',payment_status='pending',ready_at=null,delivered_at=null,closed_at=null
