@@ -166,7 +166,7 @@
             }
 
             if (profileError) throw profileError;
-            if (!profile) throw new Error('No fue posible crear tu perfil. Intenta iniciar sesión nuevamente.');
+            if (!profile) profile = await window.serveYourself.getOrCreateProfile(user);
 
             if (profile.role === 'negocio') {
                 window.location.replace('admin.html');
