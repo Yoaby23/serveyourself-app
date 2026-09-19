@@ -6,9 +6,10 @@
     <script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="styles.css">
 </head>
 <body class="bg-slate-950 text-white min-h-screen kitchen-screen">
-    <header class="sticky top-0 z-30 bg-slate-950/95 border-b border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-        <div><p class="text-xs font-black text-orange-400 uppercase tracking-widest">Pantalla de cocina</p><h1 id="restaurant-name" class="text-xl font-black">ServeYourself</h1></div>
-        <div class="flex items-center gap-2"><select id="station-filter" class="px-3 py-3 rounded-xl bg-slate-800 text-white font-black text-sm"><option value="all">Todas las estaciones</option><option value="general">General</option></select><button onclick="toggleAvailability()" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">Disponibilidad</button><button id="sound-button" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">🔇 Activar sonido</button><div id="restaurant-nav" class="sy-restaurant-nav"></div></div>
+    <header class="kitchen-header sticky top-0 z-30 bg-slate-950/95 border-b border-slate-800 px-4 py-3">
+        <div class="kitchen-identity"><p class="text-xs font-black text-orange-400 uppercase tracking-widest">Pantalla de cocina</p><h1 id="restaurant-name" class="text-xl font-black">ServeYourself</h1></div>
+        <div class="kitchen-toolbar"><select id="station-filter" class="px-3 py-3 rounded-xl bg-slate-800 text-white font-black text-sm"><option value="all">Todas las estaciones</option><option value="general">General</option></select><button onclick="toggleAvailability()" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">Disponibilidad</button><button id="sound-button" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">🔇 Activar sonido</button></div>
+        <div id="restaurant-nav" class="sy-restaurant-nav kitchen-navigation"></div>
     </header>
     <main class="p-3 grid xl:grid-cols-3 gap-3 min-h-[calc(100vh-76px)]">
         <section class="kitchen-column"><div class="kitchen-heading bg-orange-500"><span>Nuevos</span><b id="count-pendiente">0</b></div><div id="orders-pendiente" class="kitchen-list"></div></section>
