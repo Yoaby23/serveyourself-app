@@ -2,7 +2,14 @@ const SUPABASE_URL = 'https://spbgledcjwtqmlqdlpyx.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY';
 
 window.serveYourself = {
-    supabase: window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY),
+    supabase: window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+            storage: window.localStorage
+        }
+    }),
 
     escapeHtml(value) {
         return String(value ?? '').replace(/[&<>'"]/g, character => ({
