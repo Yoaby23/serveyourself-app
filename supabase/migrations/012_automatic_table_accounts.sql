@@ -22,7 +22,7 @@ begin
         v_added:=v_added||jsonb_build_array(jsonb_build_object('id',v_product.id,'nombre',v_product.name,'price',v_product.price,'qty',v_qty,'station_id',v_product.kitchen_station_id));
         v_total:=v_total+v_product.price*v_qty;
     end loop;
-    update public.orders set items=items||v_added,kitchen_items=coalesce(kitchen_items,'[]'::jsonb)||v_added,total=total+v_total,notes=coalesce(nullif(left(trim(coalesce(p_notes,'')),500),''),notes),status='pendiente',payment_status='pending',ready_at=null,delivered_at=null,closed_at=null
+    update public.orders set items=items||v_added,kitchen_items=case when v_order.status in ('listo','entregado') then v_added else coalesce(kitchen_items,'[]'::jsonb)||v_added end,total=total+v_total,notes=coalesce(nullif(left(trim(coalesce(p_notes,'')),500),''),notes),status='pendiente',payment_status='pending',ready_at=null,delivered_at=null,closed_at=null
     where id=p_order_id returning * into v_order;
     update public.order_station_statuses
     set status='pendiente',updated_at=now()
