@@ -224,6 +224,30 @@
             return true;
         }
 
+        async function resumeSavedSession() {
+            const { data: { session }, error } = await window.serveYourself.supabase.auth.getSession();
+            if (error) throw error;
+            if (!session?.user) return false;
+            await redirectSignedInUser(session.user);
+            return true;
+        }
+
+        async function initializeAccess() {
+            const handledOAuth = await completeOAuthLogin();
+            if (handledOAuth) return;
+
+            if (requestedNextPage) {
+                await openRequestedView();
+                return;
+            }
+
+            try {
+                await resumeSavedSession();
+            } catch (error) {
+                console.warn('No fue posible reanudar la sesión guardada:', error.message);
+            }
+        }
+
         // Manejo del Login
         document.getElementById('login-form').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -254,9 +278,7 @@
                 btn.disabled = false;
             }
         });
-        completeOAuthLogin().then(handled => {
-            if (!handled) openRequestedView();
-        });
+        initializeAccess();
     </script>
 </body>
 </html>
