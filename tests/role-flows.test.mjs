@@ -127,8 +127,12 @@ const automaticAccounts = read('supabase/migrations/012_automatic_table_accounts
 assert.match(automaticAccounts, /pg_advisory_xact_lock/, 'La cuenta automática por mesa debe evitar carreras entre meseros');
 assert.match(automaticAccounts, /payment_status='pending' and status<>'cancelado'/, 'Solo debe reutilizar cuentas realmente abiertas');
 assert.match(automaticAccounts, /was_appended/, 'El POS debe saber cuándo agregó una ronda a una cuenta existente');
-assert.match(automaticAccounts, /kitchen_items=v_added/, 'Cocina debe recibir solo los productos de la ronda nueva');
-assert.match(kitchen, /order\.kitchen_items \|\| order\.items/, 'Cocina no debe volver a preparar productos de rondas anteriores');
+assert.match(automaticAccounts, /kitchen_items=coalesce\(kitchen_items,'\[\]'::jsonb\)\|\|v_added/, 'Cocina debe conservar todas las rondas pendientes');
+assert.match(kitchen, /order\.kitchen_items \|\| order\.items/, 'Cocina debe usar la cola de productos pendientes');
+const pendingKitchenQueue = read('supabase/migrations/013_pending_kitchen_queue.sql');
+assert.match(pendingKitchenQueue, /set kitchen_items=items[\s\S]*status in \('pendiente','preparando'\)/, 'La migracion debe recuperar comandas activas ocultadas');
+assert.match(pendingKitchenQueue, /kitchen_items=coalesce\(kitchen_items,'\[\]'::jsonb\)\|\|v_added/, 'Las rondas nuevas deben acumularse en la cola de cocina');
+assert.match(pendingKitchenQueue, /kitchen_items=case when p_status='entregado' then '\[\]'::jsonb else kitchen_items end/, 'La cola debe limpiarse al entregar la comanda');
 assert.match(kitchen, /5000/, 'Cocina debe sincronizarse aunque Realtime se interrumpa en la PWA');
 assert.match(kitchen, /visibilitychange/, 'Cocina debe actualizarse al volver a primer plano');
 
