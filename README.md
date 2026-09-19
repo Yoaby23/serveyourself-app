@@ -168,6 +168,17 @@ Esta corrección recupera de forma segura las comandas activas sin entregas ante
 y acumula todas las rondas pendientes de una cuenta en cocina. La cola se limpia
 cuando la comanda completa se marca como entregada; el historial se conserva.
 
+### Comandas independientes por ronda
+
+Ejecuta después:
+
+`supabase/migrations/014_independent_kitchen_tickets.sql`
+
+La mesa conserva una sola cuenta para caja, pero cada envío del mesero crea una
+comanda independiente en cocina. Una ronda nueva permanece en **Nuevos** y no cambia
+el estado de otra ronda que ya esté **Preparando** o **Lista**. Las notificaciones al
+mesero también identifican la comanda y la cuenta correspondientes.
+
 ## Servicios externos
 
 ### Inicio de sesión con Google, Facebook y Apple

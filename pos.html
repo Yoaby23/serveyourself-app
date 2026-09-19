@@ -192,15 +192,15 @@
         }
         async function loadReadyOrders() {
             if (!access?.can_create_orders) return;
-            const { data, error } = await db.from('orders').select('id, table_id, service_type, created_at, ready_at, restaurant_tables(name)').eq('restaurant_id', access.restaurant_id).eq('created_by', access.user.id).eq('status', 'listo').order('ready_at');
+            const { data, error } = await db.from('kitchen_tickets').select('id,order_id,table_id,service_type,created_at,ready_at').eq('restaurant_id', access.restaurant_id).eq('created_by', access.user.id).eq('status', 'listo').order('ready_at');
             if (error) return;
             const readyOrders = data || [];
             document.getElementById('ready-panel').classList.toggle('hidden', !readyOrders.length);
             document.getElementById('ready-count').textContent = readyOrders.length;
-            document.getElementById('ready-orders').innerHTML = readyOrders.map(order => `<article class="bg-white border border-green-200 rounded-2xl p-4"><div class="flex items-center justify-between gap-3"><div><b class="text-lg">Pedido #${order.id}</b><p class="text-sm text-green-700 font-bold">${order.service_type === 'dine_in' ? esc(order.restaurant_tables?.name || 'Mesa') : 'Para llevar'}</p></div><span class="text-2xl">✅</span></div></article>`).join('');
+            document.getElementById('ready-orders').innerHTML = readyOrders.map(order => `<article class="bg-white border border-green-200 rounded-2xl p-4"><div class="flex items-center justify-between gap-3"><div><b class="text-lg">Comanda #${order.id}</b><p class="text-xs text-slate-500">Cuenta #${order.order_id}</p><p class="text-sm text-green-700 font-bold">${order.service_type === 'dine_in' ? esc(tables.find(table=>Number(table.id)===Number(order.table_id))?.name || 'Mesa') : 'Para llevar'}</p></div><span class="text-2xl">✅</span></div></article>`).join('');
         }
         function activateWaiterRealtime() {
-            db.channel(`waiter-ready-${access.user.id}`).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${access.restaurant_id}` }, payload => {
+            db.channel(`waiter-ready-${access.user.id}`).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kitchen_tickets', filter: `restaurant_id=eq.${access.restaurant_id}` }, payload => {
                 if (payload.new.created_by === access.user.id && payload.new.status === 'listo' && payload.old.status !== 'listo') {
                     showReadyAlert(payload.new);
                 }
@@ -209,7 +209,7 @@
         }
         function showReadyAlert(order) {
             const alertBox = document.getElementById('ready-alert');
-            alertBox.innerHTML = `<p class="text-xs font-black uppercase tracking-wider">Pedido listo</p><p class="font-black text-lg mt-1">La comanda #${order.id} está lista para entregar.</p>`;
+            alertBox.innerHTML = `<p class="text-xs font-black uppercase tracking-wider">Pedido listo</p><p class="font-black text-lg mt-1">La comanda #${order.id} de la cuenta #${order.order_id} está lista para entregar.</p>`;
             alertBox.classList.remove('hidden');
             document.getElementById('ready-sound').play().catch(() => {});
             setTimeout(() => alertBox.classList.add('hidden'), 8000);

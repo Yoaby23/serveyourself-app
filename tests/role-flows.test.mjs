@@ -33,7 +33,7 @@ assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
 assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v4/, 'La PWA debe renovar su caché para recibir los arreglos operativos');
+assert.match(read('sw.js'), /serveyourself-shell-v5/, 'La PWA debe renovar su caché para recibir las comandas independientes');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
@@ -59,7 +59,7 @@ assert.match(team, /set_staff_permissions/, 'El dueño debe poder editar permiso
 assert.match(pos, /waiter-ready-/, 'El mesero debe escuchar comandas listas en tiempo real');
 assert.match(pos, /Mis comandas listas/, 'El mesero debe ver comandas listas dentro del POS');
 assert.match(notification, /created_by/, 'La notificación debe dirigirse al creador de la comanda');
-assert.match(notification, /La comanda #\$\{order\.id\} está lista/, 'La notificación debe indicar qué comanda está lista');
+assert.match(notification, /ticket\?\.id \?\? order\.id/, 'La notificación debe indicar qué comanda independiente está lista');
 
 function renderNavigation(access) {
     const container = { innerHTML: '', contains: () => false };
@@ -116,7 +116,7 @@ assert.match(paymentExpiration, /interval '20 minutes'/, 'El pago en línea debe
 assert.match(paymentExpiration, /payment_status = 'expired'/, 'Los pedidos sin pago deben marcarse como vencidos');
 assert.match(paymentExpiration, /protect_unpaid_online_order/, 'La base de datos debe impedir enviar pedidos sin pago a cocina');
 assert.match(paymentExpiration, /mercado_pago_payment_id is null/, 'Un pago que Mercado Pago ya procesa no debe vencer como impago');
-assert.match(read('cocina.html'), /payment_method\.neq\.mercado_pago,payment_status\.eq\.approved/, 'Cocina solo debe consultar pedidos en línea pagados');
+assert.match(read('supabase/migrations/014_independent_kitchen_tickets.sql'), /payment_method<>'mercado_pago' or o\.payment_status='approved'/, 'Solo deben convertirse en comandas los pedidos en línea pagados');
 assert.doesNotMatch(read('cocina.html'), /Esperando pago en línea/, 'Cocina no debe mostrar tarjetas de pagos pendientes');
 assert.match(read('caja.html'), /Pagos en línea por confirmar/, 'Caja debe poder revisar pagos en línea pendientes');
 assert.match(read('menu.html'), /Pago vencido · haz un pedido nuevo/, 'El cliente debe saber que necesita crear otro pedido');
@@ -128,11 +128,18 @@ assert.match(automaticAccounts, /pg_advisory_xact_lock/, 'La cuenta automática 
 assert.match(automaticAccounts, /payment_status='pending' and status<>'cancelado'/, 'Solo debe reutilizar cuentas realmente abiertas');
 assert.match(automaticAccounts, /was_appended/, 'El POS debe saber cuándo agregó una ronda a una cuenta existente');
 assert.match(automaticAccounts, /kitchen_items=case when v_order\.status in \('listo','entregado'\) then v_added else coalesce\(kitchen_items,'\[\]'::jsonb\)\|\|v_added end/, 'Cocina debe acumular pendientes y empezar una cola nueva después de entregar');
-assert.match(kitchen, /order\.kitchen_items \|\| order\.items/, 'Cocina debe usar la cola de productos pendientes');
 const pendingKitchenQueue = read('supabase/migrations/013_pending_kitchen_queue.sql');
 assert.match(pendingKitchenQueue, /set kitchen_items=items[\s\S]*status in \('pendiente','preparando'\)[\s\S]*ready_at is null[\s\S]*delivered_at is null/, 'La migracion solo debe recuperar comandas activas sin entregas anteriores');
 assert.match(pendingKitchenQueue, /kitchen_items=case when v_order\.status in \('listo','entregado'\) then v_added else coalesce\(kitchen_items,'\[\]'::jsonb\)\|\|v_added end/, 'Las rondas pendientes deben acumularse sin repetir las ya preparadas');
 assert.match(pendingKitchenQueue, /kitchen_items=case when p_status='entregado' then '\[\]'::jsonb else kitchen_items end/, 'La cola debe limpiarse al entregar la comanda');
+const independentTickets = read('supabase/migrations/014_independent_kitchen_tickets.sql');
+assert.match(independentTickets, /create table if not exists public\.kitchen_tickets/, 'Cada ronda debe guardarse como una comanda independiente');
+assert.match(independentTickets, /v_ticket_id:=public\.create_kitchen_ticket\(p_order_id,v_added,p_notes\)/, 'Agregar productos a una mesa debe crear una nueva comanda de cocina');
+assert.match(independentTickets, /create trigger sync_online_order_kitchen_ticket/, 'Los pedidos en linea pagados deben seguir entrando a cocina');
+assert.doesNotMatch(independentTickets, /update public\.order_station_statuses[\s\S]*set status='pendiente'/, 'Una comanda nueva no debe reiniciar estaciones anteriores');
+assert.match(kitchen, /from\('kitchen_tickets'\)/, 'Cocina debe consultar comandas independientes y no cuentas agrupadas');
+assert.match(kitchen, /update_kitchen_ticket_status/, 'Cocina debe avanzar únicamente la comanda seleccionada');
+assert.match(pos, /table: 'kitchen_tickets'/, 'El mesero debe recibir el estado listo de cada comanda');
 assert.match(kitchen, /5000/, 'Cocina debe sincronizarse aunque Realtime se interrumpa en la PWA');
 assert.match(kitchen, /visibilitychange/, 'Cocina debe actualizarse al volver a primer plano');
 

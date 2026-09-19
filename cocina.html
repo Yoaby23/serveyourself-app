@@ -21,20 +21,18 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="app-config.js"></script><script src="app.js"></script>
     <script>
         const db = window.serveYourself.supabase, esc = window.serveYourself.escapeHtml;
-        let access, orders = [], stations = [], products = [], activeStation = 'all', soundEnabled = false, timer, syncTimer, loadingOrders = false;
+        let access, orders = [], stations = [], products = [], tables = [], activeStation = 'all', soundEnabled = false, timer, syncTimer, loadingOrders = false;
         const nextStatus = { pendiente: ['preparando', 'COMENZAR'], preparando: ['listo', 'MARCAR LISTO'], listo: ['entregado', 'ENTREGAR'] };
         async function init() {
             access = await window.serveYourself.requireRestaurantPermission('can_view_kitchen'); if (!access) return;
             document.getElementById('restaurant-name').textContent = access.business_name;
             window.serveYourself.renderRestaurantNavigation(access, { dark: true });
             window.serveYourself.initPushNotifications(access.user);
-            const [{ data: stationData }, { data: productData }] = await Promise.all([db.from('kitchen_stations').select('*').eq('restaurant_id',access.restaurant_id).eq('is_active',true).order('name'),db.from('products').select('id,name,kitchen_station_id,is_available').eq('restaurant_id',access.restaurant_id).order('name')]);
-            stations=stationData||[];products=productData||[];document.getElementById('station-filter').innerHTML += stations.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');renderAvailability();
+            const [{ data: stationData }, { data: productData }, { data: tableData }] = await Promise.all([db.from('kitchen_stations').select('*').eq('restaurant_id',access.restaurant_id).eq('is_active',true).order('name'),db.from('products').select('id,name,kitchen_station_id,is_available').eq('restaurant_id',access.restaurant_id).order('name'),db.from('restaurant_tables').select('id,name').eq('restaurant_id',access.restaurant_id)]);
+            stations=stationData||[];products=productData||[];tables=tableData||[];document.getElementById('station-filter').innerHTML += stations.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');renderAvailability();
             await loadOrders();
-            db.channel(`kitchen-${access.restaurant_id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${access.restaurant_id}` }, payload => {
-                const eligible = payload.new?.payment_method !== 'mercado_pago' || payload.new?.payment_status === 'approved';
-                const newlyPaid = payload.eventType === 'UPDATE' && payload.new?.payment_status === 'approved' && payload.old?.payment_status !== 'approved';
-                if (soundEnabled && eligible && (payload.eventType === 'INSERT' || newlyPaid)) document.getElementById('new-order-sound').play().catch(() => {});
+            db.channel(`kitchen-${access.restaurant_id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'kitchen_tickets', filter: `restaurant_id=eq.${access.restaurant_id}` }, payload => {
+                if (soundEnabled && payload.eventType === 'INSERT') document.getElementById('new-order-sound').play().catch(() => {});
                 loadOrders();
             }).subscribe(status => {
                 if (status === 'SUBSCRIBED') loadOrders();
@@ -47,7 +45,7 @@
         async function loadOrders() {
             if (!access || loadingOrders) return;
             loadingOrders = true;
-            const { data, error } = await db.from('orders').select('*, restaurant_tables(name), order_station_statuses(*)').eq('restaurant_id', access.restaurant_id).in('status', ['pendiente', 'preparando', 'listo']).or('payment_method.neq.mercado_pago,payment_status.eq.approved').order('created_at');
+            const { data, error } = await db.from('kitchen_tickets').select('*, kitchen_ticket_station_statuses(*)').eq('restaurant_id', access.restaurant_id).in('status', ['pendiente', 'preparando', 'listo']).order('created_at');
             loadingOrders = false;
             if (error) return console.warn('No se pudieron sincronizar los pedidos:', error.message);
             orders = data || []; render();
@@ -57,13 +55,13 @@
             if (minutes < 1) return 'ahora'; if (minutes < 60) return `${minutes} min`; return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
         }
         function orderCard(order) {
-            const stationState = activeStation === 'all' ? order.status : (order.order_station_statuses?.find(s=>s.station_key===activeStation)?.status || order.status);
+            const stationState = activeStation === 'all' ? order.status : (order.kitchen_ticket_station_statuses?.find(s=>s.station_key===activeStation)?.status || order.status);
             const [status, label] = nextStatus[stationState];
-            const location = order.service_type === 'dine_in' ? (order.restaurant_tables?.name || 'Mesa') : 'Para llevar';
-            const roundItems = order.kitchen_items || order.items;
-            const visibleItems = activeStation === 'all' ? roundItems : roundItems.filter(item => String(products.find(p=>p.id===item.id)?.kitchen_station_id || 'general') === activeStation);
+            const location = order.service_type === 'dine_in' ? (tables.find(table=>Number(table.id)===Number(order.table_id))?.name || 'Mesa') : 'Para llevar';
+            const roundItems = order.items;
+            const visibleItems = activeStation === 'all' ? roundItems : roundItems.filter(item => String(item.station_id || products.find(p=>p.id===item.id)?.kitchen_station_id || 'general') === activeStation);
             return `<article class="kitchen-card ${elapsed(order.created_at).includes(' h') ? 'kitchen-late' : ''}">
-                <div class="flex items-start justify-between gap-3"><div><p class="text-2xl font-black">#${order.id}</p><p class="text-sm font-black text-orange-400 mt-1">${esc(location)}</p></div><div class="text-right"><p class="kitchen-clock">${elapsed(order.created_at)}</p><p class="text-xs text-slate-400 mt-1">${new Date(order.created_at).toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'})}</p></div></div>
+                <div class="flex items-start justify-between gap-3"><div><p class="text-2xl font-black">Comanda #${order.id}</p><p class="text-xs text-slate-400">Cuenta #${order.order_id}</p><p class="text-sm font-black text-orange-400 mt-1">${esc(location)}</p></div><div class="text-right"><p class="kitchen-clock">${elapsed(order.created_at)}</p><p class="text-xs text-slate-400 mt-1">${new Date(order.created_at).toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'})}</p></div></div>
                 <div class="my-4 space-y-2">${visibleItems.map(item => `<div class="flex gap-3 text-lg font-extrabold"><span class="text-orange-400 min-w-8">${Number(item.qty)}×</span><span>${esc(item.nombre)}</span></div>`).join('')}</div>
                 ${order.notes ? `<div class="bg-amber-300 text-slate-950 p-3 rounded-xl font-black">📝 ${esc(order.notes)}</div>` : ''}
                 ${order.waiter_name ? `<p class="text-xs text-slate-400 mt-3">Mesero: ${esc(order.waiter_name)}</p>` : ''}
@@ -72,16 +70,16 @@
         }
         function render() {
             ['pendiente','preparando','listo'].forEach(status => {
-                const list = orders.filter(o => { const state=activeStation==='all'?o.status:(o.order_station_statuses?.find(s=>s.station_key===activeStation)?.status);const hasItems=activeStation==='all'||o.items.some(item=>String(products.find(p=>p.id===item.id)?.kitchen_station_id||'general')===activeStation);return state===status&&hasItems; });
+                const list = orders.filter(o => { const state=activeStation==='all'?o.status:(o.kitchen_ticket_station_statuses?.find(s=>s.station_key===activeStation)?.status);const hasItems=activeStation==='all'||o.items.some(item=>String(item.station_id||products.find(p=>p.id===item.id)?.kitchen_station_id||'general')===activeStation);return state===status&&hasItems; });
                 document.getElementById(`count-${status}`).textContent = list.length;
                 document.getElementById(`orders-${status}`).innerHTML = list.length ? list.map(orderCard).join('') : '<p class="text-center text-slate-600 py-12 font-bold">Sin pedidos</p>';
             });
         }
         async function moveOrder(id, status) {
-            const { error } = activeStation === 'all' ? await db.rpc('update_kitchen_order_status', { p_order_id: id, p_status: status }) : await db.rpc('update_kitchen_station_status',{p_order_id:id,p_station_key:activeStation,p_status:status});
+            const { error } = activeStation === 'all' ? await db.rpc('update_kitchen_ticket_status', { p_ticket_id: id, p_status: status }) : await db.rpc('update_kitchen_ticket_station_status',{p_ticket_id:id,p_station_key:activeStation,p_status:status});
             if (error) return alert(error.message);
             await loadOrders();
-            const { error: notificationError } = await db.functions.invoke('send-order-notification', { body: { orderId: id } });
+            const { error: notificationError } = await db.functions.invoke('send-order-notification', { body: { ticketId: id } });
             if (notificationError) console.warn('No se pudo enviar la notificación push:', notificationError.message);
         }
         document.getElementById('sound-button').addEventListener('click', () => { soundEnabled = !soundEnabled; document.getElementById('sound-button').textContent = soundEnabled ? '🔊 Sonido activo' : '🔇 Activar sonido'; if (soundEnabled) document.getElementById('new-order-sound').play().then(a => { a.pause(); a.currentTime = 0; }).catch(() => {}); });
