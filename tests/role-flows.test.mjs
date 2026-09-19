@@ -28,9 +28,12 @@ assert.match(admin, /id="view-pedidos" class="hidden/, 'Pedidos en vivo debe ser
 assert.match(app, /renderRestaurantNavigation/, 'Debe existir navegación común');
 assert.match(app, /persistSession: true/, 'La aplicación instalada debe conservar la sesión');
 assert.match(app, /autoRefreshToken: true/, 'La sesión guardada debe renovar su token automáticamente');
+assert.match(app, /getOrCreateProfile/, 'Las cuentas antiguas deben recuperar su perfil faltante al iniciar sesión');
+assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil debe tolerar la creación simultánea del trigger');
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
+assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v2/, 'La PWA debe renovar su caché para recibir el arreglo de sesión');
+assert.match(read('sw.js'), /serveyourself-shell-v3/, 'La PWA debe renovar su caché para recibir los arreglos de sesión');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
