@@ -15,10 +15,16 @@ Deno.serve(async (request) => {
     const { data: { user } } = await client.auth.getUser();
     if (!user) return jsonResponse(request, { error: 'Sesión inválida' }, 401);
 
-    const { orderId } = await request.json();
+    const { orderId, ticketId } = await request.json();
+    let ticket: { id: number; order_id: number; status: string } | null = null;
+    if (ticketId) {
+      const { data } = await client.from('kitchen_tickets').select('id,order_id,status').eq('id', ticketId).single();
+      ticket = data;
+    }
+    const targetOrderId = ticket?.order_id ?? orderId;
     const { data: order } = await client.from('orders')
       .select('id, customer_id, restaurant_id, restaurant_name, status, order_source, created_by')
-      .eq('id', orderId)
+      .eq('id', targetOrderId)
       .single();
     if (!order) {
       return jsonResponse(request, { error: 'Pedido no encontrado' }, 404);
@@ -38,19 +44,20 @@ Deno.serve(async (request) => {
       entregado: 'Tu pedido fue marcado como entregado.',
       cancelado: 'El restaurante canceló tu pedido.'
     };
-    if (!messages[order.status]) return jsonResponse(request, { skipped: true });
+    const notificationStatus = ticket?.status ?? order.status;
+    if (!messages[notificationStatus]) return jsonResponse(request, { skipped: true });
 
     const appUrl = Deno.env.get('APP_URL') ?? 'https://serveyourself-app.vercel.app';
     const notifications: Array<{ recipient: string; message: string; url: string }> = [];
     if (order.customer_id) {
-      notifications.push({ recipient: order.customer_id, message: messages[order.status], url: `${appUrl}/menu.html` });
+      notifications.push({ recipient: order.customer_id, message: messages[notificationStatus], url: `${appUrl}/menu.html` });
     }
-    if (order.order_source === 'pos' && order.created_by && ['listo', 'cancelado'].includes(order.status)) {
+    if (order.order_source === 'pos' && order.created_by && ['listo', 'cancelado'].includes(notificationStatus)) {
       notifications.push({
         recipient: order.created_by,
-        message: order.status === 'listo'
-          ? `La comanda #${order.id} está lista para entregar.`
-          : `La comanda #${order.id} fue cancelada.`,
+        message: notificationStatus === 'listo'
+          ? `La comanda #${ticket?.id ?? order.id} de la cuenta #${order.id} está lista para entregar.`
+          : `La comanda #${ticket?.id ?? order.id} fue cancelada.`,
         url: `${appUrl}/pos.html`
       });
     }
