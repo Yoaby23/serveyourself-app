@@ -127,11 +127,11 @@ const automaticAccounts = read('supabase/migrations/012_automatic_table_accounts
 assert.match(automaticAccounts, /pg_advisory_xact_lock/, 'La cuenta automática por mesa debe evitar carreras entre meseros');
 assert.match(automaticAccounts, /payment_status='pending' and status<>'cancelado'/, 'Solo debe reutilizar cuentas realmente abiertas');
 assert.match(automaticAccounts, /was_appended/, 'El POS debe saber cuándo agregó una ronda a una cuenta existente');
-assert.match(automaticAccounts, /kitchen_items=coalesce\(kitchen_items,'\[\]'::jsonb\)\|\|v_added/, 'Cocina debe conservar todas las rondas pendientes');
+assert.match(automaticAccounts, /kitchen_items=case when v_order\.status in \('listo','entregado'\) then v_added else coalesce\(kitchen_items,'\[\]'::jsonb\)\|\|v_added end/, 'Cocina debe acumular pendientes y empezar una cola nueva después de entregar');
 assert.match(kitchen, /order\.kitchen_items \|\| order\.items/, 'Cocina debe usar la cola de productos pendientes');
 const pendingKitchenQueue = read('supabase/migrations/013_pending_kitchen_queue.sql');
-assert.match(pendingKitchenQueue, /set kitchen_items=items[\s\S]*status in \('pendiente','preparando'\)/, 'La migracion debe recuperar comandas activas ocultadas');
-assert.match(pendingKitchenQueue, /kitchen_items=coalesce\(kitchen_items,'\[\]'::jsonb\)\|\|v_added/, 'Las rondas nuevas deben acumularse en la cola de cocina');
+assert.match(pendingKitchenQueue, /set kitchen_items=items[\s\S]*status in \('pendiente','preparando'\)[\s\S]*ready_at is null[\s\S]*delivered_at is null/, 'La migracion solo debe recuperar comandas activas sin entregas anteriores');
+assert.match(pendingKitchenQueue, /kitchen_items=case when v_order\.status in \('listo','entregado'\) then v_added else coalesce\(kitchen_items,'\[\]'::jsonb\)\|\|v_added end/, 'Las rondas pendientes deben acumularse sin repetir las ya preparadas');
 assert.match(pendingKitchenQueue, /kitchen_items=case when p_status='entregado' then '\[\]'::jsonb else kitchen_items end/, 'La cola debe limpiarse al entregar la comanda');
 assert.match(kitchen, /5000/, 'Cocina debe sincronizarse aunque Realtime se interrumpa en la PWA');
 assert.match(kitchen, /visibilitychange/, 'Cocina debe actualizarse al volver a primer plano');
