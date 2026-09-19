@@ -11,10 +11,9 @@
         <div class="kitchen-toolbar"><select id="station-filter" class="px-3 py-3 rounded-xl bg-slate-800 text-white font-black text-sm"><option value="all">Todas las estaciones</option><option value="general">General</option></select><button onclick="toggleAvailability()" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">Disponibilidad</button><button id="sound-button" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">🔇 Activar sonido</button></div>
         <div id="restaurant-nav" class="sy-restaurant-nav kitchen-navigation"></div>
     </header>
-    <main class="p-3 grid xl:grid-cols-3 gap-3 min-h-[calc(100vh-76px)]">
+    <main class="p-3 grid lg:grid-cols-2 gap-3 min-h-[calc(100vh-76px)]">
         <section class="kitchen-column"><div class="kitchen-heading bg-orange-500"><span>Nuevos</span><b id="count-pendiente">0</b></div><div id="orders-pendiente" class="kitchen-list"></div></section>
         <section class="kitchen-column"><div class="kitchen-heading bg-blue-600"><span>Preparando</span><b id="count-preparando">0</b></div><div id="orders-preparando" class="kitchen-list"></div></section>
-        <section class="kitchen-column"><div class="kitchen-heading bg-emerald-600"><span>Listos</span><b id="count-listo">0</b></div><div id="orders-listo" class="kitchen-list"></div></section>
     </main>
     <audio id="new-order-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
     <aside id="availability-panel" class="hidden fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-white text-slate-950 shadow-2xl p-5 overflow-y-auto"><div class="flex justify-between"><div><p class="text-xs font-black uppercase text-orange-500">Menú del turno</p><h2 class="text-xl font-black">Disponibilidad</h2></div><button onclick="toggleAvailability()" class="w-10 h-10 rounded-xl bg-slate-100 font-black">×</button></div><div id="availability-list" class="mt-5 space-y-2"></div></aside>
@@ -69,7 +68,7 @@
             </article>`;
         }
         function render() {
-            ['pendiente','preparando','listo'].forEach(status => {
+            ['pendiente','preparando'].forEach(status => {
                 const list = orders.filter(o => { const state=activeStation==='all'?o.status:(o.kitchen_ticket_station_statuses?.find(s=>s.station_key===activeStation)?.status);const hasItems=activeStation==='all'||o.items.some(item=>String(item.station_id||products.find(p=>p.id===item.id)?.kitchen_station_id||'general')===activeStation);return state===status&&hasItems; });
                 document.getElementById(`count-${status}`).textContent = list.length;
                 document.getElementById(`orders-${status}`).innerHTML = list.length ? list.map(orderCard).join('') : '<p class="text-center text-slate-600 py-12 font-bold">Sin pedidos</p>';

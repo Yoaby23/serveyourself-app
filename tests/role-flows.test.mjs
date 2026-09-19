@@ -33,7 +33,7 @@ assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
 assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v5/, 'La PWA debe renovar su caché para recibir las comandas independientes');
+assert.match(read('sw.js'), /serveyourself-shell-v6/, 'La PWA debe renovar su caché para mostrar el tablero de dos columnas');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
@@ -139,6 +139,8 @@ assert.match(independentTickets, /create trigger sync_online_order_kitchen_ticke
 assert.doesNotMatch(independentTickets, /update public\.order_station_statuses[\s\S]*set status='pendiente'/, 'Una comanda nueva no debe reiniciar estaciones anteriores');
 assert.match(kitchen, /from\('kitchen_tickets'\)/, 'Cocina debe consultar comandas independientes y no cuentas agrupadas');
 assert.match(kitchen, /update_kitchen_ticket_status/, 'Cocina debe avanzar únicamente la comanda seleccionada');
+assert.doesNotMatch(kitchen, /id="orders-listo"|id="count-listo"/, 'Cocina no debe mostrar una columna de comandas listas');
+assert.match(kitchen, /\['pendiente','preparando'\]\.forEach/, 'El tablero debe renderizar únicamente Nuevos y Preparando');
 assert.match(pos, /table: 'kitchen_tickets'/, 'El mesero debe recibir el estado listo de cada comanda');
 assert.match(kitchen, /5000/, 'Cocina debe sincronizarse aunque Realtime se interrumpa en la PWA');
 assert.match(kitchen, /visibilitychange/, 'Cocina debe actualizarse al volver a primer plano');
