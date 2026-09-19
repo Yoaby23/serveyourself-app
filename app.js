@@ -53,6 +53,57 @@ window.serveYourself = {
         return Array.isArray(data) ? (data[0] || null) : data;
     },
 
+    async getOrCreateProfile(user) {
+        if (!user?.id) throw new Error('No se recibió un usuario válido.');
+
+        const existing = await this.supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle();
+        if (existing.error) throw existing.error;
+        if (existing.data) return existing.data;
+
+        const metadata = user.user_metadata || {};
+        const role = metadata.role === 'negocio' ? 'negocio' : 'cliente';
+        const emailName = String(user.email || '').split('@')[0];
+        const profile = {
+            id: user.id,
+            full_name: String(metadata.full_name || metadata.name || metadata.preferred_username || emailName || 'Usuario').slice(0, 120),
+            email: user.email || null,
+            phone: String(metadata.phone || '').slice(0, 30),
+            role,
+            business_name: role === 'negocio' ? String(metadata.business_name || 'Mi restaurante').slice(0, 120) : null,
+            address: role === 'negocio' ? String(metadata.address || '').slice(0, 250) : null,
+            open_time: role === 'negocio' ? (metadata.open_time || null) : null,
+            close_time: role === 'negocio' ? (metadata.close_time || null) : null,
+            avatar_url: metadata.avatar_url || metadata.picture || null,
+            rating: 5
+        };
+
+        const created = await this.supabase
+            .from('profiles')
+            .insert(profile)
+            .select('role')
+            .single();
+
+        if (!created.error) return created.data;
+
+        // El trigger de Auth puede terminar entre la consulta y el insert.
+        // En ese caso recuperamos el perfil que acaba de crear.
+        if (created.error.code === '23505') {
+            const retry = await this.supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+            if (retry.error) throw retry.error;
+            return retry.data;
+        }
+
+        throw created.error;
+    },
+
     restaurantHome(access) {
         if (!access) return 'menu.html';
         if (access.staff_role === 'owner') return 'admin.html';
