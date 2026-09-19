@@ -43,10 +43,7 @@
             </div>
             <label id="table-wrap" class="block mt-3 text-xs font-black text-slate-500 uppercase">Mesa
                 <select id="table-select" class="w-full mt-2 p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 normal-case"><option value="">Selecciona una mesa</option></select>
-            </label>
-            <label class="block mt-3 text-xs font-black text-slate-500 uppercase">Cuenta
-                <select id="open-account" class="w-full mt-2 p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 normal-case"><option value="">Nueva cuenta</option></select>
-                <small class="block mt-1 normal-case font-medium text-slate-400">Selecciona una cuenta para agregar una nueva ronda.</small>
+                <small id="table-account-hint" class="hidden mt-2 normal-case font-bold text-emerald-600"></small>
             </label>
             <div id="cart-items" class="my-5 space-y-3 max-h-[38vh] overflow-y-auto"><p class="text-center text-slate-400 py-8">Agrega productos al pedido.</p></div>
             <textarea id="order-notes" maxlength="500" rows="2" placeholder="Notas para cocina" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm"></textarea>
@@ -58,14 +55,7 @@
     <div id="success-modal" class="hidden fixed inset-0 z-50 bg-slate-950/60 p-4 items-center justify-center">
         <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center">
             <div class="text-5xl mb-3">✅</div><h2 id="success-title" class="text-2xl font-black">Pedido registrado</h2><p id="success-order" class="text-slate-500 mt-2"></p>
-            <button id="print-button" onclick="printTicket()" class="w-full mt-5 py-4 rounded-2xl bg-slate-900 text-white font-black">IMPRIMIR COMANDA</button>
-            <label id="modal-payment-wrap" class="block mt-4 text-left text-xs font-black text-slate-500 uppercase">Forma de pago
-                <select id="modal-payment-method" class="w-full mt-2 p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 normal-case font-bold">
-                    <option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="card_terminal">Tarjeta · terminal</option>
-                </select>
-            </label>
-            <button id="charge-button" onclick="chargeLastOrder()" class="w-full mt-2 py-4 rounded-2xl bg-green-600 text-white font-black">MARCAR COMO PAGADO</button>
-            <button onclick="closeSuccess()" class="w-full mt-2 py-4 rounded-2xl bg-orange-50 text-orange-600 font-black">NUEVA VENTA</button>
+            <p class="mt-4 text-sm font-bold text-emerald-600">La comanda ya está visible en cocina.</p>
         </div>
     </div>
 
@@ -78,7 +68,7 @@
     <script>
         const db = window.serveYourself.supabase;
         const esc = window.serveYourself.escapeHtml;
-        let access, products = [], tables = [], pendingOrders = [], openAccounts = [], serviceType = 'dine_in', lastOrder = null, resetCartOnClose = false;
+        let access, products = [], tables = [], pendingOrders = [], openAccounts = [], serviceType = 'dine_in', lastOrder = null, resetCartOnClose = false, successTimer = null;
         const paymentLabels = { cash: 'Efectivo', transfer: 'Transferencia', card_terminal: 'Tarjeta · terminal', mixed: 'Pago combinado' };
         const cart = new Map();
 
@@ -141,38 +131,49 @@
                 btn.className = `service-btn p-3 rounded-xl font-black ${active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'}`;
             });
             document.getElementById('table-wrap').classList.toggle('hidden', type !== 'dine_in');
+            updateTableAccountHint();
         }
         async function submitOrder() {
             if (!cart.size) return alert('Agrega al menos un producto.');
             const tableId = document.getElementById('table-select').value;
-            const selectedAccount = Number(document.getElementById('open-account').value || 0);
-            if (!selectedAccount && serviceType === 'dine_in' && !tableId) return alert('Selecciona una mesa.');
+            if (serviceType === 'dine_in' && !tableId) return alert('Selecciona una mesa.');
             const button = document.getElementById('submit-order'); button.disabled = true; button.textContent = 'REGISTRANDO...';
-            const request = selectedAccount
-                ? db.rpc('append_pos_order_items', { p_order_id: selectedAccount, p_items: [...cart].map(([id, qty]) => ({ id, qty })), p_notes: document.getElementById('order-notes').value })
-                : db.rpc('create_pos_order', { p_restaurant_id: access.restaurant_id, p_items: [...cart].map(([id, qty]) => ({ id, qty })), p_notes: document.getElementById('order-notes').value, p_service_type: serviceType, p_table_id: serviceType === 'dine_in' ? Number(tableId) : null, p_payment_method: 'cash' });
-            const { data, error } = await request;
+            const rpcParams = { p_restaurant_id: access.restaurant_id, p_items: [...cart].map(([id, qty]) => ({ id, qty })), p_notes: document.getElementById('order-notes').value, p_service_type: serviceType, p_table_id: serviceType === 'dine_in' ? Number(tableId) : null, p_payment_method: 'cash' };
+            let { data, error } = await db.rpc('create_or_append_pos_order', rpcParams);
+            if (error && /create_or_append_pos_order|schema cache/i.test(error.message || '')) {
+                await loadOpenAccounts();
+                const selectedAccount = serviceType === 'dine_in' ? openAccounts.find(order => Number(order.table_id) === Number(tableId)) : null;
+                ({ data, error } = selectedAccount
+                    ? await db.rpc('append_pos_order_items', { p_order_id: selectedAccount.id, p_items: rpcParams.p_items, p_notes: rpcParams.p_notes })
+                    : await db.rpc('create_pos_order', rpcParams));
+                if (data && selectedAccount) data.was_appended = true;
+            }
             button.disabled = false; button.textContent = 'ENVIAR A COCINA';
             if (error) return alert(error.message);
             lastOrder = data;
             lastOrder.restaurant_tables = { name: tables.find(t => t.id === Number(lastOrder.table_id))?.name };
             resetCartOnClose = true;
             document.getElementById('success-order').textContent = `Pedido #${lastOrder.id} · $${Number(lastOrder.total).toFixed(2)}`;
-            document.getElementById('success-title').textContent = selectedAccount ? 'Nueva ronda enviada a cocina' : 'Pedido enviado a cocina';
-            document.getElementById('print-button').textContent = access.can_close_accounts ? 'IMPRIMIR PRECUENTA' : 'IMPRIMIR COMANDA';
-            document.getElementById('modal-payment-wrap').classList.toggle('hidden', !access.can_close_accounts);
-            document.getElementById('charge-button').classList.toggle('hidden', !access.can_close_accounts);
-            prepareTicket(lastOrder, !access.can_close_accounts);
+            document.getElementById('success-title').textContent = lastOrder.was_appended ? 'Nueva ronda enviada a cocina' : 'Pedido enviado a cocina';
             document.getElementById('success-modal').classList.remove('hidden'); document.getElementById('success-modal').classList.add('flex');
+            clearTimeout(successTimer);
+            successTimer = setTimeout(closeSuccess, 3000);
             if (access.can_close_accounts) loadPendingOrders();
-            loadOpenAccounts();
+            await loadOpenAccounts();
         }
         async function loadOpenAccounts() {
             if (!access?.can_create_orders) return;
             const { data, error } = await db.from('orders').select('id,total,table_id,service_type,waiter_name,restaurant_tables(name)').eq('restaurant_id', access.restaurant_id).eq('order_source','pos').eq('payment_status','pending').neq('status','cancelado').order('created_at');
             if (error) return;
             openAccounts = data || [];
-            document.getElementById('open-account').innerHTML = '<option value="">Nueva cuenta</option>' + openAccounts.map(o => `<option value="${o.id}">#${o.id} · ${o.service_type === 'dine_in' ? esc(o.restaurant_tables?.name || 'Mesa') : 'Para llevar'} · $${Number(o.total).toFixed(2)}</option>`).join('');
+            updateTableAccountHint();
+        }
+        function updateTableAccountHint() {
+            const hint = document.getElementById('table-account-hint');
+            const tableId = Number(document.getElementById('table-select').value || 0);
+            const account = serviceType === 'dine_in' && tableId ? openAccounts.find(order => Number(order.table_id) === tableId) : null;
+            hint.classList.toggle('hidden', !account);
+            hint.textContent = account ? `Cuenta #${account.id} abierta · los productos se agregarán automáticamente.` : '';
         }
         function prepareTicket(order, commandOnly = false) {
             const paid = order.payment_status === 'approved';
@@ -214,31 +215,22 @@
             setTimeout(() => alertBox.classList.add('hidden'), 8000);
         }
         function printPending(id) { const order = pendingOrders.find(item => item.id === id); if (!order) return; prepareTicket(order); printTicket(); }
-        async function chargePending(id) { const method = document.getElementById(`pending-method-${id}`).value; await chargeOrder(id, method, false); }
-        async function chargeLastOrder() { if (lastOrder) await chargeOrder(lastOrder.id, document.getElementById('modal-payment-method').value, true); }
-        async function chargeOrder(id, method, showModal) {
-            const sourceOrder = lastOrder?.id === id ? lastOrder : pendingOrders.find(item => item.id === id);
+        async function chargePending(id) { const method = document.getElementById(`pending-method-${id}`).value; await chargeOrder(id, method); }
+        async function chargeOrder(id, method) {
+            const sourceOrder = pendingOrders.find(item => item.id === id);
             const { data: existingPayments } = await db.from('order_payments').select('amount').eq('order_id', id);
             const remaining = Math.max(0, Number(sourceOrder?.total || 0) - (existingPayments || []).reduce((sum, payment) => sum + Number(payment.amount), 0));
             const { data, error } = await db.rpc('register_pos_payment', { p_order_id: id, p_payment_method: method, p_amount: remaining, p_tip: 0 });
             if (error) return alert(error.message);
-            const previous = sourceOrder;
-            lastOrder = { ...previous, ...data, restaurant_tables: previous?.restaurant_tables };
-            prepareTicket(lastOrder); loadPendingOrders();
-            if (showModal) {
-                document.getElementById('success-title').textContent = 'Pago registrado';
-                document.getElementById('success-order').textContent = `Pedido #${lastOrder.id} · $${Number(lastOrder.total).toFixed(2)} · ${paymentLabels[method]}`;
-                document.getElementById('print-button').textContent = 'IMPRIMIR COMPROBANTE';
-                document.getElementById('modal-payment-wrap').classList.add('hidden');
-                document.getElementById('charge-button').classList.add('hidden');
-            } else {
-                alert(`Pedido #${id} marcado como pagado.`);
-            }
+            prepareTicket({ ...sourceOrder, ...data, restaurant_tables: sourceOrder?.restaurant_tables });
+            loadPendingOrders();
+            alert(`Pedido #${id} marcado como pagado.`);
         }
         function printTicket() { window.print(); }
-        function closeSuccess() { if (resetCartOnClose) { cart.clear(); document.getElementById('order-notes').value = ''; renderCart(); resetCartOnClose = false; } document.getElementById('success-modal').classList.add('hidden'); document.getElementById('success-modal').classList.remove('flex'); }
+        function closeSuccess() { clearTimeout(successTimer); if (resetCartOnClose) { cart.clear(); document.getElementById('order-notes').value = ''; renderCart(); resetCartOnClose = false; } document.getElementById('success-modal').classList.add('hidden'); document.getElementById('success-modal').classList.remove('flex'); }
         document.querySelectorAll('.service-btn').forEach(btn => btn.addEventListener('click', () => setService(btn.dataset.service)));
         document.getElementById('product-search').addEventListener('input', renderProducts); document.getElementById('category-filter').addEventListener('change', renderProducts);
+        document.getElementById('table-select').addEventListener('change', updateTableAccountHint);
         document.getElementById('clear-cart').addEventListener('click', () => { cart.clear(); renderCart(); }); document.getElementById('submit-order').addEventListener('click', submitOrder);
         init();
     </script>

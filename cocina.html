@@ -21,7 +21,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="app-config.js"></script><script src="app.js"></script>
     <script>
         const db = window.serveYourself.supabase, esc = window.serveYourself.escapeHtml;
-        let access, orders = [], stations = [], products = [], activeStation = 'all', soundEnabled = false, timer;
+        let access, orders = [], stations = [], products = [], activeStation = 'all', soundEnabled = false, timer, syncTimer, loadingOrders = false;
         const nextStatus = { pendiente: ['preparando', 'COMENZAR'], preparando: ['listo', 'MARCAR LISTO'], listo: ['entregado', 'ENTREGAR'] };
         async function init() {
             access = await window.serveYourself.requireRestaurantPermission('can_view_kitchen'); if (!access) return;
@@ -36,12 +36,20 @@
                 const newlyPaid = payload.eventType === 'UPDATE' && payload.new?.payment_status === 'approved' && payload.old?.payment_status !== 'approved';
                 if (soundEnabled && eligible && (payload.eventType === 'INSERT' || newlyPaid)) document.getElementById('new-order-sound').play().catch(() => {});
                 loadOrders();
-            }).subscribe();
+            }).subscribe(status => {
+                if (status === 'SUBSCRIBED') loadOrders();
+            });
             timer = setInterval(render, 30000);
+            syncTimer = setInterval(() => {
+                if (document.visibilityState === 'visible') loadOrders();
+            }, 5000);
         }
         async function loadOrders() {
+            if (!access || loadingOrders) return;
+            loadingOrders = true;
             const { data, error } = await db.from('orders').select('*, restaurant_tables(name), order_station_statuses(*)').eq('restaurant_id', access.restaurant_id).in('status', ['pendiente', 'preparando', 'listo']).or('payment_method.neq.mercado_pago,payment_status.eq.approved').order('created_at');
-            if (error) return alert('No se pudieron cargar los pedidos: ' + error.message);
+            loadingOrders = false;
+            if (error) return console.warn('No se pudieron sincronizar los pedidos:', error.message);
             orders = data || []; render();
         }
         function elapsed(date) {
@@ -52,7 +60,8 @@
             const stationState = activeStation === 'all' ? order.status : (order.order_station_statuses?.find(s=>s.station_key===activeStation)?.status || order.status);
             const [status, label] = nextStatus[stationState];
             const location = order.service_type === 'dine_in' ? (order.restaurant_tables?.name || 'Mesa') : 'Para llevar';
-            const visibleItems = activeStation === 'all' ? order.items : order.items.filter(item => String(products.find(p=>p.id===item.id)?.kitchen_station_id || 'general') === activeStation);
+            const roundItems = order.kitchen_items || order.items;
+            const visibleItems = activeStation === 'all' ? roundItems : roundItems.filter(item => String(products.find(p=>p.id===item.id)?.kitchen_station_id || 'general') === activeStation);
             return `<article class="kitchen-card ${elapsed(order.created_at).includes(' h') ? 'kitchen-late' : ''}">
                 <div class="flex items-start justify-between gap-3"><div><p class="text-2xl font-black">#${order.id}</p><p class="text-sm font-black text-orange-400 mt-1">${esc(location)}</p></div><div class="text-right"><p class="kitchen-clock">${elapsed(order.created_at)}</p><p class="text-xs text-slate-400 mt-1">${new Date(order.created_at).toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'})}</p></div></div>
                 <div class="my-4 space-y-2">${visibleItems.map(item => `<div class="flex gap-3 text-lg font-extrabold"><span class="text-orange-400 min-w-8">${Number(item.qty)}×</span><span>${esc(item.nombre)}</span></div>`).join('')}</div>
@@ -80,6 +89,10 @@
         function toggleAvailability(){document.getElementById('availability-panel').classList.toggle('hidden');}
         function renderAvailability(){document.getElementById('availability-list').innerHTML=products.map(p=>`<div class="flex justify-between items-center p-3 rounded-xl ${p.is_available?'bg-slate-50':'bg-red-50'}"><b>${esc(p.name)}</b><button onclick="setAvailability('${p.id}',${!p.is_available})" class="text-xs font-black ${p.is_available?'text-red-500':'text-green-600'}">${p.is_available?'AGOTAR':'REACTIVAR'}</button></div>`).join('');}
         async function setAvailability(id,value){const{error}=await db.rpc('set_product_availability',{p_product_id:id,p_available:value});if(error)return alert(error.message);const p=products.find(x=>x.id===id);if(p)p.is_available=value;renderAvailability();}
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadOrders(); });
+        window.addEventListener('pageshow', loadOrders);
+        window.addEventListener('online', loadOrders);
+        window.addEventListener('focus', loadOrders);
         init();
     </script>
 </body>

@@ -147,6 +147,17 @@ Mercado Pago registre un cobro, la orden se cancela y el cliente debe crear una 
 Después de aplicar esta migración vuelve a desplegar las funciones de preferencia
 y webhook para enviar el vencimiento a Mercado Pago y rechazar pagos fuera de plazo.
 
+### Cuentas automáticas por mesa
+
+Ejecuta después:
+
+`supabase/migrations/012_automatic_table_accounts.sql`
+
+Cuando una mesa ya tiene una cuenta abierta, el POS agrega automáticamente las
+nuevas rondas a esa misma cuenta. La operación se decide en PostgreSQL para evitar
+que dos meseros creen cuentas duplicadas al mismo tiempo. Cocina mantiene Realtime
+y una sincronización de respaldo cada cinco segundos para aplicaciones instaladas.
+
 ## Servicios externos
 
 ### Inicio de sesión con Google, Facebook y Apple

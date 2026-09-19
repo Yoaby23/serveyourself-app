@@ -33,7 +33,7 @@ assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
 assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v3/, 'La PWA debe renovar su caché para recibir los arreglos de sesión');
+assert.match(read('sw.js'), /serveyourself-shell-v4/, 'La PWA debe renovar su caché para recibir los arreglos operativos');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
@@ -46,8 +46,10 @@ assert.match(migration, /v_order\.status = 'pendiente' and p_status <> 'preparan
 assert.match(migration, /v_order\.status = 'preparando' and p_status <> 'listo'/, 'Cocina no debe saltar directamente a listo');
 assert.match(migration, /v_order\.status = 'listo' and p_status <> 'entregado'/, 'Cocina debe cerrar la entrega en orden');
 assert.match(pos, /!access\.can_close_accounts/, 'El POS debe ocultar controles de cobro sin permiso');
-assert.match(pos, /IMPRIMIR COMANDA/, 'El mesero debe poder imprimir una comanda');
-assert.match(pos, /IMPRIMIR PRECUENTA/, 'Caja debe poder imprimir antes de cobrar');
+assert.match(pos, /PRECUENTA/, 'Caja debe poder imprimir antes de cobrar');
+assert.doesNotMatch(pos, /id="modal-payment-method"|id="charge-button"/, 'La confirmación de cocina no debe mostrar cobro ni forma de pago');
+assert.match(pos, /setTimeout\(closeSuccess, 3000\)/, 'La confirmación debe cerrarse sola después de tres segundos');
+assert.match(pos, /create_or_append_pos_order/, 'El POS debe reutilizar automáticamente la cuenta abierta de la mesa');
 assert.match(kitchen, /requireRestaurantPermission\('can_view_kitchen'\)/, 'Cocina debe exigir su permiso');
 assert.match(kitchen, /class="kitchen-toolbar"/, 'Los controles de cocina deben usar una barra adaptable');
 assert.match(read('styles.css'), /@media \(max-width: 767px\)[\s\S]*\.kitchen-toolbar[\s\S]*grid-template-columns/, 'La barra de cocina debe reorganizarse en teléfonos');
@@ -120,6 +122,15 @@ assert.match(read('caja.html'), /Pagos en línea por confirmar/, 'Caja debe pode
 assert.match(read('menu.html'), /Pago vencido · haz un pedido nuevo/, 'El cliente debe saber que necesita crear otro pedido');
 assert.match(read('supabase/functions/create-mercado-pago-preference/index.ts'), /expiration_date_to/, 'La preferencia debe vencer junto con el pedido');
 assert.match(read('supabase/functions/mercado-pago-webhook/index.ts'), /payment window expired/, 'El webhook debe rechazar pagos creados fuera del plazo');
+
+const automaticAccounts = read('supabase/migrations/012_automatic_table_accounts.sql');
+assert.match(automaticAccounts, /pg_advisory_xact_lock/, 'La cuenta automática por mesa debe evitar carreras entre meseros');
+assert.match(automaticAccounts, /payment_status='pending' and status<>'cancelado'/, 'Solo debe reutilizar cuentas realmente abiertas');
+assert.match(automaticAccounts, /was_appended/, 'El POS debe saber cuándo agregó una ronda a una cuenta existente');
+assert.match(automaticAccounts, /kitchen_items=v_added/, 'Cocina debe recibir solo los productos de la ronda nueva');
+assert.match(kitchen, /order\.kitchen_items \|\| order\.items/, 'Cocina no debe volver a preparar productos de rondas anteriores');
+assert.match(kitchen, /5000/, 'Cocina debe sincronizarse aunque Realtime se interrumpa en la PWA');
+assert.match(kitchen, /visibilitychange/, 'Cocina debe actualizarse al volver a primer plano');
 
 for (const provider of ['google', 'facebook', 'apple']) {
     assert.match(index, new RegExp(`signInWithProvider\\('${provider}'`), `El inicio debe ofrecer acceso con ${provider}`);
