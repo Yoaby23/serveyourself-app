@@ -41,6 +41,9 @@ assert.match(pos, /!access\.can_close_accounts/, 'El POS debe ocultar controles 
 assert.match(pos, /IMPRIMIR COMANDA/, 'El mesero debe poder imprimir una comanda');
 assert.match(pos, /IMPRIMIR PRECUENTA/, 'Caja debe poder imprimir antes de cobrar');
 assert.match(kitchen, /requireRestaurantPermission\('can_view_kitchen'\)/, 'Cocina debe exigir su permiso');
+assert.match(kitchen, /class="kitchen-toolbar"/, 'Los controles de cocina deben usar una barra adaptable');
+assert.match(read('styles.css'), /@media \(max-width: 767px\)[\s\S]*\.kitchen-toolbar[\s\S]*grid-template-columns/, 'La barra de cocina debe reorganizarse en teléfonos');
+assert.match(read('styles.css'), /\.kitchen-screen[\s\S]*overflow-x: hidden/, 'Cocina no debe provocar desplazamiento horizontal');
 assert.match(team, /set_staff_permissions/, 'El dueño debe poder editar permisos individuales');
 
 assert.match(pos, /waiter-ready-/, 'El mesero debe escuchar comandas listas en tiempo real');
