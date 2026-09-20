@@ -22,10 +22,6 @@
                 <div class="flex items-center justify-between gap-3"><div><p class="text-xs font-black text-green-700 uppercase tracking-wider">Listos para entregar</p><h2 class="font-black text-green-950 mt-1">Mis comandas listas</h2></div><span id="ready-count" class="px-3 py-1 rounded-full bg-green-200 text-green-900 font-black">0</span></div>
                 <div id="ready-orders" class="grid sm:grid-cols-2 gap-3 mt-4"></div>
             </section>
-            <details id="pending-panel" class="hidden bg-amber-50 border border-amber-200 rounded-3xl p-4 mb-5">
-                <summary class="font-black text-amber-900 cursor-pointer">Cuentas pendientes <span id="pending-count" class="ml-2 px-2 py-1 rounded-full bg-amber-200 text-xs">0</span></summary>
-                <div id="pending-orders" class="grid sm:grid-cols-2 gap-3 mt-4"><p class="text-sm text-amber-700">No hay cuentas pendientes.</p></div>
-            </details>
             <div id="command-builder">
                 <div class="flex flex-col sm:flex-row gap-3 mb-5">
                     <input id="product-search" type="search" placeholder="Buscar producto..." class="flex-1 p-4 rounded-2xl border border-slate-200 bg-white font-bold">
@@ -59,7 +55,6 @@
         </div>
     </div>
 
-    <section id="print-ticket" class="ticket-print" aria-hidden="true"></section>
     <div id="ready-alert" class="ready-order-alert hidden" role="status" aria-live="assertive"></div>
     <audio id="ready-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
 
@@ -68,24 +63,15 @@
     <script>
         const db = window.serveYourself.supabase;
         const esc = window.serveYourself.escapeHtml;
-        let access, products = [], tables = [], pendingOrders = [], openAccounts = [], serviceType = 'dine_in', lastOrder = null, resetCartOnClose = false, successTimer = null;
-        const paymentLabels = { cash: 'Efectivo', transfer: 'Transferencia', card_terminal: 'Tarjeta · terminal', mixed: 'Pago combinado' };
+        let access, products = [], tables = [], openAccounts = [], serviceType = 'dine_in', lastOrder = null, resetCartOnClose = false, successTimer = null, loadingReadyOrders = false;
         const cart = new Map();
 
         async function init() {
-            access = await window.serveYourself.requireRestaurantAccess(['owner', 'manager', 'waiter', 'cashier', 'kitchen']);
+            access = await window.serveYourself.requireRestaurantPermission('can_create_orders');
             if (!access) return;
-            if (!access.can_create_orders && !access.can_close_accounts) {
-                alert('Tu cuenta no tiene permisos para comandas ni caja.');
-                window.location.replace(access.can_view_kitchen ? 'cocina.html' : 'menu.html');
-                return;
-            }
             document.getElementById('restaurant-name').textContent = access.business_name;
             window.serveYourself.renderRestaurantNavigation(access);
             window.serveYourself.initPushNotifications(access.user);
-            document.getElementById('pending-panel').classList.toggle('hidden', !access.can_close_accounts);
-            document.getElementById('command-builder').classList.toggle('hidden', !access.can_create_orders);
-            document.getElementById('order-cart').classList.toggle('hidden', !access.can_create_orders);
             const [{ data: productData, error: productError }, { data: tableData, error: tableError }] = await Promise.all([
                 db.from('products').select('*').eq('restaurant_id', access.restaurant_id).eq('is_available', true).order('category').order('name'),
                 db.from('restaurant_tables').select('*').eq('restaurant_id', access.restaurant_id).eq('is_active', true).order('name')
@@ -97,11 +83,8 @@
             if (!tables.length) setService('pickup');
             await loadOpenAccounts();
             renderProducts(); renderCart();
-            if (access.can_close_accounts) loadPendingOrders();
-            if (access.can_create_orders) {
-                loadReadyOrders();
-                activateWaiterRealtime();
-            }
+            loadReadyOrders();
+            activateWaiterRealtime();
         }
 
         function renderProducts() {
@@ -139,17 +122,14 @@
             if (serviceType === 'dine_in' && !tableId) return alert('Selecciona una mesa.');
             const button = document.getElementById('submit-order'); button.disabled = true; button.textContent = 'REGISTRANDO...';
             const rpcParams = { p_restaurant_id: access.restaurant_id, p_items: [...cart].map(([id, qty]) => ({ id, qty })), p_notes: document.getElementById('order-notes').value, p_service_type: serviceType, p_table_id: serviceType === 'dine_in' ? Number(tableId) : null, p_payment_method: 'cash' };
-            let { data, error } = await db.rpc('create_or_append_pos_order', rpcParams);
-            if (error && /create_or_append_pos_order|schema cache/i.test(error.message || '')) {
-                await loadOpenAccounts();
-                const selectedAccount = serviceType === 'dine_in' ? openAccounts.find(order => Number(order.table_id) === Number(tableId)) : null;
-                ({ data, error } = selectedAccount
-                    ? await db.rpc('append_pos_order_items', { p_order_id: selectedAccount.id, p_items: rpcParams.p_items, p_notes: rpcParams.p_notes })
-                    : await db.rpc('create_pos_order', rpcParams));
-                if (data && selectedAccount) data.was_appended = true;
-            }
+            const { data, error } = await db.rpc('create_or_append_pos_order', rpcParams);
             button.disabled = false; button.textContent = 'ENVIAR A COCINA';
-            if (error) return alert(error.message);
+            if (error) {
+                const migrationHint = /create_or_append_pos_order|schema cache/i.test(error.message || '')
+                    ? '\nAplica la migración 014 en Supabase y vuelve a intentarlo.'
+                    : '';
+                return alert(error.message + migrationHint);
+            }
             lastOrder = data;
             lastOrder.restaurant_tables = { name: tables.find(t => t.id === Number(lastOrder.table_id))?.name };
             resetCartOnClose = true;
@@ -158,7 +138,6 @@
             document.getElementById('success-modal').classList.remove('hidden'); document.getElementById('success-modal').classList.add('flex');
             clearTimeout(successTimer);
             successTimer = setTimeout(closeSuccess, 3000);
-            if (access.can_close_accounts) loadPendingOrders();
             await loadOpenAccounts();
         }
         async function loadOpenAccounts() {
@@ -175,29 +154,19 @@
             hint.classList.toggle('hidden', !account);
             hint.textContent = account ? `Cuenta #${account.id} abierta · los productos se agregarán automáticamente.` : '';
         }
-        function prepareTicket(order, commandOnly = false) {
-            const paid = order.payment_status === 'approved';
-            const location = order.service_type === 'dine_in' ? esc(order.restaurant_tables?.name || 'Mesa') : 'Para llevar';
-            const items = order.items.map(i => `<div class="ticket-row"><span>${Number(i.qty)} x ${esc(i.nombre)}</span>${commandOnly ? '' : `<span>$${(Number(i.price) * Number(i.qty)).toFixed(2)}</span>`}</div>`).join('');
-            const payment = commandOnly ? '' : `<hr><div class="ticket-row ticket-total"><span>TOTAL</span><span>$${Number(order.total).toFixed(2)}</span></div><p>${paid ? `Pago: ${paymentLabels[order.payment_method]}` : 'Pago pendiente'}</p>`;
-            document.getElementById('print-ticket').innerHTML = `<div class="ticket"><h1>${esc(access.business_name)}</h1><p class="ticket-payment-status">${commandOnly ? 'COMANDA' : (paid ? 'PAGADO' : 'PRECUENTA · PENDIENTE DE PAGO')}</p><p>Pedido #${order.id}</p><p>${new Date(order.created_at).toLocaleString('es-MX')}</p><hr><p><b>${location}</b></p>${items}${payment}${order.notes ? `<p>Nota: ${esc(order.notes)}</p>` : ''}${order.waiter_name ? `<p>Mesero: ${esc(order.waiter_name)}</p>` : ''}${paid && !commandOnly ? '<p class="ticket-thanks">¡Gracias por su compra!</p>' : ''}</div>`;
-        }
-        async function loadPendingOrders() {
-            if (!access?.can_close_accounts) return;
-            const { data, error } = await db.from('orders').select('*, restaurant_tables(name)').eq('restaurant_id', access.restaurant_id).eq('order_source', 'pos').eq('payment_status', 'pending').neq('status', 'cancelado').order('created_at');
-            if (error) return;
-            pendingOrders = data || [];
-            document.getElementById('pending-count').textContent = pendingOrders.length;
-            document.getElementById('pending-orders').innerHTML = pendingOrders.length ? pendingOrders.map(order => `<article class="bg-white border border-amber-200 rounded-2xl p-4"><div class="flex justify-between gap-3"><div><b>Pedido #${order.id}</b><p class="text-xs text-slate-500">${order.service_type === 'dine_in' ? esc(order.restaurant_tables?.name || 'Mesa') : 'Para llevar'}</p></div><strong>$${Number(order.total).toFixed(2)}</strong></div><select id="pending-method-${order.id}" class="w-full mt-3 p-2 rounded-xl border border-slate-200 text-sm font-bold"><option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="card_terminal">Tarjeta · terminal</option></select><div class="grid grid-cols-2 gap-2 mt-2"><button onclick="printPending(${order.id})" class="p-2 rounded-xl bg-slate-100 text-xs font-black">PRECUENTA</button><button onclick="chargePending(${order.id})" class="p-2 rounded-xl bg-green-600 text-white text-xs font-black">COBRAR</button></div></article>`).join('') : '<p class="text-sm text-amber-700">No hay cuentas pendientes.</p>';
-        }
         async function loadReadyOrders() {
-            if (!access?.can_create_orders) return;
-            const { data, error } = await db.from('kitchen_tickets').select('id,order_id,table_id,service_type,created_at,ready_at').eq('restaurant_id', access.restaurant_id).eq('created_by', access.user.id).eq('status', 'listo').order('ready_at');
-            if (error) return;
-            const readyOrders = data || [];
-            document.getElementById('ready-panel').classList.toggle('hidden', !readyOrders.length);
-            document.getElementById('ready-count').textContent = readyOrders.length;
-            document.getElementById('ready-orders').innerHTML = readyOrders.map(order => `<article class="bg-white border border-green-200 rounded-2xl p-4"><div class="flex items-center justify-between gap-3"><div><b class="text-lg">Comanda #${order.id}</b><p class="text-xs text-slate-500">Cuenta #${order.order_id}</p><p class="text-sm text-green-700 font-bold">${order.service_type === 'dine_in' ? esc(tables.find(table=>Number(table.id)===Number(order.table_id))?.name || 'Mesa') : 'Para llevar'}</p></div><span class="text-2xl">✅</span></div></article>`).join('');
+            if (!access?.can_create_orders || loadingReadyOrders) return;
+            loadingReadyOrders = true;
+            try {
+                const { data, error } = await db.from('kitchen_tickets').select('id,order_id,table_id,service_type,created_at,ready_at').eq('restaurant_id', access.restaurant_id).eq('created_by', access.user.id).eq('status', 'listo').order('ready_at');
+                if (error) return;
+                const readyOrders = data || [];
+                document.getElementById('ready-panel').classList.toggle('hidden', !readyOrders.length);
+                document.getElementById('ready-count').textContent = readyOrders.length;
+                document.getElementById('ready-orders').innerHTML = readyOrders.map(order => `<article class="bg-white border border-green-200 rounded-2xl p-4"><div class="flex items-center justify-between gap-3"><div><b class="text-lg">Comanda #${order.id}</b><p class="text-xs text-slate-500">Cuenta #${order.order_id}</p><p class="text-sm text-green-700 font-bold">${order.service_type === 'dine_in' ? esc(tables.find(table=>Number(table.id)===Number(order.table_id))?.name || 'Mesa') : 'Para llevar'}</p></div><span class="text-2xl">✅</span></div></article>`).join('');
+            } finally {
+                loadingReadyOrders = false;
+            }
         }
         function activateWaiterRealtime() {
             db.channel(`waiter-ready-${access.user.id}`).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kitchen_tickets', filter: `restaurant_id=eq.${access.restaurant_id}` }, payload => {
@@ -214,24 +183,15 @@
             document.getElementById('ready-sound').play().catch(() => {});
             setTimeout(() => alertBox.classList.add('hidden'), 8000);
         }
-        function printPending(id) { const order = pendingOrders.find(item => item.id === id); if (!order) return; prepareTicket(order); printTicket(); }
-        async function chargePending(id) { const method = document.getElementById(`pending-method-${id}`).value; await chargeOrder(id, method); }
-        async function chargeOrder(id, method) {
-            const sourceOrder = pendingOrders.find(item => item.id === id);
-            const { data: existingPayments } = await db.from('order_payments').select('amount').eq('order_id', id);
-            const remaining = Math.max(0, Number(sourceOrder?.total || 0) - (existingPayments || []).reduce((sum, payment) => sum + Number(payment.amount), 0));
-            const { data, error } = await db.rpc('register_pos_payment', { p_order_id: id, p_payment_method: method, p_amount: remaining, p_tip: 0 });
-            if (error) return alert(error.message);
-            prepareTicket({ ...sourceOrder, ...data, restaurant_tables: sourceOrder?.restaurant_tables });
-            loadPendingOrders();
-            alert(`Pedido #${id} marcado como pagado.`);
-        }
-        function printTicket() { window.print(); }
         function closeSuccess() { clearTimeout(successTimer); if (resetCartOnClose) { cart.clear(); document.getElementById('order-notes').value = ''; renderCart(); resetCartOnClose = false; } document.getElementById('success-modal').classList.add('hidden'); document.getElementById('success-modal').classList.remove('flex'); }
         document.querySelectorAll('.service-btn').forEach(btn => btn.addEventListener('click', () => setService(btn.dataset.service)));
         document.getElementById('product-search').addEventListener('input', renderProducts); document.getElementById('category-filter').addEventListener('change', renderProducts);
         document.getElementById('table-select').addEventListener('change', updateTableAccountHint);
         document.getElementById('clear-cart').addEventListener('click', () => { cart.clear(); renderCart(); }); document.getElementById('submit-order').addEventListener('click', submitOrder);
+        window.setInterval(() => { if (!document.hidden) loadReadyOrders(); }, 5000);
+        window.addEventListener('focus', loadReadyOrders);
+        window.addEventListener('pageshow', loadReadyOrders);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) { loadReadyOrders(); loadOpenAccounts(); } });
         init();
     </script>
 </body>
