@@ -131,7 +131,10 @@ frecuentes. Las nuevas pantallas son:
 - `reportes.html`: ventas, meseros, productos, caja y exportación CSV/PDF.
 - `clientes.html`: cupones, reservaciones y lealtad.
 
-La aplicación incluye manifiesto y service worker para instalarse como PWA.
+La aplicación incluye manifiesto y service worker para instalarse como PWA en Android,
+iPhone/iPad y computadoras. Desde la portada o el menú de trabajo usa **Instalar
+ServeYourself**. En iPhone abre la app en Safari y elige **Compartir → Agregar a
+pantalla de inicio**; en Android, Chrome y Edge usa **Instalar aplicación**.
 
 ### Vencimiento de pagos en línea
 
@@ -183,13 +186,19 @@ mesero también identifican la comanda y la cuenta correspondientes.
 
 ### Inicio de sesión con Google, Facebook y Apple
 
+La guía completa, con los valores exactos de callback y las comprobaciones, está en
+[`docs/AUTH_PROVIDERS.md`](docs/AUTH_PROVIDERS.md).
+
 La portada usa Supabase Auth para los tres proveedores. En **Supabase → Authentication → Providers**, habilita Google, Facebook y Apple y agrega el Client ID y secreto de cada plataforma. No se usa GitHub.
 
 En **Authentication → URL Configuration**, configura:
 
 ```text
 Site URL: https://serveyourself-app.vercel.app
-Redirect URL: https://serveyourself-app.vercel.app/**
+Redirect URLs:
+https://serveyourself-app.vercel.app/index.html
+https://serveyourself-app.vercel.app/registro.html
+https://serveyourself-app.vercel.app/recuperar.html
 ```
 
 En las consolas de Google, Meta y Apple registra como URL de retorno del proveedor:
