@@ -41,7 +41,7 @@ assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
 assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v9/, 'La PWA debe renovar su caché para eliminar accesos duplicados');
+assert.match(read('sw.js'), /serveyourself-shell-v10/, 'La PWA debe renovar su caché para publicar la navegación y el manifiesto nuevos');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
@@ -53,8 +53,9 @@ assert.match(migration, /p_payment_method not in \('cash', 'transfer', 'card_ter
 assert.match(migration, /v_order\.status = 'pendiente' and p_status <> 'preparando'/, 'Cocina debe respetar el avance de estados');
 assert.match(migration, /v_order\.status = 'preparando' and p_status <> 'listo'/, 'Cocina no debe saltar directamente a listo');
 assert.match(migration, /v_order\.status = 'listo' and p_status <> 'entregado'/, 'Cocina debe cerrar la entrega en orden');
-assert.match(pos, /!access\.can_close_accounts/, 'El POS debe ocultar controles de cobro sin permiso');
-assert.match(pos, /PRECUENTA/, 'Caja debe poder imprimir antes de cobrar');
+assert.match(pos, /requireRestaurantPermission\('can_create_orders'\)/, 'El POS debe exigir permiso para crear comandas');
+assert.doesNotMatch(pos, /pending-panel|register_pos_payment|PRECUENTA|COBRAR/, 'El POS de meseros no debe duplicar funciones de Caja');
+assert.doesNotMatch(pos, /db\.rpc\('create_pos_order'|db\.rpc\('append_pos_order_items'/, 'El POS no debe usar rutas antiguas que omiten comandas independientes');
 assert.doesNotMatch(pos, /id="modal-payment-method"|id="charge-button"/, 'La confirmación de cocina no debe mostrar cobro ni forma de pago');
 assert.match(pos, /setTimeout\(closeSuccess, 3000\)/, 'La confirmación debe cerrarse sola después de tres segundos');
 assert.match(pos, /create_or_append_pos_order/, 'El POS debe reutilizar automáticamente la cuenta abierta de la mesa');
@@ -150,6 +151,8 @@ assert.match(kitchen, /update_kitchen_ticket_status/, 'Cocina debe avanzar únic
 assert.doesNotMatch(kitchen, /id="orders-listo"|id="count-listo"/, 'Cocina no debe mostrar una columna de comandas listas');
 assert.match(kitchen, /\['pendiente','preparando'\]\.forEach/, 'El tablero debe renderizar únicamente Nuevos y Preparando');
 assert.match(pos, /table: 'kitchen_tickets'/, 'El mesero debe recibir el estado listo de cada comanda');
+assert.match(pos, /setInterval[\s\S]*5000/, 'El POS debe sincronizar comandas listas aunque Realtime se interrumpa');
+assert.match(pos, /visibilitychange/, 'El POS debe sincronizarse al volver a primer plano');
 assert.match(kitchen, /5000/, 'Cocina debe sincronizarse aunque Realtime se interrumpa en la PWA');
 assert.match(kitchen, /visibilitychange/, 'Cocina debe actualizarse al volver a primer plano');
 

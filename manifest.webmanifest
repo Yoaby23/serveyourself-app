@@ -1,10 +1,19 @@
 {
   "name": "ServeYourself",
   "short_name": "ServeYourself",
-  "start_url": "/index.html",
+  "id": "/",
+  "start_url": "/index.html?source=pwa",
+  "scope": "/",
+  "lang": "es-MX",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
   "background_color": "#f8fafc",
   "theme_color": "#f97316",
   "description": "Pedidos, punto de venta, caja y cocina para restaurantes.",
-  "icons": [{ "src": "/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
+  "categories": ["business", "food", "productivity"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "/app-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
 }
