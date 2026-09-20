@@ -41,10 +41,9 @@
                     </div>
                     <div class="flex flex-col py-2">
                         <button onclick="mostrarSeccion('home')" class="text-left px-5 py-2.5 text-sm font-black text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">🏠 Inicio</button>
-                        <button onclick="mostrarSeccion('pedidos')" class="text-left px-5 py-2.5 text-sm font-black text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">📦 Pedidos Activos</button>
                         <button onclick="mostrarSeccion('productos')" class="text-left px-5 py-2.5 text-sm font-black text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">🍔 Editar Menú</button>
                         <button onclick="mostrarSeccion('dashboard')" class="text-left px-5 py-2.5 text-sm font-black text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">📊 Ventas</button>
-                        <button onclick="mostrarSeccion('config')" class="text-left px-5 py-2.5 text-sm font-black text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">⚙️ Configuración</button>
+                        <button onclick="mostrarSeccion('config')" class="text-left px-5 py-2.5 text-sm font-black text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">⚙️ Configuración de restaurante</button>
                         <a href="pos.html" class="text-left px-5 py-2.5 text-sm font-black text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">🧾 Punto de venta</a>
                         <a href="caja.html" class="text-left px-5 py-2.5 text-sm font-black text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">💵 Caja y cuentas</a>
                         <a href="cocina.html" class="text-left px-5 py-2.5 text-sm font-black text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors">👨‍🍳 Pantalla de cocina</a>
@@ -68,7 +67,6 @@
         <section id="view-home" class="space-y-6">
             <div><p class="text-xs font-black text-orange-500 uppercase tracking-widest">Administración</p><h2 class="text-3xl font-black text-slate-900 mt-1">Todas las funciones</h2><p class="text-sm text-slate-500 mt-2">Elige qué parte del restaurante deseas administrar.</p></div>
             <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <button onclick="mostrarSeccion('pedidos')" class="admin-feature-card"><span>📦</span><b>Pedidos en vivo</b><small>Consulta y administra órdenes activas</small></button>
                 <a href="pos.html" class="admin-feature-card"><span>🧾</span><b>Meseros</b><small>Crea pedidos, imprime y cobra cuentas</small></a>
                 <a href="caja.html" class="admin-feature-card"><span>💵</span><b>Caja</b><small>Abre turnos, divide pagos y controla efectivo</small></a>
                 <a href="cocina.html" class="admin-feature-card"><span>👨‍🍳</span><b>Cocina</b><small>Abre la pantalla de preparación</small></a>
@@ -77,18 +75,10 @@
                 <a href="reportes.html" class="admin-feature-card"><span>📊</span><b>Reportes</b><small>Ventas, meseros, productos y diferencias</small></a>
                 <a href="clientes.html" class="admin-feature-card"><span>🎟️</span><b>Clientes y promociones</b><small>Cupones, reservaciones y lealtad</small></a>
                 <a href="equipo.html" class="admin-feature-card"><span>👥</span><b>Personal y permisos</b><small>Meseros, cocina y capitanes de caja</small></a>
-                <button onclick="mostrarSeccion('config')" class="admin-feature-card"><span>⚙️</span><b>Configuración</b><small>Horarios, ubicación y métodos de pago</small></button>
+                <button onclick="mostrarSeccion('config')" class="admin-feature-card"><span>⚙️</span><b>Configuración de restaurante</b><small>Horarios, ubicación y métodos de pago</small></button>
                 <a href="qr.html" class="admin-feature-card"><span>▦</span><b>QR del menú</b><small>Genera el código público imprimible</small></a>
                 <a href="menu.html" class="admin-feature-card"><span>🛍️</span><b>Mis pedidos personales</b><small>Cambia a la experiencia de cliente</small></a>
             </div>
-        </section>
-
-        <section id="view-pedidos" class="hidden space-y-6">
-            <div>
-                <h2 class="text-2xl font-black text-slate-900 tracking-tight">Panel de Órdenes</h2>
-                <p id="live-indicator" class="text-orange-500 text-[10px] font-black uppercase tracking-widest mt-1">● Escuchando pedidos en vivo</p>
-            </div>
-            <div id="lista-pedidos" class="space-y-6"></div>
         </section>
 
         <section id="view-productos" class="hidden space-y-8">
@@ -124,7 +114,7 @@
         </section>
 
         <section id="view-config" class="hidden space-y-6">
-            <div><h2 class="text-2xl font-black text-slate-900">Configuración</h2><p class="text-sm text-slate-400 font-semibold">Pedidos, ubicación y cobros.</p></div>
+            <div><h2 class="text-2xl font-black text-slate-900">Configuración de restaurante</h2><p class="text-sm text-slate-400 font-semibold">Pedidos, ubicación y cobros.</p></div>
             <form id="business-config-form" class="bg-white p-6 rounded-[2.5rem] border border-slate-100 space-y-5">
                 <label class="flex items-center justify-between font-bold text-sm"><span>Aceptar pedidos</span><input id="cfg-accepting" type="checkbox" class="w-5 h-5 accent-orange-500"></label>
                 <div class="border-t border-slate-100 pt-4 space-y-3">
@@ -156,16 +146,8 @@
                 </div>
                 <button class="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs">GUARDAR CONFIGURACIÓN</button>
             </form>
-            <div class="grid grid-cols-1 gap-3">
-                <a href="equipo.html" class="bg-white p-5 rounded-3xl border border-slate-100 flex items-center gap-4 hover:border-orange-300"><span class="text-3xl">🪑</span><span><b class="block text-slate-900">Mesas y personal</b><small class="text-slate-400">Crea mesas e invita meseros y cocina</small></span></a>
-                <a href="qr.html" class="bg-white p-5 rounded-3xl border border-slate-100 flex items-center gap-4 hover:border-orange-300"><span class="text-3xl">▦</span><span><b class="block text-slate-900">QR imprimible del menú</b><small class="text-slate-400">Descarga o imprime el acceso al menú público</small></span></a>
-                <a href="pos.html" class="bg-white p-5 rounded-3xl border border-slate-100 flex items-center gap-4 hover:border-orange-300"><span class="text-3xl">🧾</span><span><b class="block text-slate-900">Abrir punto de venta</b><small class="text-slate-400">Registra pedidos y cobra manualmente</small></span></a>
-                <a href="cocina.html" class="bg-white p-5 rounded-3xl border border-slate-100 flex items-center gap-4 hover:border-orange-300"><span class="text-3xl">👨‍🍳</span><span><b class="block text-slate-900">Abrir pantalla de cocina</b><small class="text-slate-400">Visualiza y avanza pedidos en tiempo real</small></span></a>
-            </div>
         </section>
     </main>
-
-    <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app-config.js"></script>
@@ -180,7 +162,7 @@
         function toggleAdminMenu() { document.getElementById('admin-menu').classList.toggle('hidden'); }
         
         function mostrarSeccion(seccion) {
-            ['home', 'pedidos', 'productos', 'dashboard', 'config'].forEach(id => {
+            ['home', 'productos', 'dashboard', 'config'].forEach(id => {
                 document.getElementById(`view-${id}`).classList.toggle('hidden', id !== seccion);
             });
             document.getElementById('admin-menu').classList.add('hidden');
@@ -208,144 +190,7 @@
             cargarConfiguracion(profile);
             window.serveYourself.initPushNotifications(user);
 
-            cargarPedidos();
             cargarProductos();
-            activarRealtime();
-            setInterval(cargarPedidos, 30000);
-        }
-
-        function activarRealtime() {
-            _supabase
-                .channel('cambios-pedidos')
-                .on('postgres_changes', { 
-                    event: 'INSERT', 
-                    schema: 'public', 
-                    table: 'orders',
-                    filter: `restaurant_id=eq.${currentRestaurantId}` 
-                }, payload => {
-                    console.log('¡Nuevo pedido recibido!', payload);
-                    document.getElementById('notif-sound').play();
-                    cargarPedidos();
-                })
-                .on('postgres_changes', { 
-                    event: 'UPDATE', 
-                    schema: 'public', 
-                    table: 'orders',
-                    filter: `restaurant_id=eq.${currentRestaurantId}` 
-                }, () => cargarPedidos())
-                .subscribe();
-        }
-
-        async function cargarPedidos() {
-            const container = document.getElementById('lista-pedidos');
-            await _supabase.rpc('expire_unpaid_online_orders', { p_restaurant_id: currentRestaurantId });
-            const { data: orders, error } = await _supabase.from('orders')
-                .select('*').eq('restaurant_id', currentRestaurantId).order('created_at', { ascending: false });
-
-            if (error) {
-                container.innerHTML = `<div class="text-center py-20 text-red-400 text-xs font-black uppercase">No se pudieron cargar las órdenes</div>`;
-                return;
-            }
-
-            if (!orders || orders.length === 0) {
-                container.innerHTML = `<div class="text-center py-20 opacity-30 italic text-xs font-black uppercase tracking-widest">Esperando órdenes...</div>`;
-                return;
-            }
-
-            container.innerHTML = orders.map(o => {
-                const esPendiente = o.status === 'pendiente';
-                const estados = {
-                    pendiente: ['NUEVA ORDEN', 'bg-orange-500 text-white'],
-                    preparando: ['PREPARANDO', 'bg-blue-100 text-blue-600'],
-                    listo: ['LISTO PARA RECOGER', 'bg-green-100 text-green-600'],
-                    entregado: ['ENTREGADO', 'bg-slate-100 text-slate-500'],
-                    cancelado: ['CANCELADO', 'bg-red-100 text-red-600']
-                };
-                const [estadoTexto, estadoClase] = estados[o.status] || [String(o.status).toUpperCase(), 'bg-slate-100 text-slate-500'];
-                const pagoPendiente = o.payment_method === 'mercado_pago' && o.payment_status === 'pending';
-                const pagoVencido = o.payment_method === 'mercado_pago' && o.payment_status === 'expired';
-                const pagoBloqueado = o.payment_method === 'mercado_pago' && o.payment_status !== 'approved';
-                const pagoProcesando = pagoPendiente && Boolean(o.mercado_pago_payment_id);
-                const venceEn = pagoPendiente && !pagoProcesando ? tiempoRestantePago(o) : '';
-                const siguienteAccion = pagoBloqueado ? '' : o.status === 'pendiente'
-                    ? `<button onclick="cambiarEstado('${escapeHtml(o.id)}', 'preparando')" class="bg-slate-900 text-white px-5 py-3 rounded-2xl font-black text-[10px] uppercase">Preparar</button>`
-                    : o.status === 'preparando'
-                        ? `<button onclick="cambiarEstado('${escapeHtml(o.id)}', 'listo')" class="bg-green-600 text-white px-5 py-3 rounded-2xl font-black text-[10px] uppercase">Marcar listo</button>`
-                        : o.status === 'listo'
-                            ? `<button onclick="cambiarEstado('${escapeHtml(o.id)}', 'entregado')" class="bg-slate-900 text-white px-5 py-3 rounded-2xl font-black text-[10px] uppercase">Entregar</button>`
-                            : '';
-                return `
-                    <div class="bg-white p-5 rounded-[2.5rem] border-2 ${esPendiente ? 'border-orange-500 shadow-xl shadow-orange-100 new-order-anim' : 'border-slate-100 opacity-60'}">
-                        <div class="flex justify-between items-center mb-4">
-                            <span class="text-[9px] font-black px-3 py-1 rounded-full uppercase ${estadoClase}">
-                                ${escapeHtml(estadoTexto)}
-                            </span>
-                            <span class="text-[10px] font-bold text-slate-400">${new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
-                        <div class="space-y-2 mb-4">
-                            ${o.items.map(i => `<p class="text-sm font-bold text-slate-800"><span class="text-orange-500">${Number(i.qty)}x</span> ${escapeHtml(i.nombre)}</p>`).join('')}
-                        </div>
-                        ${o.notes ? `<div class="bg-orange-50 p-3 rounded-2xl mb-4 border border-orange-100 text-[11px] font-semibold text-slate-600 italic">"${escapeHtml(o.notes)}"</div>` : ''}
-                        <p class="text-[10px] font-black uppercase ${pagoVencido ? 'text-red-500' : 'text-slate-400'} mb-3">${pagoVencido ? 'Pago vencido · el cliente debe crear otro pedido' : pagoProcesando ? 'Mercado Pago está procesando el cobro' : `Pago: ${escapeHtml(o.payment_method || 'cash')} · ${escapeHtml(o.payment_status || 'not_required')}${venceEn ? ` · vence en ${venceEn}` : ''}`}</p>
-                        <div class="flex items-center justify-between pt-4 border-t border-slate-50">
-                            <p class="text-lg font-black text-slate-900">$${o.total}</p>
-                            <div class="flex gap-2">
-                                ${pagoPendiente ? `<button onclick="verificarPago('${escapeHtml(o.id)}', this)" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-3 rounded-2xl font-black text-[10px] uppercase transition-colors">Verificar pago</button>` : siguienteAccion}
-                                ${['pendiente', 'preparando'].includes(o.status) ? `<button onclick="cancelarPedido('${escapeHtml(o.id)}')" class="bg-red-50 text-red-500 px-4 py-3 rounded-2xl font-black text-[10px] uppercase">Cancelar</button>` : ''}
-                                ${['entregado', 'cancelado'].includes(o.status) ? `<button onclick="eliminarPedido('${escapeHtml(o.id)}')" class="bg-red-50 text-red-500 p-3 rounded-2xl">🗑️</button>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function tiempoRestantePago(order) {
-            const expiresAt = new Date(order.payment_expires_at || new Date(order.created_at).getTime() + 20 * 60000).getTime();
-            const seconds = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
-            return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-        }
-
-        async function cambiarEstado(id, status) {
-            const updates = { status };
-            if (status === 'listo') updates.ready_at = new Date().toISOString();
-            if (status === 'entregado') updates.delivered_at = new Date().toISOString();
-            const { error } = await _supabase.from('orders').update(updates).eq('id', id);
-            if (error) {
-                alert('No se pudo actualizar el pedido: ' + error.message);
-                return;
-            }
-            await _supabase.functions.invoke('send-order-notification', { body: { orderId: id } });
-        }
-
-        async function verificarPago(orderId, button) {
-            const originalText = button.innerText;
-            button.disabled = true;
-            button.innerText = 'VERIFICANDO...';
-            try {
-                const response = await window.serveYourself.reconcileMercadoPagoOrder(orderId);
-                if (!response.ok) throw new Error('Mercado Pago todavía no reporta un pago para esta orden.');
-                await cargarPedidos();
-            } catch (error) {
-                alert(error.message);
-            } finally {
-                button.disabled = false;
-                button.innerText = originalText;
-            }
-        }
-
-        async function cancelarPedido(id) {
-            const reason = prompt('Motivo de cancelación:');
-            if (!reason) return;
-            const { error } = await _supabase.rpc('cancel_order', { p_order_id: id, p_reason: reason });
-            if (error) { alert(error.message); return; }
-            await _supabase.functions.invoke('send-order-notification', { body: { orderId: id } });
-            cargarPedidos();
-        }
-        async function eliminarPedido(id) {
-            if (!confirm("¿Borrar este pedido finalizado?")) return;
-            const { error } = await _supabase.from('orders').delete().eq('id', id);
-            if (error) alert('No se pudo borrar el pedido: ' + error.message);
         }
 
         async function cargarProductos() {
