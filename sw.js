@@ -1,6 +1,6 @@
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
-const CACHE = 'serveyourself-shell-v9';
-const SHELL = ['/index.html','/menu.html','/pos.html','/cocina.html','/styles.css','/app.js','/app-config.js','/logo.png'];
+const CACHE = 'serveyourself-shell-v10';
+const SHELL = ['/index.html','/registro.html','/recuperar.html','/menu.html','/admin.html','/pos.html','/caja.html','/cocina.html','/styles.css','/app.js','/app-config.js','/manifest.webmanifest','/app-icon.svg','/logo.png'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', event => {
