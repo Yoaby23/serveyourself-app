@@ -155,9 +155,25 @@ window.serveYourself = {
         else window.location.href = fallback;
     },
 
+    ensureGlobalBackButton() {
+        if (!document.body || !document.querySelector) return;
+        const page = window.location.pathname.split('/').pop() || 'index.html';
+        if (page === 'index.html' || document.querySelector('[data-sy-back], .sy-restaurant-nav')) return;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'sy-global-back no-print';
+        button.dataset.syBack = 'true';
+        button.setAttribute('aria-label', 'Volver a la vista anterior');
+        button.setAttribute('title', 'Volver');
+        button.textContent = '←';
+        button.addEventListener('click', () => this.goBack('index.html'));
+        document.body.appendChild(button);
+    },
+
     renderRestaurantNavigation(access, options = {}) {
         const container = document.getElementById(options.containerId || 'restaurant-nav');
         if (!container || !access) return;
+        document.querySelector('.sy-global-back')?.remove();
         const dark = Boolean(options.dark);
         const triggerClass = dark ? 'sy-nav-trigger sy-nav-trigger-dark' : 'sy-nav-trigger';
         const links = [];
@@ -175,7 +191,7 @@ window.serveYourself = {
         links.push('<a href="menu.html">🛍️ Mis pedidos personales</a>');
         container.innerHTML = `
             <div class="sy-nav-actions">
-                <button type="button" class="${triggerClass}" onclick="window.serveYourself.goBack('${this.restaurantHome(access)}')" aria-label="Volver">←</button>
+                <button type="button" data-sy-back class="${triggerClass}" onclick="window.serveYourself.goBack('${this.restaurantHome(access)}')" aria-label="Volver">←</button>
                 <button type="button" class="${triggerClass}" onclick="window.serveYourself.toggleRestaurantMenu()" aria-label="Abrir menú" aria-expanded="false">☰</button>
             </div>
             <div id="restaurant-menu-dropdown" class="sy-nav-dropdown hidden">
@@ -213,8 +229,16 @@ window.serveYourself = {
     },
 
     async installApp() {
+        const standalone = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        if (standalone) {
+            alert('ServeYourself ya está instalada en este dispositivo.');
+            return;
+        }
         if (!this._installPrompt) {
-            alert('En iPhone usa Compartir → Agregar a inicio. En Chrome abre el menú e instala la aplicación.');
+            const isiOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent || '');
+            alert(isiOS
+                ? 'En Safari toca Compartir → Agregar a pantalla de inicio.'
+                : 'En Chrome o Edge abre el menú del navegador y elige Instalar aplicación.');
             return;
         }
         this._installPrompt.prompt();
@@ -274,6 +298,25 @@ if (!document.querySelector('link[rel="manifest"]')) {
     manifest.href = 'manifest.webmanifest';
     document.head.appendChild(manifest);
 }
+[
+    ['theme-color', '#f97316'],
+    ['mobile-web-app-capable', 'yes'],
+    ['apple-mobile-web-app-capable', 'yes'],
+    ['apple-mobile-web-app-status-bar-style', 'default'],
+    ['apple-mobile-web-app-title', 'ServeYourself']
+].forEach(([name, content]) => {
+    if (document.querySelector(`meta[name="${name}"]`)) return;
+    const meta = document.createElement('meta');
+    meta.name = name;
+    meta.content = content;
+    document.head.appendChild(meta);
+});
+if (!document.querySelector('link[rel="apple-touch-icon"]')) {
+    const appleIcon = document.createElement('link');
+    appleIcon.rel = 'apple-touch-icon';
+    appleIcon.href = 'logo.png';
+    document.head.appendChild(appleIcon);
+}
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
@@ -281,3 +324,9 @@ window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
     window.serveYourself._installPrompt = event;
 });
+window.addEventListener('appinstalled', () => { window.serveYourself._installPrompt = null; });
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => window.serveYourself.ensureGlobalBackButton());
+} else {
+    window.serveYourself.ensureGlobalBackButton();
+}
