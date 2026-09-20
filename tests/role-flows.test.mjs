@@ -30,6 +30,9 @@ assert.match(admin, /<b>Caja<\/b>/, 'El acceso al corte debe llamarse Caja');
 assert.doesNotMatch(admin, /Comandas y caja|Turnos y corte de caja/, 'El panel no debe conservar los nombres anteriores');
 assert.match(admin, /Configuración de restaurante/, 'La sección debe identificarse como Configuración de restaurante');
 assert.doesNotMatch(admin, /Mesas y personal|QR imprimible del menú|Abrir punto de venta|Abrir pantalla de cocina/, 'Configuración no debe duplicar accesos disponibles en el inicio');
+const adminDropdown = admin.slice(admin.indexOf('id="admin-menu"'), admin.indexOf('</nav>'));
+assert.doesNotMatch(adminDropdown, /href=|mostrarSeccion\(/, 'El menú del perfil no debe repetir accesos del panel principal');
+assert.match(adminDropdown, /cerrarSesion\(\)/, 'El menú del perfil debe conservar el cierre de sesión');
 assert.match(app, /renderRestaurantNavigation/, 'Debe existir navegación común');
 assert.match(app, /persistSession: true/, 'La aplicación instalada debe conservar la sesión');
 assert.match(app, /autoRefreshToken: true/, 'La sesión guardada debe renovar su token automáticamente');
@@ -38,7 +41,7 @@ assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
 assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v8/, 'La PWA debe renovar su caché para mostrar el panel simplificado');
+assert.match(read('sw.js'), /serveyourself-shell-v9/, 'La PWA debe renovar su caché para eliminar accesos duplicados');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
