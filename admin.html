@@ -27,7 +27,7 @@
 
     <nav class="bg-white/90 backdrop-blur-md p-4 sticky top-0 z-50 border-b border-slate-100">
         <div class="flex justify-between items-center relative max-w-5xl mx-auto">
-            <button onclick="mostrarSeccion('home')" class="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 font-black" title="Inicio">⌂</button>
+            <button data-sy-back onclick="adminBack()" class="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 font-black" title="Volver" aria-label="Volver a la vista anterior">←</button>
             <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2">
                 <h1 class="text-lg font-black tracking-tighter text-slate-900">serve<span class="text-orange-500">yourself</span></h1>
             </div>
@@ -40,6 +40,7 @@
                         <p id="admin-email-display" class="text-xs font-medium text-slate-500">...</p>
                     </div>
                     <div class="p-2 bg-slate-50 border-t border-slate-100">
+                        <button onclick="window.serveYourself.installApp()" class="block text-center w-full py-2.5 text-sm font-bold text-slate-700 hover:bg-white rounded-xl transition-colors">📲 Instalar aplicación</button>
                         <button onclick="cerrarSesion()" class="block text-center w-full py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors">Cerrar sesión</button>
                     </div>
                 </div>
@@ -52,7 +53,7 @@
         <section id="view-home" class="space-y-6">
             <div><p class="text-xs font-black text-orange-500 uppercase tracking-widest">Administración</p><h2 class="text-3xl font-black text-slate-900 mt-1">Todas las funciones</h2><p class="text-sm text-slate-500 mt-2">Elige qué parte del restaurante deseas administrar.</p></div>
             <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <a href="pos.html" class="admin-feature-card"><span>🧾</span><b>Meseros</b><small>Crea pedidos, imprime y cobra cuentas</small></a>
+                <a href="pos.html" class="admin-feature-card"><span>🧾</span><b>Meseros</b><small>Crea comandas y envíalas directamente a cocina</small></a>
                 <a href="caja.html" class="admin-feature-card"><span>💵</span><b>Caja</b><small>Abre turnos, divide pagos y controla efectivo</small></a>
                 <a href="cocina.html" class="admin-feature-card"><span>👨‍🍳</span><b>Cocina</b><small>Abre la pantalla de preparación</small></a>
                 <button onclick="mostrarSeccion('productos')" class="admin-feature-card"><span>🍔</span><b>Menú y productos</b><small>Agrega productos y cambia disponibilidad</small></button>
@@ -143,15 +144,22 @@
         const safeImageUrl = window.serveYourself.safeImageUrl;
         let currentRestaurantId = null;
         let currentProfile = null;
+        let currentAdminSection = 'home';
 
         function toggleAdminMenu() { document.getElementById('admin-menu').classList.toggle('hidden'); }
         
         function mostrarSeccion(seccion) {
+            currentAdminSection = seccion;
             ['home', 'productos', 'dashboard', 'config'].forEach(id => {
                 document.getElementById(`view-${id}`).classList.toggle('hidden', id !== seccion);
             });
             document.getElementById('admin-menu').classList.add('hidden');
             if (seccion === 'dashboard') cargarDashboard();
+        }
+
+        function adminBack() {
+            if (currentAdminSection !== 'home') mostrarSeccion('home');
+            else window.serveYourself.goBack('index.html');
         }
 
         async function inicializarAdmin() {
