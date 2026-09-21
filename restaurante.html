@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>serveyourself | Menú</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="styles.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
@@ -67,6 +68,21 @@
                 <button onclick="cerrarCarrito()" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold">✕</button>
             </div>
             <div id="lista-carrito" class="space-y-6 mb-8"></div>
+            <div id="service-options" class="grid grid-cols-2 gap-2 mb-6">
+                <button type="button" data-service="pickup" onclick="setService('pickup')" class="service-btn py-3 rounded-2xl bg-slate-900 text-white font-black text-xs">RECOGER</button>
+                <button type="button" data-service="delivery" onclick="setService('delivery')" class="service-btn py-3 rounded-2xl bg-slate-100 text-slate-600 font-black text-xs hidden">DELIVERY</button>
+            </div>
+            <div id="delivery-fields" class="hidden mb-6 space-y-3">
+                <select id="saved-address" onchange="useSavedAddress()" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold"><option value="">Nueva dirección</option></select>
+                <input id="delivery-name" maxlength="120" placeholder="Nombre de quien recibe" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
+                <input id="delivery-phone" maxlength="30" inputmode="tel" placeholder="Teléfono" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
+                <input id="delivery-address" maxlength="300" placeholder="Calle, número, colonia y ciudad" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
+                <input id="delivery-reference" maxlength="300" placeholder="Referencias (color, entre calles, timbre)" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
+                <button type="button" onclick="useMyLocation()" class="w-full py-3 rounded-2xl bg-blue-50 text-blue-700 text-xs font-black">📍 USAR MI UBICACIÓN</button>
+                <div id="delivery-map" class="h-52 rounded-2xl overflow-hidden border"></div>
+                <label class="flex items-center gap-2 text-xs font-bold text-slate-500"><input id="save-address" type="checkbox"> Guardar esta dirección</label>
+                <div id="delivery-quote" class="p-4 bg-orange-50 text-orange-700 rounded-2xl text-sm font-bold">Selecciona el punto exacto en el mapa.</div>
+            </div>
             <div class="mb-8">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Notas adicionales</label>
                 <textarea id="order-notes" placeholder="Ej: Sin cebolla, salsas extra..." class="w-full bg-slate-50 border border-slate-100 rounded-[1.5rem] p-4 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all resize-none" rows="3"></textarea>
@@ -77,6 +93,8 @@
                 <div id="transfer-details" class="hidden mt-3 p-4 bg-blue-50 rounded-2xl text-xs text-blue-700"></div>
             </div>
             <div class="border-t border-slate-100 pt-6 space-y-4">
+                <div class="flex justify-between items-center"><p class="text-slate-400 font-bold uppercase tracking-widest text-xs">Productos</p><p id="modal-subtotal" class="font-black">$0.00</p></div>
+                <div id="fee-row" class="hidden flex justify-between items-center"><p class="text-slate-400 font-bold uppercase tracking-widest text-xs">Envío</p><p id="modal-fee" class="font-black">$0.00</p></div>
                 <div class="flex justify-between items-center">
                     <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">Total a pagar</p>
                     <p id="modal-total" class="text-3xl font-black text-slate-900">$0.00</p>
@@ -87,6 +105,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app-config.js"></script>
     <script src="app.js"></script>
     <script>
@@ -99,6 +118,7 @@
         let carrito = [];
         const productosPorId = new Map();
         let restaurant = null;
+        let serviceType = 'pickup', deliveryQuote = null, deliveryMap = null, deliveryMarker = null, savedAddresses = [];
 
         async function cargarPagina() {
             const user = await window.serveYourself.requireUser();
@@ -130,7 +150,12 @@
                     img.src = imageUrl; img.classList.remove('hidden');
                 }
                 renderPaymentMethods(res);
+                document.querySelector('[data-service="delivery"]').classList.toggle('hidden', !res.delivery_enabled);
             }
+
+            const { data: addresses } = await _supabase.from('customer_addresses').select('*').order('is_default', { ascending: false });
+            savedAddresses = addresses || [];
+            document.getElementById('saved-address').innerHTML = '<option value="">Nueva dirección</option>' + savedAddresses.map(a => `<option value="${a.id}">${escapeHtml(a.label)} · ${escapeHtml(a.address)}</option>`).join('');
 
             const { data: productos, error: productsError } = await _supabase
                 .from('products')
@@ -147,12 +172,68 @@
 
         function renderPaymentMethods(res) {
             const options = [];
-            if (res.payment_cash) options.push('<option value="cash">Efectivo al recoger</option>');
-            if (res.payment_transfer) options.push('<option value="transfer">Transferencia bancaria</option>');
+            if (res.payment_cash) options.push(`<option value="cash">${serviceType === 'delivery' ? 'Efectivo al entregar' : 'Efectivo al recoger'}</option>`);
+            if (serviceType !== 'delivery' && res.payment_transfer) options.push('<option value="transfer">Transferencia bancaria</option>');
             if (res.payment_online && res.mercado_pago_connected) options.push('<option value="mercado_pago">Mercado Pago</option>');
             document.getElementById('payment-method').innerHTML = options.join('');
-            if (!options.length) document.getElementById('btn-confirmar').disabled = true;
+            document.getElementById('btn-confirmar').disabled = !options.length;
             mostrarDatosTransferencia();
+        }
+
+        function setService(type) {
+            if (type === 'delivery' && !restaurant?.delivery_enabled) return;
+            serviceType = type; deliveryQuote = null;
+            document.querySelectorAll('.service-btn').forEach(button => {
+                const active = button.dataset.service === type;
+                button.className = `service-btn py-3 rounded-2xl font-black text-xs ${active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'}`;
+            });
+            document.getElementById('delivery-fields').classList.toggle('hidden', type !== 'delivery');
+            document.getElementById('fee-row').classList.toggle('hidden', type !== 'delivery');
+            renderPaymentMethods(restaurant);
+            if (type === 'delivery') {
+                setTimeout(initDeliveryMap, 50);
+                const selected = savedAddresses.find(a => a.is_default);
+                if (selected) { document.getElementById('saved-address').value = selected.id; useSavedAddress(); }
+            }
+            actualizarModalCarrito();
+        }
+
+        function initDeliveryMap() {
+            if (deliveryMap) { deliveryMap.invalidateSize(); return; }
+            const center = [restaurant.latitude || 19.4326, restaurant.longitude || -99.1332];
+            deliveryMap = L.map('delivery-map').setView(center, 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(deliveryMap);
+            deliveryMap.on('click', event => setDeliveryPoint(event.latlng.lat, event.latlng.lng));
+        }
+
+        function setDeliveryPoint(lat, lng) {
+            if (!deliveryMap) initDeliveryMap();
+            if (!deliveryMarker) deliveryMarker = L.marker([lat, lng], { draggable: true }).addTo(deliveryMap);
+            else deliveryMarker.setLatLng([lat, lng]);
+            deliveryMarker.off('dragend').on('dragend', event => { const p = event.target.getLatLng(); setDeliveryPoint(p.lat, p.lng); });
+            deliveryMap.setView([lat, lng], 16); calculateQuote();
+        }
+
+        function useMyLocation() {
+            if (!navigator.geolocation) return alert('Tu dispositivo no permite obtener la ubicación.');
+            navigator.geolocation.getCurrentPosition(p => setDeliveryPoint(p.coords.latitude, p.coords.longitude), () => alert('No pudimos obtener tu ubicación. Selecciona el punto en el mapa.'), { enableHighAccuracy: true });
+        }
+
+        function useSavedAddress() {
+            const a = savedAddresses.find(item => item.id === document.getElementById('saved-address').value); if (!a) return;
+            document.getElementById('delivery-name').value = a.contact_name; document.getElementById('delivery-phone').value = a.contact_phone;
+            document.getElementById('delivery-address').value = a.address; document.getElementById('delivery-reference').value = a.reference || '';
+            setDeliveryPoint(a.latitude, a.longitude);
+        }
+
+        async function calculateQuote() {
+            if (serviceType !== 'delivery' || !deliveryMarker || !carrito.length) return;
+            const point = deliveryMarker.getLatLng(), subtotal = carrito.reduce((sum, item) => sum + item.price * item.qty, 0);
+            document.getElementById('delivery-quote').textContent = 'Calculando cobertura...';
+            const { data, error } = await _supabase.rpc('calculate_delivery_quote', { p_restaurant_id: resId, p_latitude: point.lat, p_longitude: point.lng, p_subtotal: subtotal });
+            if (error) { deliveryQuote = null; document.getElementById('delivery-quote').textContent = error.message; actualizarModalCarrito(); return; }
+            deliveryQuote = data; document.getElementById('delivery-quote').textContent = `${data.distance_km} km · Envío $${Number(data.delivery_fee).toFixed(2)} · Aproximadamente ${data.eta_minutes} min`;
+            actualizarModalCarrito();
         }
 
         function mostrarDatosTransferencia() {
@@ -225,6 +306,7 @@
             }
             actualizarInterfazCarrito(id);
             if (!document.getElementById('modal-carrito').classList.contains('hidden')) actualizarModalCarrito();
+            if (serviceType === 'delivery' && deliveryMarker) calculateQuote();
         }
 
         function actualizarInterfazCarrito(prodId) {
@@ -266,6 +348,10 @@
                 lista.appendChild(div);
             });
             totalElement.innerText = `$${total.toFixed(2)}`;
+            document.getElementById('modal-subtotal').innerText = `$${total.toFixed(2)}`;
+            const fee = serviceType === 'delivery' ? Number(deliveryQuote?.delivery_fee || 0) : 0;
+            document.getElementById('modal-fee').innerText = `$${fee.toFixed(2)}`;
+            totalElement.innerText = `$${(total + fee).toFixed(2)}`;
         }
 
         async function confirmarPedido() {
@@ -274,17 +360,21 @@
             const btn = document.getElementById('btn-confirmar');
             const notas = document.getElementById('order-notes').value;
             const paymentMethod = document.getElementById('payment-method').value;
+            if (serviceType === 'delivery' && !['cash', 'mercado_pago'].includes(paymentMethod)) return alert('Delivery solo acepta efectivo o Mercado Pago.');
+            if (serviceType === 'delivery' && !deliveryQuote) return alert('Selecciona una dirección dentro de la zona de entrega.');
             btn.disabled = true;
             btn.innerText = "ENVIANDO...";
 
             try {
                 const items = carrito.map(item => ({ id: item.id, qty: item.qty }));
-                const { data: order, error } = await _supabase.rpc('create_order_v2', {
-                    p_restaurant_id: resId,
-                    p_items: items,
-                    p_notes: notas.slice(0, 500),
-                    p_payment_method: paymentMethod
-                });
+                let result;
+                if (serviceType === 'delivery') {
+                    const point = deliveryMarker.getLatLng();
+                    const name = document.getElementById('delivery-name').value.trim(), phone = document.getElementById('delivery-phone').value.trim(), address = document.getElementById('delivery-address').value.trim(), reference = document.getElementById('delivery-reference').value.trim();
+                    result = await _supabase.rpc('create_delivery_order', { p_restaurant_id: resId, p_items: items, p_notes: notas.slice(0, 500), p_payment_method: paymentMethod, p_address: address, p_reference: reference, p_latitude: point.lat, p_longitude: point.lng, p_contact_name: name, p_contact_phone: phone, p_scheduled_for: null });
+                    if (!result.error && document.getElementById('save-address').checked) await _supabase.from('customer_addresses').insert({ customer_id: (await _supabase.auth.getUser()).data.user.id, label: 'Casa', address, reference: reference || null, latitude: point.lat, longitude: point.lng, contact_name: name, contact_phone: phone, is_default: savedAddresses.length === 0 });
+                } else result = await _supabase.rpc('create_order_v2', { p_restaurant_id: resId, p_items: items, p_notes: notas.slice(0, 500), p_payment_method: paymentMethod });
+                const { data: order, error } = result;
 
                 if (error) throw error;
 
@@ -295,6 +385,7 @@
                     return;
                 }
 
+                if (serviceType === 'delivery') { window.location.href = `delivery-tracking.html?id=${order.id}`; return; }
                 alert(paymentMethod === 'transfer' ? 'Pedido enviado. Realiza la transferencia con los datos indicados.' : '¡Pedido enviado con éxito!');
                 carrito = [];
                 // Resetear UI de cantidades en el menú
