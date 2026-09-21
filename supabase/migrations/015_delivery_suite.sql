@@ -166,6 +166,7 @@ create function public.list_restaurant_staff() returns table(id bigint,user_id u
 language sql stable security definer set search_path='' as $$ select s.id,s.user_id,p.full_name,p.email,s.staff_role,s.is_active,s.can_create_orders,s.can_view_kitchen,s.can_close_accounts,s.can_manage_delivery,s.can_deliver_orders,s.created_at from public.restaurant_staff s join public.profiles p on p.id=s.user_id where s.restaurant_id=auth.uid() order by s.created_at desc; $$;
 
 drop function if exists public.set_staff_permissions(bigint,boolean,boolean,boolean);
+drop function if exists public.set_staff_permissions(bigint,boolean,boolean,boolean,boolean,boolean);
 create function public.set_staff_permissions(p_staff_id bigint,p_can_create_orders boolean,p_can_view_kitchen boolean,p_can_close_accounts boolean,p_can_manage_delivery boolean,p_can_deliver_orders boolean)
 returns void language plpgsql security definer set search_path='' as $$ begin update public.restaurant_staff set can_create_orders=p_can_create_orders,can_view_kitchen=p_can_view_kitchen,can_close_accounts=p_can_close_accounts,can_manage_delivery=p_can_manage_delivery,can_deliver_orders=p_can_deliver_orders where id=p_staff_id and restaurant_id=auth.uid();if not found then raise exception 'Integrante no encontrado';end if;end; $$;
 
