@@ -33,9 +33,8 @@ assert.match(pos, /create_or_append_pos_order/, 'Las mesas deben reutilizar su c
 assert.doesNotMatch(pos, /pending-panel|register_pos_payment|order_payments/, 'Meseros no debe contener funciones de caja');
 assert.match(read('caja.html'), /register_pos_payment/, 'Los pagos manuales deben permanecer en Caja');
 
-for (const provider of ['google', 'facebook', 'apple']) {
-    assert.match(read('index.html'), new RegExp(`signInWithProvider\\('${provider}'`));
-    assert.match(read('registro.html'), new RegExp(`registerWithProvider\\('${provider}'`));
-}
+assert.match(read('index.html'), /signInWithProvider\('google'/);
+assert.match(read('registro.html'), /registerWithProvider\('google'/);
+assert.doesNotMatch(read('index.html') + read('registro.html'), /facebook|Continuar con Apple|Registrarme con Apple/i);
 
 console.log(`Calidad PWA, navegación y POS: OK (${htmlFiles.length} pantallas revisadas)`);

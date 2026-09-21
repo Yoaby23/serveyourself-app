@@ -156,17 +156,16 @@ assert.match(pos, /visibilitychange/, 'El POS debe sincronizarse al volver a pri
 assert.match(kitchen, /5000/, 'Cocina debe sincronizarse aunque Realtime se interrumpa en la PWA');
 assert.match(kitchen, /visibilitychange/, 'Cocina debe actualizarse al volver a primer plano');
 
-for (const provider of ['google', 'facebook', 'apple']) {
-    assert.match(index, new RegExp(`signInWithProvider\\('${provider}'`), `El inicio debe ofrecer acceso con ${provider}`);
-    assert.match(registration, new RegExp(`registerWithProvider\\('${provider}'`), `El registro debe ofrecer acceso con ${provider}`);
-}
-assert.match(index, /signInWithOAuth/, 'Los proveedores sociales deben usar OAuth de Supabase');
+assert.match(index, /signInWithProvider\('google'/, 'El inicio debe ofrecer acceso con Google');
+assert.match(registration, /registerWithProvider\('google'/, 'El registro debe ofrecer acceso con Google');
+assert.doesNotMatch(index + registration, /facebook|Continuar con Apple|Registrarme con Apple/i, 'Facebook y Apple no deben aparecer como opciones');
+assert.match(index, /signInWithOAuth/, 'Google debe usar OAuth de Supabase');
 assert.match(registration, /completeOAuthRegistration/, 'El registro debe completar el retorno de OAuth');
 assert.match(registration, /CREAR MI RESTAURANTE/, 'El registro social de negocio debe solicitar los datos del restaurante');
 assert.doesNotMatch(index, /signInWithProvider\('github'/, 'GitHub no debe mostrarse como proveedor');
 assert.match(socialAuth, /raw_user_meta_data ->> 'name'/, 'El perfil social debe aceptar el nombre del proveedor');
 assert.match(socialAuth, /raw_user_meta_data ->> 'picture'/, 'El perfil social debe aceptar la imagen del proveedor');
-assert.match(socialAuth, /split_part\(coalesce\(new\.email/, 'Apple debe tener un nombre alternativo si no comparte el nombre');
+assert.match(socialAuth, /split_part\(coalesce\(new\.email/, 'El perfil debe tener un nombre alternativo si Google no comparte el nombre');
 assert.match(index, /href="recuperar\.html"/, 'El inicio de sesión debe enlazar la recuperación de contraseña');
 assert.match(index, /Pide fácil\./, 'La portada debe comunicar una experiencia sencilla para clientes');
 assert.match(index, /Atiende mejor\./, 'La portada debe representar también al equipo del restaurante');
