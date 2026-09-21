@@ -56,6 +56,7 @@
                 <a href="pos.html" class="admin-feature-card"><span>🧾</span><b>Meseros</b><small>Crea comandas y envíalas directamente a cocina</small></a>
                 <a href="caja.html" class="admin-feature-card"><span>💵</span><b>Caja</b><small>Abre turnos, divide pagos y controla efectivo</small></a>
                 <a href="cocina.html" class="admin-feature-card"><span>👨‍🍳</span><b>Cocina</b><small>Abre la pantalla de preparación</small></a>
+                <a href="delivery.html" class="admin-feature-card"><span>🛵</span><b>Delivery y despacho</b><small>Acepta, asigna y sigue entregas en tiempo real</small></a>
                 <button onclick="mostrarSeccion('productos')" class="admin-feature-card"><span>🍔</span><b>Menú y productos</b><small>Agrega productos y cambia disponibilidad</small></button>
                 <a href="inventario.html" class="admin-feature-card"><span>📦</span><b>Inventario y recetas</b><small>Ingredientes, estaciones, costos y mínimos</small></a>
                 <a href="reportes.html" class="admin-feature-card"><span>📊</span><b>Reportes</b><small>Ventas, meseros, productos y diferencias</small></a>
@@ -116,6 +117,18 @@
                     <input id="cfg-lng" type="number" step="any" placeholder="Longitud" class="p-4 bg-slate-50 rounded-2xl text-sm font-bold">
                 </div>
                 <button type="button" onclick="usarUbicacionActual()" class="w-full py-3 bg-blue-50 text-blue-600 rounded-2xl font-black text-xs">📍 USAR MI UBICACIÓN ACTUAL</button>
+                <div class="border-t border-slate-100 pt-4 space-y-3">
+                    <label class="flex items-center justify-between font-bold text-sm"><span>Ofrecer delivery</span><input id="cfg-delivery-enabled" type="checkbox" class="w-5 h-5 accent-orange-500"></label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="text-xs font-bold text-slate-600">Radio máximo (km)<input id="cfg-delivery-radius" type="number" min="0.5" max="50" step="0.1" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
+                        <label class="text-xs font-bold text-slate-600">Pedido mínimo<input id="cfg-delivery-minimum" type="number" min="0" step="0.01" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
+                        <label class="text-xs font-bold text-slate-600">Tarifa base<input id="cfg-delivery-base" type="number" min="0" step="0.01" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
+                        <label class="text-xs font-bold text-slate-600">Costo por km<input id="cfg-delivery-km" type="number" min="0" step="0.01" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
+                        <label class="text-xs font-bold text-slate-600">Envío gratis desde<input id="cfg-delivery-free" type="number" min="0" step="0.01" placeholder="Opcional" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
+                        <label class="text-xs font-bold text-slate-600">Preparación (min)<input id="cfg-delivery-prep" type="number" min="5" max="240" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
+                    </div>
+                    <p class="text-xs text-slate-400">Los clientes verán únicamente Efectivo al entregar y Mercado Pago. Configura la ubicación exacta para calcular la cobertura.</p>
+                </div>
                 <div class="border-t border-slate-100 pt-4 space-y-3">
                     <p class="text-[10px] font-black text-slate-400 uppercase">Métodos de pago</p>
                     <label class="flex gap-3 text-sm font-bold"><input id="cfg-cash" type="checkbox" class="accent-orange-500"> Efectivo</label>
@@ -246,6 +259,13 @@
             document.getElementById('cfg-close-time').value = profile.close_time ? String(profile.close_time).slice(0, 5) : '';
             document.getElementById('cfg-lat').value = profile.latitude ?? '';
             document.getElementById('cfg-lng').value = profile.longitude ?? '';
+            document.getElementById('cfg-delivery-enabled').checked = profile.delivery_enabled ?? false;
+            document.getElementById('cfg-delivery-radius').value = profile.delivery_radius_km ?? 5;
+            document.getElementById('cfg-delivery-minimum').value = profile.delivery_minimum ?? 0;
+            document.getElementById('cfg-delivery-base').value = profile.delivery_base_fee ?? 0;
+            document.getElementById('cfg-delivery-km').value = profile.delivery_fee_per_km ?? 0;
+            document.getElementById('cfg-delivery-free').value = profile.delivery_free_over ?? '';
+            document.getElementById('cfg-delivery-prep').value = profile.delivery_prep_minutes ?? 30;
             document.getElementById('cfg-cash').checked = profile.payment_cash ?? true;
             document.getElementById('cfg-transfer').checked = profile.payment_transfer ?? false;
             document.getElementById('cfg-online').checked = profile.payment_online ?? false;
@@ -296,6 +316,13 @@
                 close_time: closeTime || null,
                 latitude: Number(document.getElementById('cfg-lat').value) || null,
                 longitude: Number(document.getElementById('cfg-lng').value) || null,
+                delivery_enabled: document.getElementById('cfg-delivery-enabled').checked,
+                delivery_radius_km: Number(document.getElementById('cfg-delivery-radius').value) || 5,
+                delivery_minimum: Number(document.getElementById('cfg-delivery-minimum').value) || 0,
+                delivery_base_fee: Number(document.getElementById('cfg-delivery-base').value) || 0,
+                delivery_fee_per_km: Number(document.getElementById('cfg-delivery-km').value) || 0,
+                delivery_free_over: Number(document.getElementById('cfg-delivery-free').value) || null,
+                delivery_prep_minutes: Number(document.getElementById('cfg-delivery-prep').value) || 30,
                 payment_cash: document.getElementById('cfg-cash').checked,
                 payment_transfer: document.getElementById('cfg-transfer').checked,
                 payment_online: document.getElementById('cfg-online').checked,
@@ -308,6 +335,12 @@
             }
             if (updates.payment_online && !currentProfile.mercado_pago_connected) {
                 alert('Primero conecta tu cuenta de Mercado Pago.'); return;
+            }
+            if (updates.delivery_enabled && (!updates.latitude || !updates.longitude)) {
+                alert('Para activar delivery debes guardar la ubicación exacta del restaurante.'); return;
+            }
+            if (updates.delivery_enabled && !updates.payment_cash && !updates.payment_online) {
+                alert('Delivery necesita Efectivo o Mercado Pago como método de cobro.'); return;
             }
             const { error } = await _supabase.from('profiles').update(updates).eq('id', currentRestaurantId);
             if (error) { alert(error.message); return; }

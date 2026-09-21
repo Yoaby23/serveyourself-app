@@ -23,7 +23,7 @@ Deno.serve(async (request) => {
     }
     const targetOrderId = ticket?.order_id ?? orderId;
     const { data: order } = await client.from('orders')
-      .select('id, customer_id, restaurant_id, restaurant_name, status, order_source, created_by')
+      .select('id, customer_id, restaurant_id, restaurant_name, status, order_source, service_type, delivery_status, assigned_driver_id, created_by')
       .eq('id', targetOrderId)
       .single();
     if (!order) {
@@ -31,11 +31,10 @@ Deno.serve(async (request) => {
     }
 
     if (order.restaurant_id !== user.id) {
-      const { data: canOperateKitchen } = await client.rpc('has_restaurant_permission', {
-        p_restaurant_id: order.restaurant_id,
-        p_permission: 'view_kitchen'
-      });
-      if (!canOperateKitchen) return jsonResponse(request, { error: 'Sin permiso para notificar este pedido' }, 403);
+      const permissions = await Promise.all(['view_kitchen', 'manage_delivery', 'deliver_orders'].map(p_permission =>
+        client.rpc('has_restaurant_permission', { p_restaurant_id: order.restaurant_id, p_permission })
+      ));
+      if (!permissions.some(result => result.data)) return jsonResponse(request, { error: 'Sin permiso para notificar este pedido' }, 403);
     }
 
     const messages: Record<string, string> = {
@@ -43,14 +42,24 @@ Deno.serve(async (request) => {
       listo: '¡Tu pedido está listo para recoger!',
       entregado: 'Tu pedido fue marcado como entregado.',
       cancelado: 'El restaurante canceló tu pedido.'
+      ,pending_acceptance: 'Tu pedido de delivery está esperando confirmación.'
+      ,accepted: 'El restaurante aceptó tu pedido de delivery.'
+      ,ready_for_dispatch: 'Tu pedido está listo y pronto saldrá a reparto.'
+      ,picked_up: 'El repartidor recogió tu pedido.'
+      ,on_the_way: '¡Tu pedido va en camino!'
+      ,arrived: 'El repartidor llegó a tu domicilio.'
+      ,delivered: 'Tu pedido fue entregado.'
     };
-    const notificationStatus = ticket?.status ?? order.status;
+    const notificationStatus = order.service_type === 'delivery' ? order.delivery_status : (ticket?.status ?? order.status);
     if (!messages[notificationStatus]) return jsonResponse(request, { skipped: true });
 
     const appUrl = Deno.env.get('APP_URL') ?? 'https://serveyourself-app.vercel.app';
     const notifications: Array<{ recipient: string; message: string; url: string }> = [];
     if (order.customer_id) {
-      notifications.push({ recipient: order.customer_id, message: messages[notificationStatus], url: `${appUrl}/menu.html` });
+      notifications.push({ recipient: order.customer_id, message: messages[notificationStatus], url: order.service_type === 'delivery' ? `${appUrl}/delivery-tracking.html?id=${order.id}` : `${appUrl}/menu.html` });
+    }
+    if (order.service_type === 'delivery' && order.assigned_driver_id && ['accepted', 'ready_for_dispatch'].includes(notificationStatus)) {
+      notifications.push({ recipient: order.assigned_driver_id, message: notificationStatus === 'ready_for_dispatch' ? `El pedido #${order.id} está listo para recoger.` : `Te asignaron el pedido #${order.id}.`, url: `${appUrl}/repartidor.html` });
     }
     if (order.order_source === 'pos' && order.created_by && ['listo', 'cancelado'].includes(notificationStatus)) {
       notifications.push({
