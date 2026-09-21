@@ -22,7 +22,7 @@ Deno.serve(async (request) => {
     const { orderId } = await request.json();
     const { data: order, error: orderError } = await userClient
       .from('orders')
-      .select('id, customer_id, restaurant_id, restaurant_name, items, total, payment_method, payment_status, created_at, payment_expires_at')
+      .select('id, customer_id, restaurant_id, restaurant_name, items, total, delivery_fee, service_type, payment_method, payment_status, created_at, payment_expires_at')
       .eq('id', orderId)
       .single();
     if (orderError || !order || order.customer_id !== user.id) {
@@ -46,21 +46,27 @@ Deno.serve(async (request) => {
     const appUrl = Deno.env.get('APP_URL') ?? 'https://serveyourself-app.vercel.app';
     const feePercent = Math.max(0, Math.min(100, Number(Deno.env.get('MERCADO_PAGO_FEE_PERCENT') ?? 0)));
     const marketplaceFee = Math.round(Number(order.total) * feePercent) / 100;
-    const preferenceBody: Record<string, unknown> = {
-      items: order.items.map((item: Record<string, unknown>) => ({
+    const checkoutItems = order.items.map((item: Record<string, unknown>) => ({
         id: String(item.id),
         title: String(item.nombre),
         quantity: Number(item.qty),
         unit_price: Number(item.price),
         currency_id: 'MXN'
-      })),
+      }));
+    if (Number(order.delivery_fee || 0) > 0) checkoutItems.push({
+      id: 'delivery-fee', title: 'Envío a domicilio', quantity: 1,
+      unit_price: Number(order.delivery_fee), currency_id: 'MXN'
+    });
+    const returnPage = order.service_type === 'delivery' ? 'delivery-tracking.html' : 'menu.html';
+    const preferenceBody: Record<string, unknown> = {
+      items: checkoutItems,
       payer: { email: user.email },
       external_reference: String(order.id),
       statement_descriptor: 'SERVEYOURSELF',
       back_urls: {
-        success: `${appUrl}/menu.html?payment=success&order_id=${encodeURIComponent(order.id)}`,
-        pending: `${appUrl}/menu.html?payment=pending&order_id=${encodeURIComponent(order.id)}`,
-        failure: `${appUrl}/menu.html?payment=failure&order_id=${encodeURIComponent(order.id)}`
+        success: `${appUrl}/${returnPage}?payment=success&id=${encodeURIComponent(order.id)}&order_id=${encodeURIComponent(order.id)}`,
+        pending: `${appUrl}/${returnPage}?payment=pending&id=${encodeURIComponent(order.id)}&order_id=${encodeURIComponent(order.id)}`,
+        failure: `${appUrl}/${returnPage}?payment=failure&id=${encodeURIComponent(order.id)}&order_id=${encodeURIComponent(order.id)}`
       },
       auto_return: 'approved',
       notification_url: `${supabaseUrl}/functions/v1/mercado-pago-webhook?order_id=${encodeURIComponent(order.id)}`,
