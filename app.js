@@ -107,13 +107,15 @@ window.serveYourself = {
     restaurantHome(access) {
         if (!access) return 'menu.html';
         if (access.staff_role === 'owner') return 'admin.html';
+        if (access.can_deliver_orders) return 'repartidor.html';
+        if (access.can_manage_delivery) return 'delivery.html';
         if (access.can_create_orders) return 'pos.html';
         if (access.can_close_accounts) return 'caja.html';
         if (access.can_view_kitchen) return 'cocina.html';
         return 'menu.html';
     },
 
-    async requireRestaurantAccess(allowedRoles = ['owner', 'manager', 'waiter', 'kitchen', 'cashier']) {
+    async requireRestaurantAccess(allowedRoles = ['owner', 'manager', 'waiter', 'kitchen', 'cashier', 'driver']) {
         const user = await this.requireUser();
         if (!user) return null;
         try {
@@ -181,6 +183,8 @@ window.serveYourself = {
         if (access.can_create_orders) links.push('<a href="pos.html">🧾 Comandas</a>');
         if (access.can_close_accounts) links.push('<a href="caja.html">💵 Caja y cuentas</a>');
         if (access.can_view_kitchen) links.push('<a href="cocina.html">👨‍🍳 Cocina</a>');
+        if (access.can_manage_delivery || access.staff_role === 'owner') links.push('<a href="delivery.html">🛵 Delivery y despacho</a>');
+        if (access.can_deliver_orders) links.push('<a href="repartidor.html">📍 Mis entregas</a>');
         if (access.staff_role === 'owner') {
             links.push('<a href="equipo.html">👥 Personal y permisos</a>');
             links.push('<a href="inventario.html">📦 Inventario y recetas</a>');
