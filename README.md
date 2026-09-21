@@ -182,6 +182,22 @@ comanda independiente en cocina. Una ronda nueva permanece en **Nuevos** y no ca
 el estado de otra ronda que ya esté **Preparando** o **Lista**. Las notificaciones al
 mesero también identifican la comanda y la cuenta correspondientes.
 
+### Delivery y despacho
+
+Ejecuta después:
+
+`supabase/migrations/015_delivery_suite.sql`
+
+Agrega cobertura y tarifas por distancia, direcciones guardadas, aceptación de pedidos,
+despacho, rol de repartidor, ubicación en ruta, código de entrega, incidencias y métricas.
+En delivery los únicos métodos disponibles son **Efectivo al entregar** y **Mercado Pago**.
+Después de aplicar la migración vuelve a desplegar estas funciones:
+
+```bash
+supabase functions deploy create-mercado-pago-preference
+supabase functions deploy send-order-notification
+```
+
 ## Servicios externos
 
 ### Inicio de sesión con Google
