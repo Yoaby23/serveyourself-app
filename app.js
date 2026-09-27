@@ -159,8 +159,9 @@ window.serveYourself = {
 
     ensureGlobalBackButton() {
         if (!document.body || !document.querySelector) return;
-        const page = window.location.pathname.split('/').pop() || 'index.html';
-        if (page === 'index.html' || document.querySelector('[data-sy-back], .sy-restaurant-nav')) return;
+        const page = (window.location.pathname || '/index.html').split('/').pop() || 'index.html';
+        const mainPages = ['index.html', 'menu.html', 'admin.html', 'pos.html', 'caja.html', 'cocina.html', 'delivery.html', 'repartidor.html'];
+        if (mainPages.includes(page) || document.querySelector('[data-sy-back], .sy-restaurant-nav')) return;
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'sy-global-back no-print';
@@ -178,13 +179,15 @@ window.serveYourself = {
         document.querySelector('.sy-global-back')?.remove();
         const dark = Boolean(options.dark);
         const triggerClass = dark ? 'sy-nav-trigger sy-nav-trigger-dark' : 'sy-nav-trigger';
+        const page = (window.location.pathname || '/index.html').split('/').pop() || 'index.html';
+        const mainPages = ['admin.html', 'pos.html', 'caja.html', 'cocina.html', 'delivery.html', 'repartidor.html'];
+        const showBack = options.showBack ?? !mainPages.includes(page);
         const links = [];
         links.push(`<a href="${this.restaurantHome(access)}">🏠 Inicio de trabajo</a>`);
         if (access.can_create_orders) links.push('<a href="pos.html">🧾 Comandas</a>');
         if (access.can_close_accounts) links.push('<a href="caja.html">💵 Caja y cuentas</a>');
         if (access.can_view_kitchen) links.push('<a href="cocina.html">👨‍🍳 Cocina</a>');
         if (access.can_manage_delivery || access.staff_role === 'owner') links.push('<a href="delivery.html">🛵 Delivery y despacho</a>');
-        if (access.can_deliver_orders) links.push('<a href="repartidor.html">📍 Mis entregas</a>');
         if (access.staff_role === 'owner') {
             links.push('<a href="equipo.html">👥 Personal y permisos</a>');
             links.push('<a href="inventario.html">📦 Inventario y recetas</a>');
@@ -193,9 +196,10 @@ window.serveYourself = {
             links.push('<a href="qr.html">▦ QR del menú</a>');
         }
         links.push('<a href="menu.html">🛍️ Mis pedidos personales</a>');
+        links.push('<a href="repartidor-registro.html">🛵 Trabajar como repartidor</a>');
         container.innerHTML = `
             <div class="sy-nav-actions">
-                <button type="button" data-sy-back class="${triggerClass}" onclick="window.serveYourself.goBack('${this.restaurantHome(access)}')" aria-label="Volver">←</button>
+                ${showBack ? `<button type="button" data-sy-back class="${triggerClass}" onclick="window.serveYourself.goBack('${this.restaurantHome(access)}')" aria-label="Volver">←</button>` : ''}
                 <button type="button" class="${triggerClass}" onclick="window.serveYourself.toggleRestaurantMenu()" aria-label="Abrir menú" aria-expanded="false">☰</button>
             </div>
             <div id="restaurant-menu-dropdown" class="sy-nav-dropdown hidden">

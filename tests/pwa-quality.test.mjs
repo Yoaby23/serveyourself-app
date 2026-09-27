@@ -29,7 +29,7 @@ assert.ok(fs.existsSync(new URL('../app-icon.svg', import.meta.url)), 'El icono 
 assert.match(sw, /manifest\.webmanifest/);
 assert.match(sw, /app-icon\.svg/);
 
-assert.match(pos, /create_or_append_pos_order/, 'Las mesas deben reutilizar su cuenta abierta');
+assert.match(pos, /create_pos_table_order/, 'Las mesas deben permitir cuentas nuevas o existentes');
 assert.doesNotMatch(pos, /pending-panel|register_pos_payment|order_payments/, 'Meseros no debe contener funciones de caja');
 assert.match(read('caja.html'), /register_pos_payment/, 'Los pagos manuales deben permanecer en Caja');
 

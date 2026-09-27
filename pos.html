@@ -1,198 +1,25 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Punto de venta | ServeYourself</title>
-    <link rel="icon" href="logo.png" type="image/png">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body class="bg-slate-50 min-h-screen">
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-            <div><p class="text-xs font-black text-orange-500 uppercase tracking-widest">Punto de venta</p><h1 id="restaurant-name" class="text-xl font-black">ServeYourself</h1></div>
-            <div id="restaurant-nav" class="sy-restaurant-nav"></div>
-        </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto p-4 grid lg:grid-cols-[1fr_390px] gap-5">
-        <section>
-            <section id="ready-panel" class="hidden bg-green-50 border border-green-200 rounded-3xl p-4 mb-5">
-                <div class="flex items-center justify-between gap-3"><div><p class="text-xs font-black text-green-700 uppercase tracking-wider">Listos para entregar</p><h2 class="font-black text-green-950 mt-1">Mis comandas listas</h2></div><span id="ready-count" class="px-3 py-1 rounded-full bg-green-200 text-green-900 font-black">0</span></div>
-                <div id="ready-orders" class="grid sm:grid-cols-2 gap-3 mt-4"></div>
-            </section>
-            <div id="command-builder">
-                <div class="flex flex-col sm:flex-row gap-3 mb-5">
-                    <input id="product-search" type="search" placeholder="Buscar producto..." class="flex-1 p-4 rounded-2xl border border-slate-200 bg-white font-bold">
-                    <select id="category-filter" class="p-4 rounded-2xl border border-slate-200 bg-white font-bold"><option value="">Todas las categorías</option></select>
-                </div>
-                <div id="product-grid" class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
-            </div>
-        </section>
-
-        <aside id="order-cart" class="lg:sticky lg:top-24 lg:self-start bg-white rounded-3xl border border-slate-200 shadow-sm p-5">
-            <div class="flex justify-between items-center"><h2 class="text-xl font-black">Pedido</h2><button id="clear-cart" class="text-xs font-black text-red-500">VACIAR</button></div>
-            <div class="grid grid-cols-2 gap-2 mt-4">
-                <button data-service="dine_in" class="service-btn p-3 rounded-xl bg-slate-900 text-white font-black">En mesa</button>
-                <button data-service="pickup" class="service-btn p-3 rounded-xl bg-slate-100 text-slate-600 font-black">Para llevar</button>
-            </div>
-            <label id="table-wrap" class="block mt-3 text-xs font-black text-slate-500 uppercase">Mesa
-                <select id="table-select" class="w-full mt-2 p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 normal-case"><option value="">Selecciona una mesa</option></select>
-                <small id="table-account-hint" class="hidden mt-2 normal-case font-bold text-emerald-600"></small>
-            </label>
-            <div id="cart-items" class="my-5 space-y-3 max-h-[38vh] overflow-y-auto"><p class="text-center text-slate-400 py-8">Agrega productos al pedido.</p></div>
-            <textarea id="order-notes" maxlength="500" rows="2" placeholder="Notas para cocina" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm"></textarea>
-            <div class="flex justify-between items-end mt-5 pt-5 border-t border-slate-100"><span class="font-bold text-slate-500">Total</span><strong id="cart-total" class="text-3xl">$0.00</strong></div>
-            <button id="submit-order" class="w-full mt-4 py-4 rounded-2xl bg-orange-500 text-white font-black text-sm uppercase tracking-wider">Enviar a cocina</button>
-        </aside>
-    </main>
-
-    <div id="success-modal" class="hidden fixed inset-0 z-50 bg-slate-950/60 p-4 items-center justify-center">
-        <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center">
-            <div class="text-5xl mb-3">✅</div><h2 id="success-title" class="text-2xl font-black">Pedido registrado</h2><p id="success-order" class="text-slate-500 mt-2"></p>
-            <p class="mt-4 text-sm font-bold text-emerald-600">La comanda ya está visible en cocina.</p>
-        </div>
-    </div>
-
-    <div id="ready-alert" class="ready-order-alert hidden" role="status" aria-live="assertive"></div>
-    <audio id="ready-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app-config.js"></script><script src="app.js"></script>
-    <script>
-        const db = window.serveYourself.supabase;
-        const esc = window.serveYourself.escapeHtml;
-        let access, products = [], tables = [], openAccounts = [], serviceType = 'dine_in', lastOrder = null, resetCartOnClose = false, successTimer = null, loadingReadyOrders = false;
-        const cart = new Map();
-
-        async function init() {
-            access = await window.serveYourself.requireRestaurantPermission('can_create_orders');
-            if (!access) return;
-            document.getElementById('restaurant-name').textContent = access.business_name;
-            window.serveYourself.renderRestaurantNavigation(access);
-            window.serveYourself.initPushNotifications(access.user);
-            const [{ data: productData, error: productError }, { data: tableData, error: tableError }] = await Promise.all([
-                db.from('products').select('*').eq('restaurant_id', access.restaurant_id).eq('is_available', true).order('category').order('name'),
-                db.from('restaurant_tables').select('*').eq('restaurant_id', access.restaurant_id).eq('is_active', true).order('name')
-            ]);
-            if (productError || tableError) return alert('No se pudo cargar el punto de venta. Aplica primero la migración 004 en Supabase.');
-            products = productData || []; tables = tableData || [];
-            document.getElementById('category-filter').innerHTML += [...new Set(products.map(p => p.category))].map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
-            document.getElementById('table-select').innerHTML += tables.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
-            if (!tables.length) setService('pickup');
-            await loadOpenAccounts();
-            renderProducts(); renderCart();
-            loadReadyOrders();
-            activateWaiterRealtime();
-        }
-
-        function renderProducts() {
-            const query = document.getElementById('product-search').value.trim().toLowerCase();
-            const category = document.getElementById('category-filter').value;
-            const visible = products.filter(p => (!category || p.category === category) && (!query || `${p.name} ${p.category}`.toLowerCase().includes(query)));
-            document.getElementById('product-grid').innerHTML = visible.length ? visible.map(p => `
-                <button onclick="addProduct('${p.id}')" class="bg-white rounded-3xl border border-slate-200 p-4 text-left hover:border-orange-400 hover:shadow-md">
-                    <img src="${esc(window.serveYourself.safeImageUrl(p.image_url) || 'logo.png')}" class="w-full h-32 object-cover rounded-2xl bg-slate-100" alt="">
-                    <p class="text-[10px] uppercase tracking-wider font-black text-orange-500 mt-3">${esc(p.category)}</p><h3 class="font-black mt-1">${esc(p.name)}</h3><p class="font-black text-lg mt-2">$${Number(p.price).toFixed(2)}</p>
-                </button>`).join('') : '<p class="text-slate-400 col-span-full text-center py-16">No hay productos disponibles.</p>';
-        }
-        function addProduct(id) { cart.set(id, (cart.get(id) || 0) + 1); renderCart(); }
-        function changeQty(id, delta) { const qty = (cart.get(id) || 0) + delta; qty > 0 ? cart.set(id, qty) : cart.delete(id); renderCart(); }
-        function renderCart() {
-            const entries = [...cart.entries()];
-            document.getElementById('cart-items').innerHTML = entries.length ? entries.map(([id, qty]) => {
-                const p = products.find(item => item.id === id); return `<div class="flex gap-3 items-center"><div class="flex-1"><p class="font-black text-sm">${esc(p.name)}</p><p class="text-xs text-slate-400">$${Number(p.price).toFixed(2)} c/u</p></div><button onclick="changeQty('${id}',-1)" class="w-9 h-9 rounded-lg bg-slate-100 font-black">−</button><b>${qty}</b><button onclick="changeQty('${id}',1)" class="w-9 h-9 rounded-lg bg-orange-100 text-orange-600 font-black">+</button></div>`;
-            }).join('') : '<p class="text-center text-slate-400 py-8">Agrega productos al pedido.</p>';
-            const total = entries.reduce((sum, [id, qty]) => sum + Number(products.find(p => p.id === id).price) * qty, 0);
-            document.getElementById('cart-total').textContent = `$${total.toFixed(2)}`;
-        }
-        function setService(type) {
-            serviceType = type;
-            document.querySelectorAll('.service-btn').forEach(btn => {
-                const active = btn.dataset.service === type;
-                btn.className = `service-btn p-3 rounded-xl font-black ${active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'}`;
-            });
-            document.getElementById('table-wrap').classList.toggle('hidden', type !== 'dine_in');
-            updateTableAccountHint();
-        }
-        async function submitOrder() {
-            if (!cart.size) return alert('Agrega al menos un producto.');
-            const tableId = document.getElementById('table-select').value;
-            if (serviceType === 'dine_in' && !tableId) return alert('Selecciona una mesa.');
-            const button = document.getElementById('submit-order'); button.disabled = true; button.textContent = 'REGISTRANDO...';
-            const rpcParams = { p_restaurant_id: access.restaurant_id, p_items: [...cart].map(([id, qty]) => ({ id, qty })), p_notes: document.getElementById('order-notes').value, p_service_type: serviceType, p_table_id: serviceType === 'dine_in' ? Number(tableId) : null, p_payment_method: 'cash' };
-            const { data, error } = await db.rpc('create_or_append_pos_order', rpcParams);
-            button.disabled = false; button.textContent = 'ENVIAR A COCINA';
-            if (error) {
-                const migrationHint = /create_or_append_pos_order|schema cache/i.test(error.message || '')
-                    ? '\nAplica la migración 014 en Supabase y vuelve a intentarlo.'
-                    : '';
-                return alert(error.message + migrationHint);
-            }
-            lastOrder = data;
-            lastOrder.restaurant_tables = { name: tables.find(t => t.id === Number(lastOrder.table_id))?.name };
-            resetCartOnClose = true;
-            document.getElementById('success-order').textContent = `Pedido #${lastOrder.id} · $${Number(lastOrder.total).toFixed(2)}`;
-            document.getElementById('success-title').textContent = lastOrder.was_appended ? 'Nueva ronda enviada a cocina' : 'Pedido enviado a cocina';
-            document.getElementById('success-modal').classList.remove('hidden'); document.getElementById('success-modal').classList.add('flex');
-            clearTimeout(successTimer);
-            successTimer = setTimeout(closeSuccess, 3000);
-            await loadOpenAccounts();
-        }
-        async function loadOpenAccounts() {
-            if (!access?.can_create_orders) return;
-            const { data, error } = await db.from('orders').select('id,total,table_id,service_type,waiter_name,restaurant_tables(name)').eq('restaurant_id', access.restaurant_id).eq('order_source','pos').eq('payment_status','pending').neq('status','cancelado').order('created_at');
-            if (error) return;
-            openAccounts = data || [];
-            updateTableAccountHint();
-        }
-        function updateTableAccountHint() {
-            const hint = document.getElementById('table-account-hint');
-            const tableId = Number(document.getElementById('table-select').value || 0);
-            const account = serviceType === 'dine_in' && tableId ? openAccounts.find(order => Number(order.table_id) === tableId) : null;
-            hint.classList.toggle('hidden', !account);
-            hint.textContent = account ? `Cuenta #${account.id} abierta · los productos se agregarán automáticamente.` : '';
-        }
-        async function loadReadyOrders() {
-            if (!access?.can_create_orders || loadingReadyOrders) return;
-            loadingReadyOrders = true;
-            try {
-                const { data, error } = await db.from('kitchen_tickets').select('id,order_id,table_id,service_type,created_at,ready_at').eq('restaurant_id', access.restaurant_id).eq('created_by', access.user.id).eq('status', 'listo').order('ready_at');
-                if (error) return;
-                const readyOrders = data || [];
-                document.getElementById('ready-panel').classList.toggle('hidden', !readyOrders.length);
-                document.getElementById('ready-count').textContent = readyOrders.length;
-                document.getElementById('ready-orders').innerHTML = readyOrders.map(order => `<article class="bg-white border border-green-200 rounded-2xl p-4"><div class="flex items-center justify-between gap-3"><div><b class="text-lg">Comanda #${order.id}</b><p class="text-xs text-slate-500">Cuenta #${order.order_id}</p><p class="text-sm text-green-700 font-bold">${order.service_type === 'dine_in' ? esc(tables.find(table=>Number(table.id)===Number(order.table_id))?.name || 'Mesa') : 'Para llevar'}</p></div><span class="text-2xl">✅</span></div></article>`).join('');
-            } finally {
-                loadingReadyOrders = false;
-            }
-        }
-        function activateWaiterRealtime() {
-            db.channel(`waiter-ready-${access.user.id}`).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kitchen_tickets', filter: `restaurant_id=eq.${access.restaurant_id}` }, payload => {
-                if (payload.new.created_by === access.user.id && payload.new.status === 'listo' && payload.old.status !== 'listo') {
-                    showReadyAlert(payload.new);
-                }
-                loadReadyOrders();
-            }).subscribe();
-        }
-        function showReadyAlert(order) {
-            const alertBox = document.getElementById('ready-alert');
-            alertBox.innerHTML = `<p class="text-xs font-black uppercase tracking-wider">Pedido listo</p><p class="font-black text-lg mt-1">La comanda #${order.id} de la cuenta #${order.order_id} está lista para entregar.</p>`;
-            alertBox.classList.remove('hidden');
-            document.getElementById('ready-sound').play().catch(() => {});
-            setTimeout(() => alertBox.classList.add('hidden'), 8000);
-        }
-        function closeSuccess() { clearTimeout(successTimer); if (resetCartOnClose) { cart.clear(); document.getElementById('order-notes').value = ''; renderCart(); resetCartOnClose = false; } document.getElementById('success-modal').classList.add('hidden'); document.getElementById('success-modal').classList.remove('flex'); }
-        document.querySelectorAll('.service-btn').forEach(btn => btn.addEventListener('click', () => setService(btn.dataset.service)));
-        document.getElementById('product-search').addEventListener('input', renderProducts); document.getElementById('category-filter').addEventListener('change', renderProducts);
-        document.getElementById('table-select').addEventListener('change', updateTableAccountHint);
-        document.getElementById('clear-cart').addEventListener('click', () => { cart.clear(); renderCart(); }); document.getElementById('submit-order').addEventListener('click', submitOrder);
-        window.setInterval(() => { if (!document.hidden) loadReadyOrders(); }, 5000);
-        window.addEventListener('focus', loadReadyOrders);
-        window.addEventListener('pageshow', loadReadyOrders);
-        document.addEventListener('visibilitychange', () => { if (!document.hidden) { loadReadyOrders(); loadOpenAccounts(); } });
-        init();
-    </script>
-</body>
-</html>
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Punto de venta | ServeYourself</title><link rel="icon" href="logo.png"><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="styles.css"></head><body class="bg-slate-50 min-h-screen">
+<header class="bg-white border-b sticky top-0 z-30"><div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between"><div><p class="text-xs font-black text-orange-500 uppercase tracking-widest">Punto de venta</p><h1 id="restaurant-name" class="text-xl font-black">ServeYourself</h1></div><div id="restaurant-nav" class="sy-restaurant-nav"></div></div></header>
+<main class="max-w-7xl mx-auto p-4"><section id="ready-panel" class="hidden bg-green-50 border border-green-200 rounded-3xl p-4 mb-5"><div class="flex items-center justify-between"><div><p class="text-xs font-black text-green-700 uppercase">Listos para entregar</p><h2 class="font-black">Mis comandas listas</h2></div><span id="ready-count" class="px-3 py-1 rounded-full bg-green-200 font-black">0</span></div><div id="ready-orders" class="grid sm:grid-cols-2 gap-3 mt-4"></div></section>
+<section id="table-view"><div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4"><div><p class="text-xs uppercase tracking-wider font-black text-orange-500">Salón</p><h2 class="text-3xl font-black">Selecciona una mesa</h2><p class="text-slate-500">Ve cuáles están disponibles y cuáles tienen cuentas abiertas.</p></div><button onclick="startOrder(null,null,'pickup')" class="px-5 py-4 rounded-2xl bg-slate-900 text-white font-black">🥡 NUEVA ORDEN PARA LLEVAR</button></div><div class="flex gap-4 text-sm mt-5"><span><i class="inline-block w-3 h-3 bg-emerald-500 rounded-full"></i> Disponible</span><span><i class="inline-block w-3 h-3 bg-orange-500 rounded-full"></i> Ocupada</span></div><div id="table-grid" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 mt-5"></div></section>
+<section id="menu-view" class="hidden"><button onclick="showTables()" class="mb-4 px-4 py-3 rounded-2xl bg-white border font-black">← Volver a mesas</button><div class="grid lg:grid-cols-[1fr_390px] gap-5"><div><div id="order-context" class="bg-slate-900 text-white rounded-3xl p-5 mb-5"></div><div class="flex flex-col sm:flex-row gap-3 mb-5"><input id="product-search" type="search" placeholder="Buscar producto..." class="flex-1 p-4 rounded-2xl border bg-white font-bold"><select id="category-filter" class="p-4 rounded-2xl border bg-white font-bold"><option value="">Todas las categorías</option></select></div><div id="product-grid" class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4"></div></div><aside class="lg:sticky lg:top-24 lg:self-start bg-white rounded-3xl border shadow-sm p-5"><div class="flex justify-between"><h2 class="text-xl font-black">Comanda</h2><button onclick="clearCart()" class="text-xs font-black text-red-500">VACIAR</button></div><div id="cart-items" class="my-5 space-y-3 max-h-[42vh] overflow-y-auto"></div><textarea id="order-notes" maxlength="500" rows="2" placeholder="Notas para cocina" class="w-full p-3 rounded-xl border bg-slate-50 text-sm"></textarea><div class="flex justify-between items-end mt-5 pt-5 border-t"><span class="font-bold text-slate-500">Total</span><strong id="cart-total" class="text-3xl">$0.00</strong></div><button id="submit-order" onclick="submitOrder()" class="w-full mt-4 py-4 rounded-2xl bg-orange-500 text-white font-black">ENVIAR A COCINA</button></aside></div></section></main>
+<dialog id="account-dialog" class="rounded-3xl p-0 backdrop:bg-black/60 w-[92%] max-w-md"><div class="p-6"><p class="text-xs text-orange-500 font-black uppercase">Mesa ocupada</p><h2 id="account-title" class="text-2xl font-black mt-1"></h2><p class="text-sm text-slate-500 mt-1">Elige una cuenta o abre una nueva para separar consumos.</p><div id="account-options" class="space-y-3 mt-5"></div><button onclick="document.getElementById('account-dialog').close()" class="w-full mt-3 py-3 font-bold text-slate-500">CANCELAR</button></div></dialog>
+<div id="success-modal" class="hidden fixed inset-0 z-50 bg-slate-950/60 p-4 items-center justify-center"><div class="bg-white rounded-3xl p-7 w-full max-w-sm text-center"><div class="text-5xl">✅</div><h2 id="success-title" class="text-2xl font-black mt-3">Pedido enviado a cocina</h2><p id="success-order" class="text-slate-500 mt-2"></p><p class="mt-4 text-sm font-bold text-emerald-600">La comanda ya está visible en cocina.</p></div></div><div id="ready-alert" class="ready-order-alert hidden" role="status" aria-live="assertive"></div><audio id="ready-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="app-config.js"></script><script src="app.js"></script><script>
+const db=window.serveYourself.supabase,esc=window.serveYourself.escapeHtml,$=id=>document.getElementById(id);let access,products=[],tables=[],accounts=[],selectedTable=null,selectedAccount=null,serviceType='dine_in',successTimer,loadingReady=false;const cart=new Map(),money=n=>`$${Number(n||0).toFixed(2)}`;
+const tableGrid=$('table-grid'),accountTitle=$('account-title'),accountOptions=$('account-options'),accountDialog=$('account-dialog'),tableView=$('table-view'),menuView=$('menu-view'),orderContext=$('order-context'),productSearch=$('product-search'),categoryFilter=$('category-filter'),productGrid=$('product-grid'),cartItems=$('cart-items'),cartTotal=$('cart-total'),orderNotes=$('order-notes'),successTitle=$('success-title'),successOrder=$('success-order'),successModal=$('success-modal'),readyPanel=$('ready-panel'),readyCount=$('ready-count'),readyOrders=$('ready-orders'),readyAlert=$('ready-alert'),readySound=$('ready-sound');
+async function init(){access=await window.serveYourself.requireRestaurantPermission('can_create_orders');if(!access)return;$('restaurant-name').textContent=access.business_name;window.serveYourself.renderRestaurantNavigation(access,{showBack:false});window.serveYourself.initPushNotifications(access.user);const[p,t]=await Promise.all([db.from('products').select('*').eq('restaurant_id',access.restaurant_id).eq('is_available',true).order('category').order('name'),db.from('restaurant_tables').select('*').eq('restaurant_id',access.restaurant_id).eq('is_active',true).order('name')]);if(p.error||t.error)return alert('No se pudo cargar el punto de venta.');products=p.data||[];tables=t.data||[];$('category-filter').innerHTML+=[...new Set(products.map(x=>x.category))].map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');await refreshAccounts();renderProducts();renderCart();loadReady();activateRealtime()}
+async function refreshAccounts(){const{data,error}=await db.from('orders').select('id,total,table_id,waiter_name,created_at').eq('restaurant_id',access.restaurant_id).eq('order_source','pos').eq('service_type','dine_in').eq('payment_status','pending').neq('status','cancelado').order('created_at');if(!error){accounts=data||[];renderTables()}}
+function renderTables(){tableGrid.innerHTML=tables.length?tables.map(t=>{const list=accounts.filter(a=>Number(a.table_id)===Number(t.id)),busy=list.length>0;return `<button onclick="chooseTable(${t.id})" class="text-left rounded-3xl p-5 border-2 ${busy?'bg-orange-50 border-orange-300':'bg-white border-emerald-200'}"><div class="flex justify-between"><span class="text-3xl">${busy?'🍽️':'✓'}</span><span class="text-xs font-black px-3 py-1 rounded-full ${busy?'bg-orange-500 text-white':'bg-emerald-100 text-emerald-700'}">${busy?'OCUPADA':'DISPONIBLE'}</span></div><h3 class="text-2xl font-black mt-5">${esc(t.name)}</h3><p class="text-sm text-slate-500 mt-1">${busy?`${list.length} cuenta${list.length>1?'s':''} · ${money(list.reduce((s,a)=>s+Number(a.total),0))}`:'Abrir una cuenta nueva'}</p></button>`}).join(''):'<p class="col-span-full text-center bg-white rounded-3xl p-8">No hay mesas configuradas. Usa una orden para llevar.</p>'}
+function chooseTable(id){const table=tables.find(t=>Number(t.id)===Number(id)),list=accounts.filter(a=>Number(a.table_id)===Number(id));if(!list)return startOrder(table,null,'dine_in');accountTitle.textContent=table.name;accountOptions.innerHTML=list.map(a=>`<button onclick="selectAccount(${id},${a.id})" class="w-full text-left p-4 rounded-2xl border hover:border-orange-400"><div class="flex justify-between"><b>Cuenta #${a.id}</b><strong>${money(a.total)}</strong></div><small class="text-slate-500">${esc(a.waiter_name||'Mesero')} · ${new Date(a.created_at).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}</small></button>`).join('')+`<button onclick="selectAccount(${id},null)" class="w-full p-4 rounded-2xl bg-slate-900 text-white font-black">＋ ABRIR CUENTA NUEVA</button>`;accountDialog.showModal()}
+function selectAccount(tableId,accountId){accountDialog.close();startOrder(tables.find(t=>Number(t.id)===Number(tableId)),accountId,'dine_in')}
+function startOrder(table,accountId,type){selectedTable=table;selectedAccount=accountId;serviceType=type;clearCart();tableView.classList.add('hidden');menuView.classList.remove('hidden');orderContext.innerHTML=`<p class="text-xs text-orange-400 font-black uppercase">${type==='pickup'?'Para llevar':esc(table.name)}</p><h2 class="text-2xl font-black mt-1">${accountId?`Agregar a la cuenta #${accountId}`:'Abrir cuenta nueva'}</h2><p class="text-slate-400 text-sm mt-1">${accountId?'Se creará una nueva comanda dentro de esta cuenta.':'Selecciona los productos de la primera comanda.'}</p>`;window.scrollTo(0,0)}
+function showTables(){menuView.classList.add('hidden');tableView.classList.remove('hidden');clearCart();refreshAccounts();window.scrollTo(0,0)}
+function renderProducts(){const q=productSearch.value.trim().toLowerCase(),cat=categoryFilter.value;const list=products.filter(p=>(!cat||p.category===cat)&&(!q||`${p.name} ${p.category}`.toLowerCase().includes(q)));productGrid.innerHTML=list.length?list.map(p=>`<button onclick="addProduct('${p.id}')" class="bg-white rounded-3xl border p-4 text-left hover:border-orange-400"><img src="${esc(window.serveYourself.safeImageUrl(p.image_url)||'logo.png')}" class="w-full h-32 object-cover rounded-2xl bg-slate-100" alt=""><p class="text-[10px] uppercase font-black text-orange-500 mt-3">${esc(p.category)}</p><h3 class="font-black mt-1">${esc(p.name)}</h3><p class="font-black text-lg mt-2">${money(p.price)}</p></button>`).join(''):'<p class="col-span-full text-center py-16 text-slate-400">No hay productos.</p>'}
+function addProduct(id){cart.set(id,(cart.get(id)||0)+1);renderCart()}function changeQty(id,d){const q=(cart.get(id)||0)+d;q>0?cart.set(id,q):cart.delete(id);renderCart()}function clearCart(){cart.clear();if(document.getElementById('order-notes'))orderNotes.value='';renderCart()}
+function renderCart(){const rows=[...cart];cartItems.innerHTML=rows.length?rows.map(([id,q])=>{const p=products.find(x=>x.id===id);return `<div class="flex gap-3 items-center"><div class="flex-1"><b class="text-sm">${esc(p.name)}</b><p class="text-xs text-slate-400">${money(p.price)} c/u</p></div><button onclick="changeQty('${id}',-1)" class="w-9 h-9 rounded-lg bg-slate-100 font-black">−</button><b>${q}</b><button onclick="changeQty('${id}',1)" class="w-9 h-9 rounded-lg bg-orange-100 text-orange-600 font-black">+</button></div>`}).join(''):'<p class="text-center text-slate-400 py-8">Agrega productos.</p>';cartTotal.textContent=money(rows.reduce((s,[id,q])=>s+Number(products.find(p=>p.id===id).price)*q,0))}
+async function submitOrder(){if(!cart.size)return alert('Agrega al menos un producto.');const button=$('submit-order');button.disabled=true;button.textContent='REGISTRANDO...';const{data,error}=await db.rpc('create_pos_table_order',{p_restaurant_id:access.restaurant_id,p_items:[...cart].map(([id,qty])=>({id,qty})),p_notes:orderNotes.value,p_service_type:serviceType,p_table_id:selectedTable?.id||null,p_payment_method:'cash',p_existing_order_id:selectedAccount});button.disabled=false;button.textContent='ENVIAR A COCINA';if(error)return alert(error.message);successTitle.textContent=data.was_appended?'Nueva ronda enviada a cocina':'Pedido enviado a cocina';successOrder.textContent=`Cuenta #${data.id} · ${money(data.total)}`;successModal.classList.remove('hidden');successModal.classList.add('flex');clearTimeout(successTimer);successTimer=setTimeout(()=>{successModal.classList.add('hidden');successModal.classList.remove('flex');showTables()},3000);await refreshAccounts()}
+async function loadReady(){if(loadingReady)return;loadingReady=true;const{data}=await db.from('kitchen_tickets').select('id,order_id,table_id,service_type').eq('restaurant_id',access.restaurant_id).eq('created_by',access.user.id).eq('status','listo').order('ready_at');const list=data||[];readyPanel.classList.toggle('hidden',!list.length);readyCount.textContent=list.length;readyOrders.innerHTML=list.map(x=>`<article class="bg-white rounded-2xl p-4"><b>Comanda #${x.id}</b><p class="text-xs">Cuenta #${x.order_id} · ${x.service_type==='dine_in'?esc(tables.find(t=>Number(t.id)===Number(x.table_id))?.name||'Mesa'):'Para llevar'}</p></article>`).join('');loadingReady=false}
+function activateRealtime(){db.channel(`waiter-${access.restaurant_id}`).on('postgres_changes',{event:'*',schema:'public',table:'orders',filter:`restaurant_id=eq.${access.restaurant_id}`},refreshAccounts).on('postgres_changes',{event:'UPDATE',schema:'public',table:'kitchen_tickets',filter:`restaurant_id=eq.${access.restaurant_id}`},p=>{if(p.new.created_by===access.user.id&&p.new.status==='listo'&&p.old.status!=='listo'){readyAlert.innerHTML=`<b>Pedido listo</b><p>La comanda #${p.new.id} ya puede entregarse.</p>`;readyAlert.classList.remove('hidden');readySound.play().catch(()=>{});setTimeout(()=>readyAlert.classList.add('hidden'),8000)}loadReady()}).subscribe();setInterval(()=>{if(!document.hidden){refreshAccounts();loadReady()}},5000)}
+productSearch.addEventListener('input',renderProducts);categoryFilter.addEventListener('change',renderProducts);document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshAccounts();loadReady()}});window.addEventListener('pageshow',()=>{if(access){refreshAccounts();loadReady()}});init();
+</script></body></html>

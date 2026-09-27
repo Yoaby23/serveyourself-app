@@ -41,7 +41,7 @@ assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
 assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v11/, 'La PWA debe renovar su caché para publicar el módulo de delivery');
+assert.match(read('sw.js'), /serveyourself-shell-v12/, 'La PWA debe renovar su caché para publicar el marketplace de delivery');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
@@ -57,15 +57,16 @@ assert.match(pos, /requireRestaurantPermission\('can_create_orders'\)/, 'El POS 
 assert.doesNotMatch(pos, /pending-panel|register_pos_payment|PRECUENTA|COBRAR/, 'El POS de meseros no debe duplicar funciones de Caja');
 assert.doesNotMatch(pos, /db\.rpc\('create_pos_order'|db\.rpc\('append_pos_order_items'/, 'El POS no debe usar rutas antiguas que omiten comandas independientes');
 assert.doesNotMatch(pos, /id="modal-payment-method"|id="charge-button"/, 'La confirmación de cocina no debe mostrar cobro ni forma de pago');
-assert.match(pos, /setTimeout\(closeSuccess, 3000\)/, 'La confirmación debe cerrarse sola después de tres segundos');
-assert.match(pos, /create_or_append_pos_order/, 'El POS debe reutilizar automáticamente la cuenta abierta de la mesa');
+assert.match(pos, /setTimeout\([\s\S]*3000\)/, 'La confirmación debe cerrarse sola después de tres segundos');
+assert.match(pos, /create_pos_table_order/, 'El POS debe permitir elegir una cuenta o abrir otra en la misma mesa');
+assert.match(pos, /Selecciona una mesa/, 'El POS debe iniciar mostrando el estado de las mesas');
 assert.match(kitchen, /requireRestaurantPermission\('can_view_kitchen'\)/, 'Cocina debe exigir su permiso');
 assert.match(kitchen, /class="kitchen-toolbar"/, 'Los controles de cocina deben usar una barra adaptable');
 assert.match(read('styles.css'), /@media \(max-width: 767px\)[\s\S]*\.kitchen-toolbar[\s\S]*grid-template-columns/, 'La barra de cocina debe reorganizarse en teléfonos');
 assert.match(read('styles.css'), /\.kitchen-screen[\s\S]*overflow-x: hidden/, 'Cocina no debe provocar desplazamiento horizontal');
 assert.match(team, /set_staff_permissions/, 'El dueño debe poder editar permisos individuales');
 
-assert.match(pos, /waiter-ready-/, 'El mesero debe escuchar comandas listas en tiempo real');
+assert.match(pos, /db\.channel\(`waiter-/, 'El mesero debe escuchar comandas listas en tiempo real');
 assert.match(pos, /Mis comandas listas/, 'El mesero debe ver comandas listas dentro del POS');
 assert.match(notification, /created_by/, 'La notificación debe dirigirse al creador de la comanda');
 assert.match(notification, /ticket\?\.id \?\? order\.id/, 'La notificación debe indicar qué comanda independiente está lista');
@@ -150,7 +151,7 @@ assert.match(kitchen, /from\('kitchen_tickets'\)/, 'Cocina debe consultar comand
 assert.match(kitchen, /update_kitchen_ticket_status/, 'Cocina debe avanzar únicamente la comanda seleccionada');
 assert.doesNotMatch(kitchen, /id="orders-listo"|id="count-listo"/, 'Cocina no debe mostrar una columna de comandas listas');
 assert.match(kitchen, /\['pendiente','preparando'\]\.forEach/, 'El tablero debe renderizar únicamente Nuevos y Preparando');
-assert.match(pos, /table: 'kitchen_tickets'/, 'El mesero debe recibir el estado listo de cada comanda');
+assert.match(pos, /table:\s*'kitchen_tickets'/, 'El mesero debe recibir el estado listo de cada comanda');
 assert.match(pos, /setInterval[\s\S]*5000/, 'El POS debe sincronizar comandas listas aunque Realtime se interrumpa');
 assert.match(pos, /visibilitychange/, 'El POS debe sincronizarse al volver a primer plano');
 assert.match(kitchen, /5000/, 'Cocina debe sincronizarse aunque Realtime se interrumpa en la PWA');

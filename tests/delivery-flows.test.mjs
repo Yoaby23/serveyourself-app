@@ -3,6 +3,7 @@ import fs from 'node:fs';
 
 const read = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const migration = read('supabase/migrations/015_delivery_suite.sql');
+const marketplace = read('supabase/migrations/016_driver_marketplace_and_table_accounts.sql');
 const store = read('restaurante.html');
 const dispatch = read('delivery.html');
 const driver = read('repartidor.html');
@@ -27,7 +28,12 @@ assert.match(store, /Efectivo al entregar/, 'El cliente debe reconocer el cobro 
 assert.match(store, /create_delivery_order/, 'El pedido delivery debe usar la ruta segura dedicada');
 assert.match(store, /serviceType !== 'delivery' && res\.payment_transfer/, 'Transferencia debe quedar excluida del modo delivery');
 assert.match(dispatch, /accept_delivery_order/, 'Despacho debe aceptar o rechazar pedidos');
-assert.match(dispatch, /assign_delivery_driver/, 'Despacho debe asignar repartidores');
+assert.doesNotMatch(dispatch, /assign_delivery_driver|list_delivery_drivers/, 'El restaurante no debe asignar repartidores manualmente');
+assert.match(marketplace, /register_delivery_driver/, 'El repartidor debe registrarse sin invitación de un restaurante');
+assert.match(marketplace, /list_delivery_offers/, 'El repartidor debe ver ofertas de todos los restaurantes');
+assert.match(marketplace, /driver_earning/, 'La oferta debe incluir la ganancia del repartidor');
+assert.match(marketplace, /for update/, 'La aceptación de una oferta debe evitar que dos repartidores reclamen el mismo pedido');
+assert.match(driver, /claim_delivery_order/, 'El repartidor debe poder aceptar una oferta');
 assert.match(driver, /advance_delivery_order/, 'El repartidor debe avanzar el trayecto');
 assert.match(driver, /confirm_delivery/, 'La entrega debe cerrarse con código');
 assert.match(tracking, /updateMap/, 'El cliente debe ver el seguimiento');

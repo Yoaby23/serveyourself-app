@@ -9,6 +9,7 @@ Deno.serve(async (request) => {
     const authorization = request.headers.get('Authorization');
     if (!authorization) return jsonResponse(request, { error: 'Sesión requerida' }, 401);
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
     const client = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: authorization } }
     });
@@ -23,14 +24,14 @@ Deno.serve(async (request) => {
     }
     const targetOrderId = ticket?.order_id ?? orderId;
     const { data: order } = await client.from('orders')
-      .select('id, customer_id, restaurant_id, restaurant_name, status, order_source, service_type, delivery_status, assigned_driver_id, created_by')
+      .select('id, customer_id, restaurant_id, restaurant_name, status, order_source, service_type, delivery_status, assigned_driver_id, created_by, driver_earning')
       .eq('id', targetOrderId)
       .single();
     if (!order) {
       return jsonResponse(request, { error: 'Pedido no encontrado' }, 404);
     }
 
-    if (order.restaurant_id !== user.id) {
+    if (order.restaurant_id !== user.id && order.assigned_driver_id !== user.id) {
       const permissions = await Promise.all(['view_kitchen', 'manage_delivery', 'deliver_orders'].map(p_permission =>
         client.rpc('has_restaurant_permission', { p_restaurant_id: order.restaurant_id, p_permission })
       ));
@@ -44,6 +45,7 @@ Deno.serve(async (request) => {
       cancelado: 'El restaurante canceló tu pedido.'
       ,pending_acceptance: 'Tu pedido de delivery está esperando confirmación.'
       ,accepted: 'El restaurante aceptó tu pedido de delivery.'
+      ,preparing: 'El restaurante está preparando tu pedido.'
       ,ready_for_dispatch: 'Tu pedido está listo y pronto saldrá a reparto.'
       ,picked_up: 'El repartidor recogió tu pedido.'
       ,on_the_way: '¡Tu pedido va en camino!'
@@ -58,8 +60,14 @@ Deno.serve(async (request) => {
     if (order.customer_id) {
       notifications.push({ recipient: order.customer_id, message: messages[notificationStatus], url: order.service_type === 'delivery' ? `${appUrl}/delivery-tracking.html?id=${order.id}` : `${appUrl}/menu.html` });
     }
-    if (order.service_type === 'delivery' && order.assigned_driver_id && ['accepted', 'ready_for_dispatch'].includes(notificationStatus)) {
+    if (order.service_type === 'delivery' && order.assigned_driver_id && ['accepted', 'preparing', 'ready_for_dispatch'].includes(notificationStatus)) {
       notifications.push({ recipient: order.assigned_driver_id, message: notificationStatus === 'ready_for_dispatch' ? `El pedido #${order.id} está listo para recoger.` : `Te asignaron el pedido #${order.id}.`, url: `${appUrl}/repartidor.html` });
+    }
+    if (order.service_type === 'delivery' && !order.assigned_driver_id && notificationStatus === 'accepted') {
+      const { data: availableDrivers } = await serviceClient.from('delivery_drivers').select('user_id').eq('status', 'active').eq('is_available', true);
+      for (const driver of availableDrivers ?? []) {
+        notifications.push({ recipient: driver.user_id, message: `Nueva entrega disponible en ${order.restaurant_name}. Ganancia: $${Number(order.driver_earning ?? 0).toFixed(2)}.`, url: `${appUrl}/repartidor.html` });
+      }
     }
     if (order.order_source === 'pos' && order.created_by && ['listo', 'cancelado'].includes(notificationStatus)) {
       notifications.push({
