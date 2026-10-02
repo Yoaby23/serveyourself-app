@@ -560,6 +560,51 @@ input[type='radio'] {
     gap: 0.5rem;
 }
 
+.credit-checkout {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) 10rem auto;
+    gap: 0.5rem;
+    align-items: end;
+    padding: 0.8rem;
+    border: 1px solid #ddd6fe;
+    border-radius: 1rem;
+    background: #faf5ff;
+}
+
+.credit-customer-card {
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid #ddd6fe;
+    border-radius: 1.25rem;
+    background: linear-gradient(145deg,#fff 0%,#faf5ff 100%);
+    box-shadow: 0 8px 24px rgb(88 28 135 / 5%);
+}
+
+.credit-payment-form {
+    display: grid;
+    grid-template-columns: 10rem minmax(0,1fr) minmax(0,1fr) auto;
+    gap: 0.5rem;
+}
+
+.credit-payment-form input,
+.credit-payment-form select,
+.credit-payment-form button {
+    width: 100%;
+    min-width: 0;
+    padding: 0.75rem;
+    border: 1px solid #ddd6fe;
+    border-radius: 0.75rem;
+    background: #fff;
+    font-size: 0.875rem;
+    font-weight: 800;
+}
+
+.credit-payment-form button {
+    border-color: #7c3aed;
+    color: #fff;
+    background: #7c3aed;
+}
+
 .inventory-page {
     max-width: 100%;
     overflow-x: hidden;
@@ -605,6 +650,11 @@ input[type='radio'] {
     .cash-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .cash-action-primary { grid-column: 1 / -1; }
     .cash-movement-form { grid-template-columns: 1fr; }
+    .credit-checkout,
+    .credit-payment-form { grid-template-columns: 1fr; }
+    .cashier-page input,
+    .cashier-page select,
+    .cashier-page textarea { font-size: 16px !important; }
     .inventory-page #ingredient-form { grid-template-columns: 1fr; }
     .inventory-page #ingredient-form > * { grid-column: auto; }
     .inventory-page #station-form { display: grid; grid-template-columns: minmax(0,1fr) 3.5rem; }

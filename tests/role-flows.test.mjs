@@ -14,6 +14,7 @@ const index = read('index.html');
 const registration = read('registro.html');
 const recovery = read('recuperar.html');
 const socialAuth = read('supabase/migrations/011_social_auth_profiles.sql');
+const realCash = read('supabase/migrations/018_real_cash_shift_and_customer_credit.sql');
 
 for (const file of fs.readdirSync(new URL('..', import.meta.url)).filter(file => file.endsWith('.html'))) {
     const html = read(file);
@@ -41,7 +42,7 @@ assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
 assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v13/, 'La PWA debe renovar su caché para publicar cobro, impresión y navegación móvil');
+assert.match(read('sw.js'), /serveyourself-shell-v14/, 'La PWA debe renovar su caché para publicar las reglas reales de caja');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
@@ -132,6 +133,16 @@ assert.match(read('inventario.html'), /inventory-page/, 'Inventario debe activar
 assert.match(read('inventario.html'), /Recetas/, 'Debe existir gestión de recetas');
 assert.match(read('reportes.html'), /EXPORTAR CSV/, 'Los reportes deben poder exportarse');
 assert.match(read('clientes.html'), /Clientes frecuentes/, 'Debe existir el programa de lealtad');
+assert.match(pos, /get_pos_shift_status/, 'El POS debe comprobar que Caja tenga un turno abierto');
+assert.match(pos, /La caja está cerrada/, 'El mesero debe ver por qué no puede enviar comandas');
+assert.match(realCash, /require_open_cash_shift_for_pos/, 'La base de datos debe bloquear comandas sin turno abierto');
+assert.match(realCash, /Hay % cuenta\(s\) abierta\(s\)/, 'El corte debe rechazar cuentas abiertas e identificarlas');
+assert.match(realCash, /charge_order_to_customer_credit/, 'Caja debe poder cerrar una cuenta como crédito del cliente');
+assert.match(realCash, /record_customer_credit_payment/, 'Caja debe registrar abonos de cartera');
+assert.match(realCash, /credit_limit/, 'Cada cliente debe admitir autorización y límite de crédito');
+assert.match(read('caja.html'), /Crédito de clientes/, 'Caja debe mostrar la cartera de clientes');
+assert.match(read('caja.html'), /CERRAR A CRÉDITO/, 'Caja debe permitir pasar el saldo pendiente a crédito');
+assert.match(read('clientes.html'), /set_customer_credit_settings/, 'El propietario debe configurar el crédito de cada cliente');
 
 const paymentExpiration = read('supabase/migrations/010_online_payment_expiration.sql');
 assert.match(paymentExpiration, /interval '20 minutes'/, 'El pago en línea debe vencer a los 20 minutos');
