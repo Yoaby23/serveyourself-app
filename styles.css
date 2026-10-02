@@ -478,6 +478,148 @@ input[type='radio'] {
     box-shadow: 0 22px 50px rgb(20 83 45 / 22%);
 }
 
+.cash-account-card {
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 1.25rem;
+    background: #fff;
+    box-shadow: 0 8px 24px rgb(15 23 42 / 4%);
+}
+
+.payment-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+
+.payment-form label {
+    min-width: 0;
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.payment-form input,
+.payment-form select {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    margin-top: 0.35rem;
+    padding: 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.75rem;
+    color: #0f172a;
+    background: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.cash-change {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.75rem;
+    padding: 0.8rem 1rem;
+    border-radius: 0.9rem;
+    color: #166534;
+    background: #f0fdf4;
+    font-size: 0.85rem;
+    font-weight: 800;
+}
+
+.cash-change strong { font-size: 1.25rem; }
+.cash-change.is-zero { color: #475569; background: #f8fafc; }
+.cash-change.is-short { color: #b91c1c; background: #fef2f2; }
+
+.cash-actions {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.45rem;
+}
+
+.cash-action {
+    min-height: 2.75rem;
+    padding: 0.55rem;
+    border-radius: 0.75rem;
+    color: #475569;
+    background: #f1f5f9;
+    font-size: 0.68rem;
+    font-weight: 900;
+}
+
+.cash-action-primary { color: #fff; background: #0f172a; }
+.cash-action-danger { color: #dc2626; background: #fef2f2; }
+
+.cash-movement-form {
+    display: grid;
+    grid-template-columns: 150px 140px minmax(0, 1fr) auto;
+    gap: 0.5rem;
+}
+
+.inventory-page {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+.inventory-page main,
+.inventory-page section,
+.inventory-page form,
+.inventory-page label,
+.inventory-page input,
+.inventory-page select,
+.inventory-page button {
+    min-width: 0;
+}
+
+.sy-swipe-back-indicator {
+    position: fixed;
+    top: 50%;
+    left: max(0.35rem, env(safe-area-inset-left));
+    z-index: 120;
+    display: grid;
+    width: 2.7rem;
+    height: 2.7rem;
+    place-items: center;
+    border-radius: 999px;
+    color: #fff;
+    background: rgb(15 23 42 / 88%);
+    box-shadow: 0 10px 30px rgb(15 23 42 / 25%);
+    font-size: 1.35rem;
+    font-weight: 900;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-1.5rem,-50%);
+    transition: opacity 120ms ease,transform 120ms ease;
+}
+
+.sy-swipe-back-indicator.is-visible {
+    opacity: 1;
+    transform: translate(0,-50%);
+}
+
+@media (max-width: 767px) {
+    .cash-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cash-action-primary { grid-column: 1 / -1; }
+    .cash-movement-form { grid-template-columns: 1fr; }
+    .inventory-page #ingredient-form { grid-template-columns: 1fr; }
+    .inventory-page #ingredient-form > * { grid-column: auto; }
+    .inventory-page #station-form { display: grid; grid-template-columns: minmax(0,1fr) 3.5rem; }
+    .inventory-page #station-form button { grid-column: 1 / -1; min-height: 3rem; }
+    .inventory-page input,
+    .inventory-page select,
+    .inventory-page textarea { font-size: 16px !important; }
+    .inventory-page #product-stations label { align-items: stretch; flex-direction: column; }
+    .inventory-page #product-stations select { width: 100%; }
+}
+
+@media (max-width: 420px) {
+    .payment-form { grid-template-columns: 1fr; }
+}
+
 .sy-global-back {
     position: fixed;
     left: max(1rem, env(safe-area-inset-left));

@@ -157,6 +157,44 @@ window.serveYourself = {
         else window.location.href = fallback;
     },
 
+    requestBack() {
+        const request = new CustomEvent('sy:back-request', { cancelable: true });
+        if (!window.dispatchEvent(request)) return;
+        const access = this._currentRestaurantAccess;
+        const fallback = access ? this.restaurantHome(access) : 'index.html';
+        this.goBack(fallback);
+    },
+
+    enableSwipeBack() {
+        if (this._swipeBackEnabled || !document.body) return;
+        this._swipeBackEnabled = true;
+        const indicator = document.createElement('div');
+        indicator.className = 'sy-swipe-back-indicator no-print';
+        indicator.textContent = '←';
+        indicator.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(indicator);
+        let startX = 0, startY = 0, startedAt = 0, tracking = false;
+        document.addEventListener('touchstart', event => {
+            const touch = event.touches[0];
+            tracking = Boolean(touch && touch.clientX <= 32 && !document.querySelector('dialog[open]'));
+            if (!tracking) return;
+            startX = touch.clientX; startY = touch.clientY; startedAt = Date.now();
+        }, { passive: true });
+        document.addEventListener('touchmove', event => {
+            if (!tracking) return;
+            const touch = event.touches[0], dx = touch.clientX - startX, dy = Math.abs(touch.clientY - startY);
+            if (dx > 18 && dy < 70) indicator.classList.add('is-visible');
+            if (dy > 90 || dx < -10) { tracking = false; indicator.classList.remove('is-visible'); }
+        }, { passive: true });
+        document.addEventListener('touchend', event => {
+            if (!tracking) return;
+            const touch = event.changedTouches[0], dx = touch.clientX - startX, dy = Math.abs(touch.clientY - startY), elapsed = Date.now() - startedAt;
+            tracking = false; indicator.classList.remove('is-visible');
+            if (dx >= 80 && dy <= 70 && elapsed <= 900) this.requestBack();
+        }, { passive: true });
+        document.addEventListener('touchcancel', () => { tracking = false; indicator.classList.remove('is-visible'); }, { passive: true });
+    },
+
     ensureGlobalBackButton() {
         if (!document.body || !document.querySelector) return;
         const page = (window.location.pathname || '/index.html').split('/').pop() || 'index.html';
@@ -176,6 +214,7 @@ window.serveYourself = {
     renderRestaurantNavigation(access, options = {}) {
         const container = document.getElementById(options.containerId || 'restaurant-nav');
         if (!container || !access) return;
+        this._currentRestaurantAccess = access;
         document.querySelector('.sy-global-back')?.remove();
         const dark = Boolean(options.dark);
         const triggerClass = dark ? 'sy-nav-trigger sy-nav-trigger-dark' : 'sy-nav-trigger';
@@ -334,7 +373,11 @@ window.addEventListener('beforeinstallprompt', event => {
 });
 window.addEventListener('appinstalled', () => { window.serveYourself._installPrompt = null; });
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => window.serveYourself.ensureGlobalBackButton());
+    document.addEventListener('DOMContentLoaded', () => {
+        window.serveYourself.ensureGlobalBackButton();
+        window.serveYourself.enableSwipeBack();
+    });
 } else {
     window.serveYourself.ensureGlobalBackButton();
+    window.serveYourself.enableSwipeBack();
 }

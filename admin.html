@@ -176,6 +176,13 @@
             else return;
         }
 
+        window.addEventListener('sy:back-request', event => {
+            if (currentAdminSection !== 'home') {
+                event.preventDefault();
+                mostrarSeccion('home');
+            }
+        });
+
         async function inicializarAdmin() {
             const user = await window.serveYourself.requireUser();
             if (!user) return;

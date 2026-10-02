@@ -31,7 +31,7 @@ assert.match(sw, /app-icon\.svg/);
 
 assert.match(pos, /create_pos_table_order/, 'Las mesas deben permitir cuentas nuevas o existentes');
 assert.doesNotMatch(pos, /pending-panel|register_pos_payment|order_payments/, 'Meseros no debe contener funciones de caja');
-assert.match(read('caja.html'), /register_pos_payment/, 'Los pagos manuales deben permanecer en Caja');
+assert.match(read('caja.html'), /register_pos_payment_v2/, 'Los pagos manuales deben registrar efectivo y cambio en Caja');
 
 assert.match(read('index.html'), /signInWithProvider\('google'/);
 assert.match(read('registro.html'), /registerWithProvider\('google'/);

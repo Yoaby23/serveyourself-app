@@ -42,7 +42,6 @@
                     CREAR CUENTA NUEVA
                 </button>
                 <a href="index.html?next=unirse.html" class="block text-center text-sm font-black text-orange-500 py-3">Tengo un código de personal</a>
-                <button type="button" onclick="window.serveYourself.installApp()" class="w-full text-slate-500 font-bold py-3 rounded-2xl hover:bg-white transition-colors">📲 Instalar ServeYourself</button>
             </div>
         </div>
 
@@ -111,6 +110,7 @@
 
         // Función para cambiar de vista
         function switchView(viewId) {
+            document.body.dataset.activeView = viewId;
             document.getElementById('view-main').classList.add('hidden');
             document.getElementById('id-login-container').classList.add('hidden');
             document.getElementById('view-roles').classList.add('hidden');
@@ -197,6 +197,16 @@
                 setSocialButtonsDisabled(false, button);
             }
         }
+
+        document.body.dataset.activeView = 'view-main';
+        window.addEventListener('sy:back-request', event => {
+            if ((document.body.dataset.activeView || 'view-main') === 'view-main') {
+                event.preventDefault();
+                return;
+            }
+            event.preventDefault();
+            switchView('view-main');
+        });
 
         async function completeOAuthLogin() {
             if (!isOAuthReturn) return false;

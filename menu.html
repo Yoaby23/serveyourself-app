@@ -187,6 +187,7 @@
         function toggleUserMenu() { document.getElementById('user-menu').classList.toggle('hidden'); }
         
         function mostrarSeccion(id) {
+            document.body.dataset.activeView = id;
             document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
             document.getElementById(`sec-${id}`).classList.remove('hidden');
             document.getElementById('user-menu').classList.add('hidden');
@@ -196,6 +197,13 @@
             else { btnBack.classList.remove('hidden'); spacer.classList.add('hidden'); }
             if(id === 'pedidos') cargarHistorialPedidos();
         }
+
+        window.addEventListener('sy:back-request', event => {
+            if ((document.body.dataset.activeView || 'explorar') !== 'explorar') {
+                event.preventDefault();
+                mostrarSeccion('explorar');
+            }
+        });
 
         async function inicializar() {
             const user = await window.serveYourself.requireUser();

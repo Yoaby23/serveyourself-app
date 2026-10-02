@@ -41,7 +41,7 @@ assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
 assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v12/, 'La PWA debe renovar su caché para publicar el marketplace de delivery');
+assert.match(read('sw.js'), /serveyourself-shell-v13/, 'La PWA debe renovar su caché para publicar cobro, impresión y navegación móvil');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
@@ -117,6 +117,18 @@ assert.match(operations, /register_pos_payment/, 'Debe soportar pagos parciales 
 assert.match(operations, /split_pos_order/, 'Debe permitir dividir una cuenta por productos');
 assert.match(operations, /deduct_order_inventory/, 'Debe descontar inventario mediante recetas');
 assert.match(read('caja.html'), /CERRAR TURNO/, 'Caja debe permitir realizar el corte');
+assert.match(read('caja.html'), /register_pos_payment_v2/, 'Caja debe registrar el efectivo recibido');
+assert.match(read('caja.html'), /Efectivo recibido/, 'Caja debe capturar el importe recibido');
+assert.match(read('caja.html'), /Cambio a entregar/, 'Caja debe calcular el cambio');
+assert.match(read('caja.html'), /IMPRIMIR CUENTA/, 'Caja debe imprimir la cuenta sin llamarla precuenta');
+assert.doesNotMatch(read('caja.html'), /PRECUENTA/, 'Caja no debe conservar el concepto de precuenta');
+assert.match(read('supabase/migrations/017_cash_change_and_waiter_delivery.sql'), /cash_received.*cash_change/s, 'Supabase debe guardar el efectivo recibido y el cambio');
+assert.match(read('supabase/migrations/017_cash_change_and_waiter_delivery.sql'), /mark_kitchen_ticket_delivered/, 'El mesero debe poder marcar una comanda lista como entregada');
+assert.match(pos, /mark_kitchen_ticket_delivered/, 'El POS debe permitir entregar comandas listas');
+assert.match(app, /enableSwipeBack/, 'La aplicación debe habilitar el gesto de regreso');
+assert.doesNotMatch(index, />\s*Instalar ServeYourself\s*</, 'La portada no debe mostrar un botón de instalación');
+assert.match(index, /sy:back-request/, 'El acceso debe responder al gesto de regreso entre sus vistas');
+assert.match(read('inventario.html'), /inventory-page/, 'Inventario debe activar sus correcciones móviles');
 assert.match(read('inventario.html'), /Recetas/, 'Debe existir gestión de recetas');
 assert.match(read('reportes.html'), /EXPORTAR CSV/, 'Los reportes deben poder exportarse');
 assert.match(read('clientes.html'), /Clientes frecuentes/, 'Debe existir el programa de lealtad');
