@@ -15,6 +15,7 @@ const registration = read('registro.html');
 const recovery = read('recuperar.html');
 const socialAuth = read('supabase/migrations/011_social_auth_profiles.sql');
 const realCash = read('supabase/migrations/018_real_cash_shift_and_customer_credit.sql');
+const deliveryCashFix = read('supabase/migrations/019_fix_delivery_cash_payment.sql');
 
 for (const file of fs.readdirSync(new URL('..', import.meta.url)).filter(file => file.endsWith('.html'))) {
     const html = read(file);
@@ -143,6 +144,8 @@ assert.match(realCash, /credit_limit/, 'Cada cliente debe admitir autorización 
 assert.match(read('caja.html'), /Crédito de clientes/, 'Caja debe mostrar la cartera de clientes');
 assert.match(read('caja.html'), /CERRAR A CRÉDITO/, 'Caja debe permitir pasar el saldo pendiente a crédito');
 assert.match(read('clientes.html'), /set_customer_credit_settings/, 'El propietario debe configurar el crédito de cada cliente');
+assert.match(deliveryCashFix, /cash_received,cash_change,received_by/, 'La entrega en efectivo debe guardar los valores contables obligatorios');
+assert.match(deliveryCashFix, /o\.total,0,auth\.uid\(\)/, 'La entrega contra efectivo debe registrar el total recibido y cambio cero');
 
 const paymentExpiration = read('supabase/migrations/010_online_payment_expiration.sql');
 assert.match(paymentExpiration, /interval '20 minutes'/, 'El pago en línea debe vencer a los 20 minutos');
