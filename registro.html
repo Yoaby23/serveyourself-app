@@ -71,7 +71,7 @@
         const params = new URLSearchParams(window.location.search);
         const requestedRole = params.get('role');
         const role = ['cliente', 'negocio'].includes(requestedRole) ? requestedRole : 'cliente';
-        const requestedNextPage = params.get('next') === 'unirse.html' ? 'unirse.html' : null;
+        const requestedNextPage = ['unirse.html', 'repartidor.html'].includes(params.get('next')) ? params.get('next') : null;
         const isOAuthReturn = params.get('oauth') === '1';
 
         if (role === 'negocio') {
@@ -189,7 +189,7 @@
                     window.location.href = requestedNextPage || ((role === 'negocio') ? 'admin.html' : 'menu.html');
                 } else {
                     alert('Cuenta creada. Revisa tu correo para confirmar el registro y después inicia sesión.');
-                    window.location.href = requestedNextPage ? 'index.html?next=unirse.html' : 'index.html';
+                    window.location.href = requestedNextPage ? `index.html?next=${encodeURIComponent(requestedNextPage)}` : 'index.html';
                 }
             } catch (error) {
                 alert("Error: " + error.message);

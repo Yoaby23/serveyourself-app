@@ -9,6 +9,11 @@ const dispatch = read('delivery.html');
 const driver = read('repartidor.html');
 const tracking = read('delivery-tracking.html');
 const preference = read('supabase/functions/create-mercado-pago-preference/index.ts');
+const driverRealtime = read('supabase/migrations/020_driver_realtime_experience.sql');
+const driverRegistration = read('repartidor-registro.html');
+const app = read('app.js');
+const menu = read('menu.html');
+const index = read('index.html');
 
 for (const page of ['delivery.html', 'repartidor.html', 'delivery-tracking.html', 'restaurante.html']) {
   const html = read(page);
@@ -36,6 +41,16 @@ assert.match(marketplace, /for update/, 'La aceptación de una oferta debe evita
 assert.match(driver, /claim_delivery_order/, 'El repartidor debe poder aceptar una oferta');
 assert.match(driver, /advance_delivery_order/, 'El repartidor debe avanzar el trayecto');
 assert.match(driver, /confirm_delivery/, 'La entrega debe cerrarse con código');
+assert.match(driver, /delivery_marketplace_events/, 'El repartidor debe recibir nuevas ofertas mediante un canal en tiempo real');
+assert.match(driver, /setInterval\(\(\)=>\{if\(!document\.hidden&&navigator\.onLine\)load\(true\)\},5000\)/, 'El repartidor debe conservar una sincronización de respaldo');
+assert.match(driver, /driver-bottom-nav/, 'La experiencia de reparto debe tener navegación móvil propia');
+assert.match(driver, /startTracking/, 'La ubicación debe continuar compartiéndose durante la ruta');
+assert.match(driverRealtime, /active_drivers_read_marketplace_events/, 'Solo repartidores registrados deben escuchar el marketplace');
+assert.match(driverRealtime, /alter publication supabase_realtime add table public\.delivery_marketplace_events/, 'Los eventos del marketplace deben publicarse por Realtime');
+assert.match(driverRegistration, /data&&!editing[\s\S]*repartidor\.html/, 'Un repartidor ya registrado no debe capturar sus datos nuevamente');
+assert.match(driverRegistration, /select\('full_name,phone'\)/, 'El primer registro debe aprovechar los datos de la cuenta');
+assert.match(app + menu, /Modo repartidor/, 'Los accesos existentes deben abrir directamente el modo repartidor');
+assert.match(index, /index\.html\?next=repartidor\.html/, 'La portada debe permitir entrar directamente como repartidor');
 assert.match(tracking, /updateMap/, 'El cliente debe ver el seguimiento');
 assert.match(preference, /delivery-fee/, 'Mercado Pago debe incluir la tarifa de envío');
 assert.match(read('sw.js'), /delivery\.html.*repartidor\.html.*delivery-tracking\.html/, 'La PWA debe precargar las pantallas de delivery');

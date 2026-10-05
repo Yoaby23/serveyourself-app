@@ -42,6 +42,7 @@
                     CREAR CUENTA NUEVA
                 </button>
                 <a href="index.html?next=unirse.html" class="block text-center text-sm font-black text-orange-500 py-3">Tengo un código de personal</a>
+                <a href="index.html?next=repartidor.html" class="block text-center text-sm font-black text-slate-700 py-2">Soy repartidor</a>
             </div>
         </div>
 
@@ -93,6 +94,10 @@
                     <h3 class="font-black text-xl text-slate-900">Tengo un negocio 🏪</h3>
                     <p class="text-slate-500 text-sm mt-1">Subir mi menú y recibir pedidos.</p>
                 </a>
+                <a href="registro.html?role=cliente&next=repartidor.html" class="block w-full bg-white p-6 rounded-[2rem] border-2 border-slate-100 hover:border-orange-500 active:scale-95 transition-all text-left shadow-sm">
+                    <h3 class="font-black text-xl text-slate-900">Quiero repartir 🛵</h3>
+                    <p class="text-slate-500 text-sm mt-1">Aceptar entregas y consultar mis ganancias.</p>
+                </a>
             </div>
         </div>
     </main>
@@ -103,8 +108,8 @@
 
     <script>
         const loginParams = new URLSearchParams(window.location.search);
-        const requestedNextPage = loginParams.get('next') === 'unirse.html'
-            ? 'unirse.html'
+        const requestedNextPage = ['unirse.html', 'repartidor.html'].includes(loginParams.get('next'))
+            ? loginParams.get('next')
             : null;
         const isOAuthReturn = loginParams.get('oauth') === '1';
 
@@ -129,8 +134,10 @@
                 window.location.replace(requestedNextPage);
                 return;
             }
-            document.getElementById('login-description').textContent = 'Primero inicia sesión; después podrás capturar tu código de personal.';
-            document.getElementById('staff-register-help').classList.remove('hidden');
+            document.getElementById('login-description').textContent = requestedNextPage === 'repartidor.html'
+                ? 'Inicia sesión para abrir tu cuenta de repartidor.'
+                : 'Primero inicia sesión; después podrás capturar tu código de personal.';
+            document.getElementById('staff-register-help').classList.toggle('hidden', requestedNextPage !== 'unirse.html');
             switchView('view-login');
         }
 

@@ -235,7 +235,7 @@ window.serveYourself = {
             links.push('<a href="qr.html">▦ QR del menú</a>');
         }
         links.push('<a href="menu.html">🛍️ Mis pedidos personales</a>');
-        links.push('<a href="repartidor-registro.html">🛵 Trabajar como repartidor</a>');
+        links.push('<a href="repartidor.html">🛵 Modo repartidor</a>');
         container.innerHTML = `
             <div class="sy-nav-actions">
                 ${showBack ? `<button type="button" data-sy-back class="${triggerClass}" onclick="window.serveYourself.goBack('${this.restaurantHome(access)}')" aria-label="Volver">←</button>` : ''}
