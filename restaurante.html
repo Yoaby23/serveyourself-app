@@ -5,13 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>serveyourself | Menú</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="tailwind.generated.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="styles.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        
+
         .cart-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes pop {
             0% { transform: scale(0.9) translateX(-50%); opacity: 0; }
@@ -37,7 +37,7 @@
 
     <main class="max-w-md mx-auto p-5">
         <div id="res-banner" class="w-full h-44 rounded-[2.5rem] bg-slate-200 mb-8 overflow-hidden relative shadow-inner">
-            <img id="res-logo" src="" class="w-full h-full object-cover hidden">
+            <img id="res-logo" src="logo.png" alt="Logo del restaurante" class="w-full h-full object-cover hidden">
             <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end p-6">
                 <p id="res-address" class="text-white text-[10px] font-black uppercase tracking-[0.2em] opacity-80"></p>
             </div>
@@ -65,7 +65,7 @@
         <div class="modal-content bg-white w-full max-w-md mx-auto rounded-t-[3rem] p-8 pb-10 shadow-2xl overflow-y-auto max-h-[90vh]">
             <div class="flex justify-between items-center mb-8">
                 <h2 class="text-2xl font-black text-slate-900">Tu Pedido</h2>
-                <button onclick="cerrarCarrito()" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold">✕</button>
+                <button type="button" onclick="cerrarCarrito()" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold">✕</button>
             </div>
             <div id="lista-carrito" class="space-y-6 mb-8"></div>
             <div id="service-options" class="grid grid-cols-2 gap-2 mb-6">
@@ -74,10 +74,10 @@
             </div>
             <div id="delivery-fields" class="hidden mb-6 space-y-3">
                 <select id="saved-address" onchange="useSavedAddress()" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold"><option value="">Nueva dirección</option></select>
-                <input id="delivery-name" maxlength="120" placeholder="Nombre de quien recibe" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
-                <input id="delivery-phone" maxlength="30" inputmode="tel" placeholder="Teléfono" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
-                <input id="delivery-address" maxlength="300" placeholder="Calle, número, colonia y ciudad" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
-                <input id="delivery-reference" maxlength="300" placeholder="Referencias (color, entre calles, timbre)" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
+                <input type="text" id="delivery-name" maxlength="120" placeholder="Nombre de quien recibe" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
+                <input type="text" id="delivery-phone" maxlength="30" inputmode="tel" placeholder="Teléfono" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
+                <input type="text" id="delivery-address" maxlength="300" placeholder="Calle, número, colonia y ciudad" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
+                <input type="text" id="delivery-reference" maxlength="300" placeholder="Referencias (color, entre calles, timbre)" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
                 <button type="button" onclick="useMyLocation()" class="w-full py-3 rounded-2xl bg-blue-50 text-blue-700 text-xs font-black">📍 USAR MI UBICACIÓN</button>
                 <div id="delivery-map" class="h-52 rounded-2xl overflow-hidden border"></div>
                 <label class="flex items-center gap-2 text-xs font-bold text-slate-500"><input id="save-address" type="checkbox"> Guardar esta dirección</label>
@@ -99,7 +99,7 @@
                     <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">Total a pagar</p>
                     <p id="modal-total" class="text-3xl font-black text-slate-900">$0.00</p>
                 </div>
-                <button id="btn-confirmar" onclick="confirmarPedido()" class="w-full py-5 bg-orange-500 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-orange-200">CONFIRMAR PEDIDO</button>
+                <button type="button" id="btn-confirmar" onclick="confirmarPedido()" class="w-full py-5 bg-orange-500 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-orange-200">CONFIRMAR PEDIDO</button>
             </div>
         </div>
     </div>
@@ -282,9 +282,9 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-3 bg-slate-50 p-1.5 rounded-full border border-slate-100">
-                                    <button onclick="${agotado ? '' : `cambiarCantidad('${productId}', -1)`}" class="w-8 h-8 bg-white text-slate-400 rounded-full flex items-center justify-center font-black shadow-sm ${agotado ? 'cursor-not-allowed opacity-30' : ''}">-</button>
+                                    <button type="button" onclick="${agotado ? '' : `cambiarCantidad('${productId}', -1)`}" class="w-8 h-8 bg-white text-slate-400 rounded-full flex items-center justify-center font-black shadow-sm ${agotado ? 'cursor-not-allowed opacity-30' : ''}">-</button>
                                     <span id="qty-${productId}" class="font-black text-slate-900 text-xs min-w-[15px] text-center">0</span>
-                                    <button onclick="${agotado ? '' : `cambiarCantidad('${productId}', 1)`}" class="w-8 h-8 ${agotado ? 'bg-slate-300' : 'bg-slate-900'} text-white rounded-full flex items-center justify-center font-black ${agotado ? 'cursor-not-allowed' : 'shadow-md'}">+</button>
+                                    <button type="button" onclick="${agotado ? '' : `cambiarCantidad('${productId}', 1)`}" class="w-8 h-8 ${agotado ? 'bg-slate-300' : 'bg-slate-900'} text-white rounded-full flex items-center justify-center font-black ${agotado ? 'cursor-not-allowed' : 'shadow-md'}">+</button>
                                 </div>
                             </div>
                         `}).join('')}
@@ -341,9 +341,9 @@
                         <span class="text-orange-500 font-bold text-xs">$${item.price.toFixed(2)} x ${item.qty}</span>
                     </div>
                     <div class="flex items-center gap-3 bg-slate-50 p-1 rounded-full border border-slate-100">
-                         <button onclick="cambiarCantidad('${escapeHtml(item.id)}', -1)" class="w-7 h-7 bg-white text-slate-400 rounded-full flex items-center justify-center font-black">-</button>
+                         <button type="button" onclick="cambiarCantidad('${escapeHtml(item.id)}', -1)" class="w-7 h-7 bg-white text-slate-400 rounded-full flex items-center justify-center font-black">-</button>
                          <span class="font-black text-slate-900 text-xs">${item.qty}</span>
-                         <button onclick="cambiarCantidad('${escapeHtml(item.id)}', 1)" class="w-7 h-7 bg-slate-900 text-white rounded-full flex items-center justify-center font-black">+</button>
+                         <button type="button" onclick="cambiarCantidad('${escapeHtml(item.id)}', 1)" class="w-7 h-7 bg-slate-900 text-white rounded-full flex items-center justify-center font-black">+</button>
                     </div>`;
                 lista.appendChild(div);
             });

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>serveyourself | Registro</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="tailwind.generated.css">
     <link rel="stylesheet" href="styles.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800;900&display=swap');
@@ -19,7 +19,7 @@
             <h2 id="form-title" class="text-3xl font-black mb-2 text-slate-900 tracking-tight">Registro</h2>
             <p id="form-subtitle" class="text-slate-500 mb-8 font-medium">Únete a la nueva forma de pedir comida.</p>
 
-            <div id="social-register" class="space-y-3" aria-label="Opciones de registro social">
+            <div id="social-register" class="space-y-3" role="group" aria-label="Opciones de registro social">
                 <button type="button" data-provider="google" onclick="registerWithProvider('google', this)" class="w-full min-h-14 flex items-center justify-center gap-3 bg-white text-slate-800 font-bold px-5 py-4 rounded-2xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] transition-all">
                     <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.4-.18-2.07H12v3.91h5.38a4.6 4.6 0 0 1-2 3.02v2.54h3.24c1.9-1.75 2.98-4.33 2.98-7.4Z"/><path fill="#34A853" d="M12 22c2.7 0 4.97-.9 6.62-2.42l-3.24-2.54c-.9.6-2.05.96-3.38.96-2.61 0-4.82-1.76-5.61-4.13H3.04v2.62A10 10 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.39 13.87A6.02 6.02 0 0 1 6.07 12c0-.65.11-1.29.32-1.87V7.51H3.04A10 10 0 0 0 2 12c0 1.61.39 3.14 1.04 4.49l3.35-2.62Z"/><path fill="#EA4335" d="M12 6c1.47 0 2.79.51 3.83 1.5l2.87-2.87A9.64 9.64 0 0 0 12 2a10 10 0 0 0-8.96 5.51l3.35 2.62C7.18 7.76 9.39 6 12 6Z"/></svg>
                     <span>Registrarme con Google</span>
@@ -35,13 +35,13 @@
                 <input type="text" id="reg-name" placeholder="Nombre completo" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
                 <input type="tel" id="reg-phone" placeholder="WhatsApp / Teléfono" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
                 <input type="email" id="reg-email" placeholder="Correo electrónico" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
-                <input type="password" id="reg-password" placeholder="Contraseña segura (mínimo 8 caracteres)" minlength="8" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
-                
+                <input type="password" id="reg-password" autocomplete="new-password" placeholder="Contraseña segura (mínimo 8 caracteres)" minlength="8" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-medium" required>
+
                 <div id="biz-section" class="hidden space-y-4 pt-4 border-t border-slate-100 mt-4">
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Configuración del Local</p>
                     <input type="text" id="biz-name" placeholder="Nombre Comercial" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 text-sm font-medium">
                     <input type="text" id="biz-address" placeholder="Dirección del local" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 text-sm font-medium">
-                    
+
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="text-[9px] font-black text-slate-400 ml-2 uppercase">Abre</label>
