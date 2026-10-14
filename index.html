@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>serveyourself | Bienvenido</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="tailwind.generated.css">
     <link rel="stylesheet" href="styles.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800;900&display=swap');
@@ -35,23 +35,22 @@
                 <img src="welcome-image.png" alt="Comida lista" class="w-full">
             </div>
             <div class="space-y-4">
-                <button onclick="switchView('view-login')" class="w-full bg-orange-500 text-white font-black py-5 rounded-[2rem] shadow-xl shadow-orange-100 uppercase tracking-widest active:scale-95 transition-all hover:bg-orange-600">
+                <button type="button" onclick="switchView('view-login')" class="w-full bg-orange-500 text-white font-black py-5 rounded-[2rem] shadow-xl shadow-orange-100 uppercase tracking-widest active:scale-95 transition-all hover:bg-orange-600">
                     INICIAR SESIÓN
                 </button>
-                <button onclick="switchView('view-roles')" class="w-full border-2 border-slate-200 text-slate-600 font-bold py-5 rounded-[2rem] hover:border-orange-200 active:scale-95 transition-all uppercase">
+                <button type="button" onclick="switchView('view-roles')" class="w-full border-2 border-slate-200 text-slate-600 font-bold py-5 rounded-[2rem] hover:border-orange-200 active:scale-95 transition-all uppercase">
                     CREAR CUENTA NUEVA
                 </button>
                 <a href="index.html?next=unirse.html" class="block text-center text-sm font-black text-orange-500 py-3">Tengo un código de personal</a>
-                <a href="index.html?next=repartidor.html" class="block text-center text-sm font-black text-slate-700 py-2">Soy repartidor</a>
             </div>
         </div>
 
         <div id="id-login-container" class="hidden">
             <div id="view-login" class="fade-in bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 mt-8">
-                <button onclick="switchView('view-main')" class="text-orange-500 font-bold mb-6 hover:text-orange-600">← Volver</button>
+                <button type="button" onclick="switchView('view-main')" class="text-orange-500 font-bold mb-6 hover:text-orange-600">← Volver</button>
                 <h2 class="text-3xl font-black mb-2 text-slate-900 tracking-tight">Hola de nuevo</h2>
                 <p id="login-description" class="text-slate-500 mb-6 font-medium">Elige cómo quieres continuar.</p>
-                <div id="social-login" class="space-y-3" aria-label="Opciones de inicio de sesión social">
+                <div id="social-login" class="space-y-3" role="group" aria-label="Opciones de inicio de sesión social">
                     <button type="button" data-provider="google" onclick="signInWithProvider('google', this)" class="w-full min-h-14 flex items-center justify-center gap-3 bg-white text-slate-800 font-bold px-5 py-4 rounded-2xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] transition-all">
                         <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                             <path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.4-.18-2.07H12v3.91h5.38a4.6 4.6 0 0 1-2 3.02v2.54h3.24c1.9-1.75 2.98-4.33 2.98-7.4Z"/>
@@ -69,7 +68,7 @@
                 </div>
                 <form id="login-form" class="space-y-4">
                     <input type="email" id="login-email" placeholder="Correo electrónico" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
-                    <input type="password" id="login-password" placeholder="Contraseña" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
+                    <input type="password" id="login-password" autocomplete="current-password" placeholder="Contraseña" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
                     <button type="submit" id="btn-login" class="w-full bg-slate-900 text-white font-black py-5 rounded-[2rem] shadow-lg mt-6 uppercase tracking-widest active:scale-95 transition-all">
                         ENTRAR
                     </button>
@@ -80,7 +79,7 @@
         </div>
 
         <div id="view-roles" class="hidden fade-in mt-8">
-            <button onclick="switchView('view-main')" class="text-orange-500 font-bold mb-6 px-2 hover:text-orange-600">← Volver</button>
+            <button type="button" onclick="switchView('view-main')" class="text-orange-500 font-bold mb-6 px-2 hover:text-orange-600">← Volver</button>
             <div class="text-center mb-8">
                 <h2 class="text-3xl font-black mb-2 text-slate-900 tracking-tight">¿Cómo usarás la app?</h2>
                 <p class="text-slate-500 font-medium">Elige tu tipo de cuenta.</p>
@@ -119,7 +118,7 @@
             document.getElementById('view-main').classList.add('hidden');
             document.getElementById('id-login-container').classList.add('hidden');
             document.getElementById('view-roles').classList.add('hidden');
-            
+
             if(viewId === 'view-login') {
                 document.getElementById('id-login-container').classList.remove('hidden');
             } else {
@@ -261,7 +260,7 @@
         // Manejo del Login
         document.getElementById('login-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             const btn = document.getElementById('btn-login');
