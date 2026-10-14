@@ -62,8 +62,10 @@ create table if not exists public.platform_admins(
 -- En una instalación existente, el primer negocio creado corresponde al
 -- operador inicial de la plataforma y permite revisar las nuevas altas.
 insert into public.platform_admins(user_id)
-select p.id from public.profiles p where p.role='negocio'
-order by p.created_at limit 1
+select p.id from public.profiles p
+join auth.users u on u.id=p.id
+where p.role='negocio'
+order by u.created_at limit 1
 on conflict(user_id) do nothing;
 alter table public.platform_admins enable row level security;
 drop policy if exists "platform_admin_read_own" on public.platform_admins;
@@ -121,7 +123,8 @@ begin
   on conflict(driver_id,order_id) do update set response='dismissed',updated_at=now();
 end; $$;
 
-create or replace function public.list_delivery_offers()
+drop function if exists public.list_delivery_offers();
+create function public.list_delivery_offers()
 returns table(order_id bigint,restaurant_name text,pickup_address text,delivery_distance_km numeric,
   driver_earning numeric,item_count integer,delivery_status text,created_at timestamptz,
   offer_response text,finishing_current_order boolean)
