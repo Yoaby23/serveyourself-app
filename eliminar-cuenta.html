@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="icon" href="logo.png" type="image/png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>serveyourself | Eliminar cuenta</title>
+    <link rel="stylesheet" href="tailwind.generated.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 min-h-screen">
+    <main class="sy-policy-page sy-delete-page">
+        <a data-sy-back href="menu.html" class="sy-policy-back">← Volver</a>
+        <article class="sy-policy-card">
+            <p class="sy-policy-kicker">Privacidad de la cuenta</p>
+            <h1>Eliminar mi cuenta</h1>
+            <p>Puedes solicitar la eliminación de tu perfil y datos personales asociados. Conservaremos únicamente movimientos o comprobantes que deban mantenerse por seguridad, disputas u obligaciones legales.</p>
+
+            <div id="auth-required" class="sy-status-card hidden" role="status">
+                <b>Inicia sesión para continuar</b>
+                <p>Necesitamos verificar que la cuenta te pertenece.</p>
+                <a href="index.html">Iniciar sesión</a>
+            </div>
+
+            <form id="deletion-form" class="hidden">
+                <label for="deletion-reason">Motivo opcional</label>
+                <textarea id="deletion-reason" maxlength="500" rows="4" placeholder="Cuéntanos por qué deseas eliminarla"></textarea>
+                <label class="sy-confirm-row">
+                    <input type="checkbox" id="deletion-confirm" required>
+                    <span>Entiendo que perderé el acceso cuando se complete la solicitud.</span>
+                </label>
+                <button type="submit" id="deletion-submit" class="sy-danger-button">Solicitar eliminación</button>
+            </form>
+
+            <div id="pending-request" class="sy-status-card hidden" role="status">
+                <b>Solicitud recibida</b>
+                <p id="pending-date">Tu solicitud está pendiente.</p>
+                <button type="button" id="cancel-request">Cancelar solicitud</button>
+            </div>
+        </article>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
+    <script src="app-config.js"></script>
+    <script src="app.js"></script>
+    <script>
+        const client = window.serveYourself.supabase;
+        const form = document.getElementById('deletion-form');
+        const pending = document.getElementById('pending-request');
+        const authRequired = document.getElementById('auth-required');
+
+        async function loadDeletionStatus() {
+            const { data: { user } } = await client.auth.getUser();
+            if (!user) {
+                authRequired.classList.remove('hidden');
+                return;
+            }
+            const { data, error } = await client.from('account_deletion_requests')
+                .select('requested_at').eq('user_id', user.id).eq('status', 'pending')
+                .order('requested_at', { ascending: false }).limit(1).maybeSingle();
+            if (error) {
+                alert('No fue posible consultar la solicitud: ' + error.message);
+                return;
+            }
+            if (data) {
+                pending.classList.remove('hidden');
+                document.getElementById('pending-date').textContent = `Solicitada el ${new Date(data.requested_at).toLocaleDateString('es-MX')}.`;
+            } else {
+                form.classList.remove('hidden');
+            }
+        }
+
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+            const button = document.getElementById('deletion-submit');
+            button.disabled = true;
+            button.textContent = 'ENVIANDO...';
+            const { error } = await client.rpc('request_account_deletion', {
+                p_reason: document.getElementById('deletion-reason').value.trim() || null
+            });
+            if (error) {
+                alert('No fue posible crear la solicitud: ' + error.message);
+                button.disabled = false;
+                button.textContent = 'Solicitar eliminación';
+                return;
+            }
+            form.classList.add('hidden');
+            pending.classList.remove('hidden');
+            document.getElementById('pending-date').textContent = 'Tu solicitud está pendiente de procesamiento.';
+        });
+
+        document.getElementById('cancel-request').addEventListener('click', async () => {
+            const { error } = await client.rpc('cancel_account_deletion_request');
+            if (error) {
+                alert('No fue posible cancelar la solicitud: ' + error.message);
+                return;
+            }
+            pending.classList.add('hidden');
+            form.reset();
+            form.classList.remove('hidden');
+        });
+
+        loadDeletionStatus();
+    </script>
+</body>
+</html>

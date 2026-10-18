@@ -901,6 +901,47 @@ input[type='radio'] {
     .driver-online-toggle { grid-column: auto; min-width: 8rem; }
 }
 
+.sy-legal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .55rem;
+    padding: 1rem 1rem calc(1.5rem + env(safe-area-inset-bottom));
+    color: #94a3b8;
+    font-size: .72rem;
+    font-weight: 700;
+}
+.sy-legal-footer a:hover { color: #f97316; }
+.sy-account-links { display: grid; gap: .7rem; padding-top: 1rem; border-top: 1px solid #f1f5f9; }
+.sy-account-links a { color: #64748b; font-size: .72rem; font-weight: 800; text-align: center; }
+.sy-account-links a.danger { color: #dc2626; }
+
+.sy-policy-page {
+    width: min(100% - 2rem, 48rem);
+    margin: 0 auto;
+    padding: max(1.5rem, env(safe-area-inset-top)) 0 calc(2rem + env(safe-area-inset-bottom));
+}
+.sy-policy-back { display: inline-flex; margin: 0 0 1rem; color: #ea580c; font-weight: 800; }
+.sy-policy-card { padding: clamp(1.5rem, 5vw, 3rem); border: 1px solid #e2e8f0; border-radius: 2rem; background: white; box-shadow: 0 1rem 3rem rgb(15 23 42 / 6%); }
+.sy-policy-card h1 { margin: .25rem 0 .35rem; color: #0f172a; font-size: clamp(2rem, 6vw, 3rem); font-weight: 900; letter-spacing: -.04em; }
+.sy-policy-card h2 { margin: 1.8rem 0 .45rem; color: #0f172a; font-size: 1.05rem; font-weight: 900; }
+.sy-policy-card p { margin: .45rem 0; color: #64748b; font-size: .92rem; line-height: 1.75; }
+.sy-policy-card a { color: #ea580c; font-weight: 800; text-decoration: underline; }
+.sy-policy-kicker { color: #f97316 !important; font-size: .7rem !important; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
+.sy-policy-date { color: #94a3b8 !important; font-size: .72rem !important; }
+.sy-delete-page { max-width: 36rem; }
+.sy-delete-page form { display: grid; gap: .9rem; margin-top: 1.5rem; }
+.sy-delete-page form > label:first-child { color: #475569; font-size: .75rem; font-weight: 900; text-transform: uppercase; }
+.sy-delete-page textarea { width: 100%; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 1rem; background: #f8fafc; resize: vertical; }
+.sy-confirm-row { display: flex; align-items: flex-start; gap: .65rem; color: #64748b; font-size: .78rem; line-height: 1.5; }
+.sy-confirm-row input { width: 1.1rem; height: 1.1rem; margin-top: .1rem; accent-color: #dc2626; }
+.sy-danger-button { min-height: 3.5rem; border-radius: 1rem; color: white; background: #dc2626; font-size: .76rem; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; }
+.sy-danger-button:disabled { opacity: .55; }
+.sy-status-card { margin-top: 1.5rem; padding: 1rem; border: 1px solid #fed7aa; border-radius: 1rem; background: #fff7ed; }
+.sy-status-card b { color: #9a3412; }
+.sy-status-card p { margin: .25rem 0 .75rem; }
+.sy-status-card button, .sy-status-card a { color: #c2410c; font-size: .78rem; font-weight: 900; }
+
 @media print {
     body * {
         visibility: hidden !important;

@@ -199,13 +199,16 @@ supabase functions deploy send-order-notification
 ```
 
 Para habilitar el marketplace independiente, la sincronización en tiempo real y las
-correcciones de producción, ejecuta también en orden las migraciones `016` a `022`.
+correcciones de producción, ejecuta también en orden las migraciones `016` a `023`.
 La `021_production_readiness.sql` limita al repartidor a una entrega activa, conserva
 ofertas descartadas en su centro de pedidos, protege el código de entrega, agrega
 liquidaciones, aprobación de altas, reembolsos y consumo de inventario por comanda.
 La `022_driver_offer_scheduling.sql` anticipa la siguiente solicitud cuando faltan
 como máximo 8 minutos de ruta estimada o 2.5 km, sin permitir aceptar una segunda
 entrega hasta cerrar la actual.
+La `023_account_privacy_requests.sql` agrega el flujo autenticado para solicitar o
+cancelar la eliminación de una cuenta. La eliminación final debe procesarse después
+de revisar los comprobantes y obligaciones de conservación correspondientes.
 
 ## Servicios externos
 
@@ -324,3 +327,7 @@ También se admite el estado `cancelado`. Solo un negocio puede actualizar pedid
 ## Seguridad
 
 La clave `sb_publishable_...` del frontend es pública por diseño. No deben guardarse claves `service_role`, contraseñas ni secretos de APIs dentro del repositorio. Las operaciones sensibles se protegen con RLS y funciones de PostgreSQL.
+
+Las pruebas de flujos y calidad se ejecutan automáticamente en cada pull request y
+actualización de `main` mediante `.github/workflows/quality.yml`. Vercel aplica las
+cabeceras defensivas configuradas en `vercel.json`.
