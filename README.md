@@ -199,10 +199,13 @@ supabase functions deploy send-order-notification
 ```
 
 Para habilitar el marketplace independiente, la sincronización en tiempo real y las
-correcciones de producción, ejecuta también en orden las migraciones `016` a `021`.
+correcciones de producción, ejecuta también en orden las migraciones `016` a `022`.
 La `021_production_readiness.sql` limita al repartidor a una entrega activa, conserva
 ofertas descartadas en su centro de pedidos, protege el código de entrega, agrega
 liquidaciones, aprobación de altas, reembolsos y consumo de inventario por comanda.
+La `022_driver_offer_scheduling.sql` anticipa la siguiente solicitud cuando faltan
+como máximo 8 minutos de ruta estimada o 2.5 km, sin permitir aceptar una segunda
+entrega hasta cerrar la actual.
 
 ## Servicios externos
 
