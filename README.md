@@ -210,6 +210,24 @@ La `023_account_privacy_requests.sql` agrega el flujo autenticado para solicitar
 cancelar la eliminación de una cuenta. La eliminación final debe procesarse después
 de revisar los comprobantes y obligaciones de conservación correspondientes.
 
+### Priorización inteligente de cocina
+
+Ejecuta al final:
+
+`supabase/migrations/024_ml_kitchen_priority.sql`
+
+La cola de Cocina aprende los minutos reales de preparación de cada restaurante y
+tipo de servicio. Durante las primeras cinco comandas usa los tiempos configurados;
+después entrena automáticamente una regresión con cantidad de productos, complejidad
+de la comanda y horario de alta demanda. El orden recomendado también considera la
+hora programada de pickup y la ubicación en vivo del repartidor para que delivery se
+termine cerca de su llegada. Los responsables de cocina pueden mantener, elevar,
+marcar urgente o posponer una comanda sin desactivar el aprendizaje.
+
+Los tiempos iniciales se ajustan en **Configuración de restaurante**. El cliente puede
+elegir pickup inmediato o programado hasta con siete días de anticipación. No requiere
+una API de IA ni envía información operativa fuera de Supabase.
+
 ## Servicios externos
 
 ### Inicio de sesión con Google

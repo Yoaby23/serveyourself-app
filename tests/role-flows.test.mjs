@@ -43,7 +43,7 @@ assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
 assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v17/, 'La PWA debe renovar su caché al publicar cambios de producción');
+assert.match(read('sw.js'), /serveyourself-shell-v18/, 'La PWA debe renovar su caché al publicar cambios de producción');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
@@ -173,7 +173,7 @@ assert.match(independentTickets, /create table if not exists public\.kitchen_tic
 assert.match(independentTickets, /v_ticket_id:=public\.create_kitchen_ticket\(p_order_id,v_added,p_notes\)/, 'Agregar productos a una mesa debe crear una nueva comanda de cocina');
 assert.match(independentTickets, /create trigger sync_online_order_kitchen_ticket/, 'Los pedidos en linea pagados deben seguir entrando a cocina');
 assert.doesNotMatch(independentTickets, /update public\.order_station_statuses[\s\S]*set status='pendiente'/, 'Una comanda nueva no debe reiniciar estaciones anteriores');
-assert.match(kitchen, /from\('kitchen_tickets'\)/, 'Cocina debe consultar comandas independientes y no cuentas agrupadas');
+assert.match(kitchen, /list_kitchen_priority_queue/, 'Cocina debe consultar la cola de comandas independientes y no cuentas agrupadas');
 assert.match(kitchen, /update_kitchen_ticket_status/, 'Cocina debe avanzar únicamente la comanda seleccionada');
 assert.doesNotMatch(kitchen, /id="orders-listo"|id="count-listo"/, 'Cocina no debe mostrar una columna de comandas listas');
 assert.match(kitchen, /\['pendiente','preparando'\]\.forEach/, 'El tablero debe renderizar únicamente Nuevos y Preparando');
