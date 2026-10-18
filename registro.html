@@ -59,10 +59,11 @@
                     COMENZAR AHORA
                 </button>
             </form>
+            <p class="mt-5 text-center text-[11px] leading-relaxed text-slate-400">Al continuar aceptas los <a class="font-bold text-slate-600 underline" href="terminos.html">Términos de uso</a> y confirmas que leíste el <a class="font-bold text-slate-600 underline" href="privacidad.html">Aviso de privacidad</a>.</p>
         </div>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
     <script src="app-config.js"></script>
     <script src="app.js"></script>
     <script>
@@ -181,7 +182,7 @@
                 const { data: authData, error: authError } = await _supabase.auth.signUp({
                     email,
                     password,
-                    options: { data: profileData }
+                    options: { data: { ...profileData, terms_version: '2026-10-18', terms_accepted_at: new Date().toISOString() } }
                 });
                 if (authError) throw authError;
 

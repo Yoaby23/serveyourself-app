@@ -17,7 +17,7 @@
     </main>
     <audio id="new-order-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
     <aside id="availability-panel" class="hidden fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-white text-slate-950 shadow-2xl p-5 overflow-y-auto"><div class="flex justify-between"><div><p class="text-xs font-black uppercase text-orange-500">Menú del turno</p><h2 class="text-xl font-black">Disponibilidad</h2></div><button type="button" onclick="toggleAvailability()" class="w-10 h-10 rounded-xl bg-slate-100 font-black">×</button></div><div id="availability-list" class="mt-5 space-y-2"></div></aside>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="app-config.js"></script><script src="app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script><script src="app-config.js"></script><script src="app.js"></script>
     <script>
         const db = window.serveYourself.supabase, esc = window.serveYourself.escapeHtml;
         let access, orders = [], stations = [], products = [], tables = [], activeStation = 'all', soundEnabled = false, timer, syncTimer, loadingOrders = false;

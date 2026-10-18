@@ -15,6 +15,7 @@ for (const file of htmlFiles) {
     assert.doesNotMatch(html, /cdn\.tailwindcss\.com/, `${file} no debe depender del compilador Tailwind en producción`);
     assert.doesNotMatch(html, /<button(?![^>]*\btype=)/i, `${file} debe declarar el tipo de cada botón`);
     assert.doesNotMatch(html, /<input(?![^>]*\btype=)/i, `${file} debe declarar el tipo de cada campo`);
+    assert.doesNotMatch(html, /supabase-js@2["']/, `${file} debe fijar una versión exacta del cliente Supabase`);
 }
 
 assert.match(app, /ensureGlobalBackButton/, 'Debe existir un regreso común para pantallas sin navegación propia');
@@ -42,5 +43,20 @@ assert.match(read('caja.html'), /register_pos_payment_v2/, 'Los pagos manuales d
 assert.match(read('index.html'), /signInWithProvider\('google'/);
 assert.match(read('registro.html'), /registerWithProvider\('google'/);
 assert.doesNotMatch(read('index.html') + read('registro.html'), /facebook|Continuar con Apple|Registrarme con Apple/i);
+
+for (const legalPage of ['privacidad.html', 'terminos.html', 'eliminar-cuenta.html']) {
+    assert.ok(htmlFiles.includes(legalPage), `Debe existir ${legalPage}`);
+}
+assert.match(read('index.html'), /privacidad\.html/);
+assert.match(read('registro.html'), /Términos de uso/);
+assert.match(read('menu.html'), /eliminar-cuenta\.html/);
+assert.match(read('eliminar-cuenta.html'), /request_account_deletion/);
+assert.match(read('supabase/migrations/023_account_privacy_requests.sql'), /account_deletion_requests_one_pending/);
+
+const vercel = JSON.parse(read('vercel.json'));
+const securityHeaders = vercel.headers[0].headers.map(header => header.key);
+for (const header of ['X-Content-Type-Options', 'X-Frame-Options', 'Referrer-Policy', 'Permissions-Policy', 'Strict-Transport-Security']) {
+    assert.ok(securityHeaders.includes(header), `Debe configurarse la cabecera ${header}`);
+}
 
 console.log(`Calidad PWA, navegación y POS: OK (${htmlFiles.length} pantallas revisadas)`);
