@@ -14,6 +14,9 @@ const driverRegistration = read('repartidor-registro.html');
 const app = read('app.js');
 const menu = read('menu.html');
 const index = read('index.html');
+const readiness = read('supabase/migrations/021_production_readiness.sql');
+const offerScheduling = read('supabase/migrations/022_driver_offer_scheduling.sql');
+const refund = read('supabase/functions/refund-mercado-pago-payment/index.ts');
 
 for (const page of ['delivery.html', 'repartidor.html', 'delivery-tracking.html', 'restaurante.html']) {
   const html = read(page);
@@ -50,7 +53,20 @@ assert.match(driverRealtime, /alter publication supabase_realtime add table publ
 assert.match(driverRegistration, /data&&!editing[\s\S]*repartidor\.html/, 'Un repartidor ya registrado no debe capturar sus datos nuevamente');
 assert.match(driverRegistration, /select\('full_name,phone'\)/, 'El primer registro debe aprovechar los datos de la cuenta');
 assert.match(app + menu, /Modo repartidor/, 'Los accesos existentes deben abrir directamente el modo repartidor');
-assert.match(index, /index\.html\?next=repartidor\.html/, 'La portada debe permitir entrar directamente como repartidor');
+assert.match(index, /CREAR CUENTA NUEVA[\s\S]*Quiero repartir/, 'El alta de repartidor debe estar dentro del flujo Crear cuenta');
+assert.doesNotMatch(index, />Soy repartidor</, 'La portada no debe duplicar el acceso de repartidor fuera de Crear cuenta');
+assert.match(readiness, /max_active_orders=1/, 'La plataforma debe limitar a una entrega activa');
+assert.match(readiness, /Termina tu entrega activa antes de aceptar otra/, 'La toma de pedido debe bloquear una segunda entrega incluso con concurrencia');
+assert.match(offerScheduling, /remaining_km<=2\.5/, 'Las siguientes ofertas deben anticiparse por cercanía de la ruta');
+assert.match(offerScheduling, /estimated_speed_kmh[\s\S]*<=8/, 'Las siguientes ofertas deben anticiparse por tiempo estimado según el vehículo');
+assert.match(readiness, /delivery_offer_responses/, 'Las ofertas descartadas deben permanecer en el centro de pedidos');
+assert.match(driver, /offer-dialog[\s\S]*NUEVA SOLICITUD/, 'Las nuevas ofertas deben aparecer como diálogo visible');
+assert.match(driver, /promptedOffers\.has\(`\$\{o\.order_id\}:\$\{mode\}`\)/, 'Una oferta anticipada debe volver a mostrarse cuando ya pueda aceptarse');
+assert.match(driver, /syncOfferDialog/, 'El diálogo debe cerrarse si otro repartidor toma la oferta');
+assert.match(driver, /driver-orders-center/, 'El repartidor debe tener un centro persistente de pedidos');
+assert.match(readiness, /delivery_code_attempts[\s\S]*interval '15 minutes'/, 'El código de entrega debe limitar intentos');
+assert.match(readiness, /delivery_driver_ledger/, 'Las ganancias y el efectivo deben quedar en un libro contable');
+assert.match(refund, /\/refunds/, 'Los pedidos pagados que se cancelan deben reembolsarse');
 assert.match(tracking, /updateMap/, 'El cliente debe ver el seguimiento');
 assert.match(preference, /delivery-fee/, 'Mercado Pago debe incluir la tarifa de envío');
 assert.match(read('sw.js'), /delivery\.html.*repartidor\.html.*delivery-tracking\.html/, 'La PWA debe precargar las pantallas de delivery');

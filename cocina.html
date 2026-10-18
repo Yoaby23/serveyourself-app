@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cocina | ServeYourself</title><link rel="icon" href="logo.png" type="image/png">
-    <script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="tailwind.generated.css"><link rel="stylesheet" href="styles.css">
 </head>
 <body class="bg-slate-950 text-white min-h-screen kitchen-screen">
     <header class="kitchen-header sticky top-0 z-30 bg-slate-950/95 border-b border-slate-800 px-4 py-3">
         <div class="kitchen-identity"><p class="text-xs font-black text-orange-400 uppercase tracking-widest">Pantalla de cocina</p><h1 id="restaurant-name" class="text-xl font-black">ServeYourself</h1></div>
-        <div class="kitchen-toolbar"><select id="station-filter" class="px-3 py-3 rounded-xl bg-slate-800 text-white font-black text-sm"><option value="all">Todas las estaciones</option><option value="general">General</option></select><button onclick="toggleAvailability()" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">Disponibilidad</button><button id="sound-button" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">🔇 Activar sonido</button></div>
+        <div class="kitchen-toolbar"><select id="station-filter" class="px-3 py-3 rounded-xl bg-slate-800 text-white font-black text-sm"><option value="all">Todas las estaciones</option><option value="general">General</option></select><button type="button" onclick="toggleAvailability()" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">Disponibilidad</button><button type="button" id="sound-button" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">🔇 Activar sonido</button></div>
         <div id="restaurant-nav" class="sy-restaurant-nav kitchen-navigation"></div>
     </header>
     <main class="p-3 grid lg:grid-cols-2 gap-3 min-h-[calc(100vh-76px)]">
@@ -16,7 +16,7 @@
         <section class="kitchen-column"><div class="kitchen-heading bg-blue-600"><span>Preparando</span><b id="count-preparando">0</b></div><div id="orders-preparando" class="kitchen-list"></div></section>
     </main>
     <audio id="new-order-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
-    <aside id="availability-panel" class="hidden fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-white text-slate-950 shadow-2xl p-5 overflow-y-auto"><div class="flex justify-between"><div><p class="text-xs font-black uppercase text-orange-500">Menú del turno</p><h2 class="text-xl font-black">Disponibilidad</h2></div><button onclick="toggleAvailability()" class="w-10 h-10 rounded-xl bg-slate-100 font-black">×</button></div><div id="availability-list" class="mt-5 space-y-2"></div></aside>
+    <aside id="availability-panel" class="hidden fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-white text-slate-950 shadow-2xl p-5 overflow-y-auto"><div class="flex justify-between"><div><p class="text-xs font-black uppercase text-orange-500">Menú del turno</p><h2 class="text-xl font-black">Disponibilidad</h2></div><button type="button" onclick="toggleAvailability()" class="w-10 h-10 rounded-xl bg-slate-100 font-black">×</button></div><div id="availability-list" class="mt-5 space-y-2"></div></aside>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="app-config.js"></script><script src="app.js"></script>
     <script>
         const db = window.serveYourself.supabase, esc = window.serveYourself.escapeHtml;
@@ -64,7 +64,7 @@
                 <div class="my-4 space-y-2">${visibleItems.map(item => `<div class="flex gap-3 text-lg font-extrabold"><span class="text-orange-400 min-w-8">${Number(item.qty)}×</span><span>${esc(item.nombre)}</span></div>`).join('')}</div>
                 ${order.notes ? `<div class="bg-amber-300 text-slate-950 p-3 rounded-xl font-black">📝 ${esc(order.notes)}</div>` : ''}
                 ${order.waiter_name ? `<p class="text-xs text-slate-400 mt-3">Mesero: ${esc(order.waiter_name)}</p>` : ''}
-                <button onclick="moveOrder(${order.id}, '${status}')" class="w-full mt-4 py-4 rounded-xl ${stationState === 'listo' ? 'bg-emerald-500' : 'bg-white text-slate-950'} font-black text-base">${label}</button>
+                <button type="button" onclick="moveOrder(${order.id}, '${status}')" class="w-full mt-4 py-4 rounded-xl ${stationState === 'listo' ? 'bg-emerald-500' : 'bg-white text-slate-950'} font-black text-base">${label}</button>
             </article>`;
         }
         function render() {
@@ -84,7 +84,7 @@
         document.getElementById('sound-button').addEventListener('click', () => { soundEnabled = !soundEnabled; document.getElementById('sound-button').textContent = soundEnabled ? '🔊 Sonido activo' : '🔇 Activar sonido'; if (soundEnabled) document.getElementById('new-order-sound').play().then(a => { a.pause(); a.currentTime = 0; }).catch(() => {}); });
         document.getElementById('station-filter').addEventListener('change',e=>{activeStation=e.target.value;render();});
         function toggleAvailability(){document.getElementById('availability-panel').classList.toggle('hidden');}
-        function renderAvailability(){document.getElementById('availability-list').innerHTML=products.map(p=>`<div class="flex justify-between items-center p-3 rounded-xl ${p.is_available?'bg-slate-50':'bg-red-50'}"><b>${esc(p.name)}</b><button onclick="setAvailability('${p.id}',${!p.is_available})" class="text-xs font-black ${p.is_available?'text-red-500':'text-green-600'}">${p.is_available?'AGOTAR':'REACTIVAR'}</button></div>`).join('');}
+        function renderAvailability(){document.getElementById('availability-list').innerHTML=products.map(p=>`<div class="flex justify-between items-center p-3 rounded-xl ${p.is_available?'bg-slate-50':'bg-red-50'}"><b>${esc(p.name)}</b><button type="button" onclick="setAvailability('${p.id}',${!p.is_available})" class="text-xs font-black ${p.is_available?'text-red-500':'text-green-600'}">${p.is_available?'AGOTAR':'REACTIVAR'}</button></div>`).join('');}
         async function setAvailability(id,value){const{error}=await db.rpc('set_product_availability',{p_product_id:id,p_available:value});if(error)return alert(error.message);const p=products.find(x=>x.id===id);if(p)p.is_available=value;renderAvailability();}
         document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadOrders(); });
         window.addEventListener('pageshow', loadOrders);

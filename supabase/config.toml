@@ -15,3 +15,6 @@ verify_jwt = false
 
 [functions.mercado-pago-disconnect]
 verify_jwt = true
+
+[functions.refund-mercado-pago-payment]
+verify_jwt = true

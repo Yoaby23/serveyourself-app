@@ -198,6 +198,15 @@ supabase functions deploy create-mercado-pago-preference
 supabase functions deploy send-order-notification
 ```
 
+Para habilitar el marketplace independiente, la sincronización en tiempo real y las
+correcciones de producción, ejecuta también en orden las migraciones `016` a `022`.
+La `021_production_readiness.sql` limita al repartidor a una entrega activa, conserva
+ofertas descartadas en su centro de pedidos, protege el código de entrega, agrega
+liquidaciones, aprobación de altas, reembolsos y consumo de inventario por comanda.
+La `022_driver_offer_scheduling.sql` anticipa la siguiente solicitud cuando faltan
+como máximo 8 minutos de ruta estimada o 2.5 km, sin permitir aceptar una segunda
+entrega hasta cerrar la actual.
+
 ## Servicios externos
 
 ### Inicio de sesión con Google
@@ -266,6 +275,7 @@ MERCADO_PAGO_CLIENT_ID
 MERCADO_PAGO_CLIENT_SECRET
 MERCADO_PAGO_REDIRECT_URI=https://spbgledcjwtqmlqdlpyx.supabase.co/functions/v1/mercado-pago-oauth-callback
 MERCADO_PAGO_FEE_PERCENT=0
+MERCADO_PAGO_WEBHOOK_SECRET=la_firma_secreta_configurada_en_webhooks
 APP_URL=https://serveyourself-app.vercel.app
 ```
 
@@ -278,7 +288,11 @@ supabase functions deploy mercado-pago-webhook --no-verify-jwt
 supabase functions deploy mercado-pago-connect-url
 supabase functions deploy mercado-pago-oauth-callback --no-verify-jwt
 supabase functions deploy mercado-pago-disconnect
+supabase functions deploy refund-mercado-pago-payment
 ```
+
+En Mercado Pago configura la URL de notificaciones de la aplicación y copia su firma
+secreta en `MERCADO_PAGO_WEBHOOK_SECRET`. Las notificaciones sin firma válida se rechazan.
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` son proporcionadas automáticamente por Supabase Functions. Nunca coloques Client Secret, tokens OAuth de vendedores, la App API Key de OneSignal o la clave `service_role` en archivos públicos.
 
@@ -291,6 +305,15 @@ python -m http.server 8080
 ```
 
 Después abre `http://localhost:8080`.
+
+## CSS de producción
+
+Las pantallas usan `tailwind.generated.css`; no dependen del compilador CDN. Después de
+agregar o cambiar clases de Tailwind vuelve a generarlo con:
+
+```bash
+npx tailwindcss@3.4.17 -i tailwind-source.css -o tailwind.generated.css --minify --content './*.html' './*.js'
+```
 
 ## Flujo de estados
 

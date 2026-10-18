@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>serveyourself | Panel Realtime</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="tailwind.generated.css">
     <link rel="stylesheet" href="styles.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800;900&display=swap');
@@ -27,21 +27,21 @@
 
     <nav class="bg-white/90 backdrop-blur-md p-4 sticky top-0 z-50 border-b border-slate-100">
         <div class="flex justify-between items-center relative max-w-5xl mx-auto">
-            <button id="admin-back" data-sy-back onclick="adminBack()" class="hidden w-10 h-10 rounded-xl bg-orange-50 text-orange-600 font-black" title="Volver" aria-label="Volver a la vista anterior">←</button>
+            <button type="button" id="admin-back" data-sy-back onclick="adminBack()" class="hidden w-10 h-10 rounded-xl bg-orange-50 text-orange-600 font-black" title="Volver" aria-label="Volver a la vista anterior">←</button>
             <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2">
                 <h1 class="text-lg font-black tracking-tighter text-slate-900">serve<span class="text-orange-500">yourself</span></h1>
             </div>
 
             <div class="relative">
-                <button onclick="toggleAdminMenu()" class="w-10 h-10 bg-slate-900 text-white rounded-full flex items-center justify-center font-black">🏪</button>
+                <button type="button" onclick="toggleAdminMenu()" class="w-10 h-10 bg-slate-900 text-white rounded-full flex items-center justify-center font-black">🏪</button>
                 <div id="admin-menu" class="hidden absolute top-14 right-0 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden fade-in-down">
                     <div class="p-4 border-b border-slate-50 bg-slate-50/50">
                         <p id="biz-name-display" class="text-sm font-black text-slate-900 italic">Cargando...</p>
                         <p id="admin-email-display" class="text-xs font-medium text-slate-500">...</p>
                     </div>
                     <div class="p-2 bg-slate-50 border-t border-slate-100">
-                        <button onclick="window.serveYourself.installApp()" class="block text-center w-full py-2.5 text-sm font-bold text-slate-700 hover:bg-white rounded-xl transition-colors">📲 Instalar aplicación</button>
-                        <button onclick="cerrarSesion()" class="block text-center w-full py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors">Cerrar sesión</button>
+                        <button type="button" onclick="window.serveYourself.installApp()" class="block text-center w-full py-2.5 text-sm font-bold text-slate-700 hover:bg-white rounded-xl transition-colors">📲 Instalar aplicación</button>
+                        <button type="button" onclick="cerrarSesion()" class="block text-center w-full py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors">Cerrar sesión</button>
                     </div>
                 </div>
             </div>
@@ -57,12 +57,12 @@
                 <a href="caja.html" class="admin-feature-card"><span>💵</span><b>Caja</b><small>Abre turnos, divide pagos y controla efectivo</small></a>
                 <a href="cocina.html" class="admin-feature-card"><span>👨‍🍳</span><b>Cocina</b><small>Abre la pantalla de preparación</small></a>
                 <a href="delivery.html" class="admin-feature-card"><span>🛵</span><b>Delivery y despacho</b><small>Acepta, asigna y sigue entregas en tiempo real</small></a>
-                <button onclick="mostrarSeccion('productos')" class="admin-feature-card"><span>🍔</span><b>Menú y productos</b><small>Agrega productos y cambia disponibilidad</small></button>
+                <button type="button" onclick="mostrarSeccion('productos')" class="admin-feature-card"><span>🍔</span><b>Menú y productos</b><small>Agrega productos y cambia disponibilidad</small></button>
                 <a href="inventario.html" class="admin-feature-card"><span>📦</span><b>Inventario y recetas</b><small>Ingredientes, estaciones, costos y mínimos</small></a>
                 <a href="reportes.html" class="admin-feature-card"><span>📊</span><b>Reportes</b><small>Ventas, meseros, productos y diferencias</small></a>
                 <a href="clientes.html" class="admin-feature-card"><span>🎟️</span><b>Clientes y promociones</b><small>Cupones, reservaciones y lealtad</small></a>
                 <a href="equipo.html" class="admin-feature-card"><span>👥</span><b>Personal y permisos</b><small>Meseros, cocina y capitanes de caja</small></a>
-                <button onclick="mostrarSeccion('config')" class="admin-feature-card"><span>⚙️</span><b>Configuración de restaurante</b><small>Horarios, ubicación y métodos de pago</small></button>
+                <button type="button" onclick="mostrarSeccion('config')" class="admin-feature-card"><span>⚙️</span><b>Configuración de restaurante</b><small>Horarios, ubicación y métodos de pago</small></button>
                 <a href="qr.html" class="admin-feature-card"><span>▦</span><b>QR del menú</b><small>Genera el código público imprimible</small></a>
                 <a href="menu.html" class="admin-feature-card"><span>🛍️</span><b>Mis pedidos personales</b><small>Cambia a la experiencia de cliente</small></a>
             </div>
@@ -139,11 +139,11 @@
                         <button id="mp-connect" type="button" onclick="conectarMercadoPago()" class="w-full mt-3 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase">Conectar Mercado Pago</button>
                         <button id="mp-disconnect" type="button" onclick="desconectarMercadoPago()" class="hidden w-full mt-3 py-3 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase">Desconectar cuenta</button>
                     </div>
-                    <input id="cfg-bank" placeholder="Banco" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold">
-                    <input id="cfg-holder" placeholder="Titular de la cuenta" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold">
-                    <input id="cfg-clabe" maxlength="18" placeholder="CLABE (18 dígitos)" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold">
+                    <input type="text" id="cfg-bank" placeholder="Banco" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold">
+                    <input type="text" id="cfg-holder" placeholder="Titular de la cuenta" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold">
+                    <input type="text" id="cfg-clabe" maxlength="18" placeholder="CLABE (18 dígitos)" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold">
                 </div>
-                <button class="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs">GUARDAR CONFIGURACIÓN</button>
+                <button type="submit" class="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs">GUARDAR CONFIGURACIÓN</button>
             </form>
         </section>
     </main>
@@ -160,7 +160,7 @@
         let currentAdminSection = 'home';
 
         function toggleAdminMenu() { document.getElementById('admin-menu').classList.toggle('hidden'); }
-        
+
         function mostrarSeccion(seccion) {
             currentAdminSection = seccion;
             ['home', 'productos', 'dashboard', 'config'].forEach(id => {
@@ -224,7 +224,7 @@
                     </div>
                     <div class="flex items-center gap-3">
                         <input type="checkbox" ${p.is_available ? 'checked' : ''} onchange="toggleDisponibilidad('${p.id}', ${p.is_available})" class="w-4 h-4 accent-green-500">
-                        <button onclick="eliminarProducto('${p.id}')" class="text-slate-300">🗑️</button>
+                        <button type="button" onclick="eliminarProducto('${p.id}')" class="text-slate-300">🗑️</button>
                     </div>
                 </div>
             `).join('');

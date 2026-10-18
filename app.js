@@ -35,7 +35,12 @@ window.serveYourself = {
         const webhookUrl = new URL(`${SUPABASE_URL}/functions/v1/mercado-pago-webhook`);
         webhookUrl.searchParams.set('order_id', String(orderId));
         if (paymentId) webhookUrl.searchParams.set('payment_id', String(paymentId));
-        return fetch(webhookUrl.toString(), { method: 'GET' });
+        const { data: { session } } = await this.supabase.auth.getSession();
+        if (!session?.access_token) throw new Error('Sesión requerida para verificar el pago.');
+        return fetch(webhookUrl.toString(), {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${session.access_token}`, apikey: SUPABASE_KEY }
+        });
     },
 
     async requireUser() {
@@ -248,6 +253,13 @@ window.serveYourself = {
                 <button type="button" onclick="window.serveYourself.installApp()">📲 Instalar aplicación</button>
                 <button type="button" class="sy-nav-logout" onclick="window.serveYourself.signOut()">Cerrar sesión</button>
             </div>`;
+        if (typeof this.supabase.rpc === 'function') {
+            this.supabase.rpc('is_platform_admin').then(({ data }) => {
+                if (!data || document.getElementById('sy-platform-admin-link')) return;
+                const menu = container.querySelector('.sy-nav-dropdown nav');
+                menu?.insertAdjacentHTML('beforeend', '<a id="sy-platform-admin-link" href="platform-admin.html">🛡️ Plataforma y repartidores</a>');
+            }).catch(() => {});
+        }
         if (!this._restaurantMenuListener) {
             document.addEventListener('click', event => {
                 const dropdown = document.getElementById('restaurant-menu-dropdown');

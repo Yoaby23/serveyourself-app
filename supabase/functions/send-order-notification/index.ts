@@ -1,6 +1,25 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts';
 
+async function sendPush(payload: Record<string, unknown>) {
+  let lastStatus = 0;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const response = await fetch('https://api.onesignal.com/notifications', {
+      method: 'POST',
+      headers: {
+        Authorization: `Key ${Deno.env.get('ONESIGNAL_REST_API_KEY')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (response.ok) return response;
+    lastStatus = response.status;
+    if (response.status < 500 && response.status !== 429) break;
+    await new Promise(resolve => setTimeout(resolve, 300 * 2 ** attempt));
+  }
+  throw new Error(`OneSignal rechazó la notificación (${lastStatus || 'sin respuesta'})`);
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(request) });
   if (request.method !== 'POST') return jsonResponse(request, { error: 'Método no permitido' }, 405);
@@ -80,22 +99,14 @@ Deno.serve(async (request) => {
     }
     if (!notifications.length) return jsonResponse(request, { skipped: true, reason: 'Sin destinatarios' });
 
-    const results = await Promise.all(notifications.map(notification => fetch('https://api.onesignal.com/notifications', {
-      method: 'POST',
-      headers: {
-        Authorization: `Key ${Deno.env.get('ONESIGNAL_REST_API_KEY')}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
+    const results = await Promise.all(notifications.map(notification => sendPush({
         app_id: Deno.env.get('ONESIGNAL_APP_ID'),
         include_aliases: { external_id: [notification.recipient] },
         target_channel: 'push',
         headings: { es: order.restaurant_name, en: order.restaurant_name },
         contents: { es: notification.message, en: notification.message },
         url: notification.url
-      })
-    })));
-    if (results.some(response => !response.ok)) throw new Error('No se pudo enviar una notificación');
+      })));
     return jsonResponse(request, { sent: true, recipients: notifications.length });
   } catch (error) {
     return jsonResponse(request, { error: error instanceof Error ? error.message : 'Error interno' }, 500);

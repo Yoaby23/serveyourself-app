@@ -12,6 +12,9 @@ for (const file of htmlFiles) {
     const html = read(file);
     assert.match(html, /<script src="app\.js"><\/script>/, `${file} debe cargar la navegación y soporte PWA compartidos`);
     assert.match(html, /<meta name="viewport"/i, `${file} debe adaptarse a dispositivos móviles`);
+    assert.doesNotMatch(html, /cdn\.tailwindcss\.com/, `${file} no debe depender del compilador Tailwind en producción`);
+    assert.doesNotMatch(html, /<button(?![^>]*\btype=)/i, `${file} debe declarar el tipo de cada botón`);
+    assert.doesNotMatch(html, /<input(?![^>]*\btype=)/i, `${file} debe declarar el tipo de cada campo`);
 }
 
 assert.match(app, /ensureGlobalBackButton/, 'Debe existir un regreso común para pantallas sin navegación propia');
@@ -23,11 +26,14 @@ assert.match(app, /beforeinstallprompt/, 'Android y escritorio deben ofrecer el 
 assert.equal(manifest.id, '/');
 assert.equal(manifest.scope, '/');
 assert.equal(manifest.display, 'standalone');
-assert.equal(manifest.icons[0].src, '/app-icon.svg');
-assert.equal(manifest.icons[0].sizes, 'any');
-assert.ok(fs.existsSync(new URL('../app-icon.svg', import.meta.url)), 'El icono declarado debe existir');
+for (const icon of manifest.icons) assert.ok(fs.existsSync(new URL(`..${icon.src}`, import.meta.url)), `Debe existir ${icon.src}`);
+assert.ok(manifest.icons.some(icon => icon.src === '/app-icon-192.png' && icon.sizes === '192x192'), 'Android requiere un icono PNG de 192px');
+assert.ok(manifest.icons.some(icon => icon.src === '/app-icon-512.png' && icon.sizes === '512x512'), 'Android y escritorio requieren un icono PNG de 512px');
 assert.match(sw, /manifest\.webmanifest/);
 assert.match(sw, /app-icon\.svg/);
+assert.match(sw, /app-icon-192\.png.*app-icon-512\.png/);
+assert.match(sw, /tailwind\.generated\.css/, 'El CSS de producción debe funcionar sin conexión');
+assert.ok(fs.statSync(new URL('../tailwind.generated.css', import.meta.url)).size > 1000, 'El CSS local compilado debe existir');
 
 assert.match(pos, /create_pos_table_order/, 'Las mesas deben permitir cuentas nuevas o existentes');
 assert.doesNotMatch(pos, /pending-panel|register_pos_payment|order_payments/, 'Meseros no debe contener funciones de caja');
