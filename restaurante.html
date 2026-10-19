@@ -72,6 +72,12 @@
                 <button type="button" data-service="pickup" onclick="setService('pickup')" class="service-btn py-3 rounded-2xl bg-slate-900 text-white font-black text-xs">RECOGER</button>
                 <button type="button" data-service="delivery" onclick="setService('delivery')" class="service-btn py-3 rounded-2xl bg-slate-100 text-slate-600 font-black text-xs hidden">DELIVERY</button>
             </div>
+            <div id="pickup-fields" class="mb-6 space-y-3">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2 block">¿Cuándo recoges?</label>
+                <select id="pickup-timing" onchange="togglePickupSchedule()" class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold"><option value="asap">Lo antes posible</option><option value="scheduled">Programar hora</option></select>
+                <input id="pickup-scheduled-for" type="datetime-local" class="hidden w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold">
+                <p id="pickup-estimate" class="text-xs font-bold text-orange-600 px-2"></p>
+            </div>
             <div id="delivery-fields" class="hidden mb-6 space-y-3">
                 <select id="saved-address" onchange="useSavedAddress()" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold"><option value="">Nueva dirección</option></select>
                 <input type="text" id="delivery-name" maxlength="120" placeholder="Nombre de quien recibe" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
@@ -188,6 +194,7 @@
                 button.className = `service-btn py-3 rounded-2xl font-black text-xs ${active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'}`;
             });
             document.getElementById('delivery-fields').classList.toggle('hidden', type !== 'delivery');
+            document.getElementById('pickup-fields').classList.toggle('hidden', type !== 'pickup');
             document.getElementById('fee-row').classList.toggle('hidden', type !== 'delivery');
             renderPaymentMethods(restaurant);
             if (type === 'delivery') {
@@ -196,6 +203,21 @@
                 if (selected) { document.getElementById('saved-address').value = selected.id; useSavedAddress(); }
             }
             actualizarModalCarrito();
+        }
+
+        function localDateTimeValue(date) {
+            const offset = date.getTimezoneOffset();
+            return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 16);
+        }
+
+        function togglePickupSchedule() {
+            const input = document.getElementById('pickup-scheduled-for');
+            const scheduled = document.getElementById('pickup-timing').value === 'scheduled';
+            const minimum = new Date(Date.now() + 10 * 60000), maximum = new Date(Date.now() + 7 * 86400000);
+            input.min = localDateTimeValue(minimum); input.max = localDateTimeValue(maximum);
+            if (scheduled && !input.value) input.value = localDateTimeValue(new Date(Date.now() + Math.max(30, Number(restaurant?.pickup_prep_minutes || 20)) * 60000));
+            input.classList.toggle('hidden', !scheduled);
+            document.getElementById('pickup-estimate').textContent = scheduled ? 'Cocina ajustará el inicio para entregarlo recién preparado.' : `Tiempo estimado inicial: ${Number(restaurant?.pickup_prep_minutes || 20)} min.`;
         }
 
         function initDeliveryMap() {
@@ -373,7 +395,12 @@
                     const name = document.getElementById('delivery-name').value.trim(), phone = document.getElementById('delivery-phone').value.trim(), address = document.getElementById('delivery-address').value.trim(), reference = document.getElementById('delivery-reference').value.trim();
                     result = await _supabase.rpc('create_delivery_order', { p_restaurant_id: resId, p_items: items, p_notes: notas.slice(0, 500), p_payment_method: paymentMethod, p_address: address, p_reference: reference, p_latitude: point.lat, p_longitude: point.lng, p_contact_name: name, p_contact_phone: phone, p_scheduled_for: null });
                     if (!result.error && document.getElementById('save-address').checked) await _supabase.from('customer_addresses').insert({ customer_id: (await _supabase.auth.getUser()).data.user.id, label: 'Casa', address, reference: reference || null, latitude: point.lat, longitude: point.lng, contact_name: name, contact_phone: phone, is_default: savedAddresses.length === 0 });
-                } else result = await _supabase.rpc('create_order_v2', { p_restaurant_id: resId, p_items: items, p_notes: notas.slice(0, 500), p_payment_method: paymentMethod });
+                } else {
+                    const scheduled = document.getElementById('pickup-timing').value === 'scheduled';
+                    const scheduledValue = document.getElementById('pickup-scheduled-for').value;
+                    if (scheduled && !scheduledValue) throw new Error('Selecciona la fecha y hora de recogida.');
+                    result = await _supabase.rpc('create_scheduled_pickup_order', { p_restaurant_id: resId, p_items: items, p_notes: notas.slice(0, 500), p_payment_method: paymentMethod, p_scheduled_for: scheduled ? new Date(scheduledValue).toISOString() : null });
+                }
                 const { data: order, error } = result;
 
                 if (error) throw error;
@@ -401,7 +428,7 @@
             }
         }
 
-        cargarPagina();
+        cargarPagina().then(togglePickupSchedule);
     </script>
 </body>
 </html>

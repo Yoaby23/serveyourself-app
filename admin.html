@@ -118,6 +118,13 @@
                 </div>
                 <button type="button" onclick="usarUbicacionActual()" class="w-full py-3 bg-blue-50 text-blue-600 rounded-2xl font-black text-xs">📍 USAR MI UBICACIÓN ACTUAL</button>
                 <div class="border-t border-slate-100 pt-4 space-y-3">
+                    <div><p class="text-[10px] font-black text-slate-400 uppercase">Tiempos iniciales de cocina</p><p class="text-xs text-slate-400 mt-1">El modelo inteligente usará estos valores mientras aprende de las primeras 5 comandas de cada servicio.</p></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="text-xs font-bold text-slate-600">Para recoger (min)<input id="cfg-pickup-prep" type="number" min="5" max="240" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
+                        <label class="text-xs font-bold text-slate-600">Servicio en mesa (min)<input id="cfg-dine-in-prep" type="number" min="5" max="240" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
+                    </div>
+                </div>
+                <div class="border-t border-slate-100 pt-4 space-y-3">
                     <label class="flex items-center justify-between font-bold text-sm"><span>Ofrecer delivery</span><input id="cfg-delivery-enabled" type="checkbox" class="w-5 h-5 accent-orange-500"></label>
                     <div class="grid grid-cols-2 gap-3">
                         <label class="text-xs font-bold text-slate-600">Radio máximo (km)<input id="cfg-delivery-radius" type="number" min="0.5" max="50" step="0.1" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
@@ -274,6 +281,8 @@
             document.getElementById('cfg-delivery-km').value = profile.delivery_fee_per_km ?? 0;
             document.getElementById('cfg-delivery-free').value = profile.delivery_free_over ?? '';
             document.getElementById('cfg-delivery-prep').value = profile.delivery_prep_minutes ?? 30;
+            document.getElementById('cfg-pickup-prep').value = profile.pickup_prep_minutes ?? 20;
+            document.getElementById('cfg-dine-in-prep').value = profile.dine_in_prep_minutes ?? 15;
             document.getElementById('cfg-cash').checked = profile.payment_cash ?? true;
             document.getElementById('cfg-transfer').checked = profile.payment_transfer ?? false;
             document.getElementById('cfg-online').checked = profile.payment_online ?? false;
@@ -331,6 +340,8 @@
                 delivery_fee_per_km: Number(document.getElementById('cfg-delivery-km').value) || 0,
                 delivery_free_over: Number(document.getElementById('cfg-delivery-free').value) || null,
                 delivery_prep_minutes: Number(document.getElementById('cfg-delivery-prep').value) || 30,
+                pickup_prep_minutes: Number(document.getElementById('cfg-pickup-prep').value) || 20,
+                dine_in_prep_minutes: Number(document.getElementById('cfg-dine-in-prep').value) || 15,
                 payment_cash: document.getElementById('cfg-cash').checked,
                 payment_transfer: document.getElementById('cfg-transfer').checked,
                 payment_online: document.getElementById('cfg-online').checked,

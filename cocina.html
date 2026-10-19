@@ -11,6 +11,10 @@
         <div class="kitchen-toolbar"><select id="station-filter" class="px-3 py-3 rounded-xl bg-slate-800 text-white font-black text-sm"><option value="all">Todas las estaciones</option><option value="general">General</option></select><button type="button" onclick="toggleAvailability()" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">Disponibilidad</button><button type="button" id="sound-button" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">🔇 Activar sonido</button></div>
         <div id="restaurant-nav" class="sy-restaurant-nav kitchen-navigation"></div>
     </header>
+    <section class="kitchen-intelligence" aria-live="polite">
+        <div><span class="kitchen-ml-dot"></span><b>Orden inteligente activo</b><small id="ml-status">Calibrando con los tiempos reales de tu cocina</small></div>
+        <p>La cola combina preparación, hora prometida y llegada del repartidor. Cocina conserva el control.</p>
+    </section>
     <main class="p-3 grid lg:grid-cols-2 gap-3 min-h-[calc(100vh-76px)]">
         <section class="kitchen-column"><div class="kitchen-heading bg-orange-500"><span>Nuevos</span><b id="count-pendiente">0</b></div><div id="orders-pendiente" class="kitchen-list"></div></section>
         <section class="kitchen-column"><div class="kitchen-heading bg-blue-600"><span>Preparando</span><b id="count-preparando">0</b></div><div id="orders-preparando" class="kitchen-list"></div></section>
@@ -20,7 +24,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script><script src="app-config.js"></script><script src="app.js"></script>
     <script>
         const db = window.serveYourself.supabase, esc = window.serveYourself.escapeHtml;
-        let access, orders = [], stations = [], products = [], tables = [], activeStation = 'all', soundEnabled = false, timer, syncTimer, loadingOrders = false;
+        let access, orders = [], stations = [], products = [], tables = [], activeStation = 'all', soundEnabled = false, timer, syncTimer, refreshTimer, loadingOrders = false, refreshQueued = false;
         const nextStatus = { pendiente: ['preparando', 'COMENZAR'], preparando: ['listo', 'MARCAR LISTO'], listo: ['entregado', 'ENTREGAR'] };
         async function init() {
             access = await window.serveYourself.requireRestaurantPermission('can_view_kitchen'); if (!access) return;
@@ -32,35 +36,44 @@
             await loadOrders();
             db.channel(`kitchen-${access.restaurant_id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'kitchen_tickets', filter: `restaurant_id=eq.${access.restaurant_id}` }, payload => {
                 if (soundEnabled && payload.eventType === 'INSERT') document.getElementById('new-order-sound').play().catch(() => {});
-                loadOrders();
-            }).subscribe(status => {
-                if (status === 'SUBSCRIBED') loadOrders();
-            });
+                scheduleLoad();
+            }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${access.restaurant_id}` }, scheduleLoad).subscribe(status => { if (status === 'SUBSCRIBED') scheduleLoad(); });
             timer = setInterval(render, 30000);
             syncTimer = setInterval(() => {
                 if (document.visibilityState === 'visible') loadOrders();
             }, 5000);
         }
+        function scheduleLoad() { clearTimeout(refreshTimer); refreshTimer = setTimeout(loadOrders, 180); }
         async function loadOrders() {
-            if (!access || loadingOrders) return;
+            if (!access) return;
+            if (loadingOrders) { refreshQueued = true; return; }
             loadingOrders = true;
-            const { data, error } = await db.from('kitchen_tickets').select('*, kitchen_ticket_station_statuses(*)').eq('restaurant_id', access.restaurant_id).in('status', ['pendiente', 'preparando', 'listo']).order('created_at');
+            const { data, error } = await db.rpc('list_kitchen_priority_queue', { p_restaurant_id: access.restaurant_id });
             loadingOrders = false;
+            if (refreshQueued) { refreshQueued = false; scheduleLoad(); }
             if (error) return console.warn('No se pudieron sincronizar los pedidos:', error.message);
-            orders = data || []; render();
+            orders = Array.isArray(data) ? data : []; render();
         }
         function elapsed(date) {
             const minutes = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 60000));
             if (minutes < 1) return 'ahora'; if (minutes < 60) return `${minutes} min`; return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
         }
-        function orderCard(order) {
+        function minutesUntil(date) { return Math.ceil((new Date(date).getTime() - Date.now()) / 60000); }
+        function timeLabel(date) { return new Date(date).toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' }); }
+        function orderCard(order, position) {
             const stationState = activeStation === 'all' ? order.status : (order.kitchen_ticket_station_statuses?.find(s=>s.station_key===activeStation)?.status || order.status);
             const [status, label] = nextStatus[stationState];
             const location = order.service_type === 'dine_in' ? (tables.find(table=>Number(table.id)===Number(order.table_id))?.name || 'Mesa') : order.service_type === 'delivery' ? '🛵 Delivery' : 'Para llevar';
             const roundItems = order.items;
             const visibleItems = activeStation === 'all' ? roundItems : roundItems.filter(item => String(item.station_id || products.find(p=>p.id===item.id)?.kitchen_station_id || 'general') === activeStation);
-            return `<article class="kitchen-card ${elapsed(order.created_at).includes(' h') ? 'kitchen-late' : ''}">
-                <div class="flex items-start justify-between gap-3"><div><p class="text-2xl font-black">Comanda #${order.id}</p><p class="text-xs text-slate-400">Cuenta #${order.order_id}</p><p class="text-sm font-black text-orange-400 mt-1">${esc(location)}</p></div><div class="text-right"><p class="kitchen-clock">${elapsed(order.created_at)}</p><p class="text-xs text-slate-400 mt-1">${new Date(order.created_at).toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'})}</p></div></div>
+            const startIn = minutesUntil(order.recommended_start_at), urgent = order.priority_override > 0 || startIn <= 0;
+            const startLabel = stationState === 'preparando' ? 'EN PREPARACIÓN' : startIn > 1 ? `INICIAR EN ${startIn} MIN` : 'INICIAR AHORA';
+            const modelLabel = order.model_ready ? `ML · error medio ±${Math.max(1, Math.round(Number(order.mean_absolute_error || 0)))} min` : `ML calibrando · ${Number(order.sample_count || 0)}/5`;
+            return `<article class="kitchen-card ${urgent ? 'kitchen-due' : ''} ${order.priority_override === 2 ? 'kitchen-urgent' : ''}">
+                <div class="kitchen-card-priority"><span>#${position + 1} · ${esc(startLabel)}</span><select aria-label="Prioridad de comanda ${order.id}" onchange="setPriority(${order.id},this.value)" class="kitchen-priority-select"><option value="-1" ${order.priority_override===-1?'selected':''}>Posponer</option><option value="0" ${order.priority_override===0?'selected':''}>Normal</option><option value="1" ${order.priority_override===1?'selected':''}>Alta</option><option value="2" ${order.priority_override===2?'selected':''}>Urgente</option></select></div>
+                <div class="flex items-start justify-between gap-3"><div><p class="text-2xl font-black">Comanda #${order.id}</p><p class="text-xs text-slate-400">Cuenta #${order.order_id}</p><p class="text-sm font-black text-orange-400 mt-1">${esc(location)}</p></div><div class="text-right"><p class="kitchen-clock">${elapsed(order.created_at)}</p><p class="text-xs text-slate-400 mt-1">${timeLabel(order.created_at)}</p></div></div>
+                <div class="kitchen-timing-grid"><span><small>LISTO A LAS</small><b>${timeLabel(order.target_ready_at)}</b></span><span><small>PREPARACIÓN</small><b>≈ ${Math.round(Number(order.predicted_prep_minutes || 0))} min</b></span></div>
+                <p class="kitchen-priority-reason">${esc(order.priority_reason)} <small>${esc(modelLabel)}</small></p>
                 <div class="my-4 space-y-2">${visibleItems.map(item => `<div class="flex gap-3 text-lg font-extrabold"><span class="text-orange-400 min-w-8">${Number(item.qty)}×</span><span>${esc(item.nombre)}</span></div>`).join('')}</div>
                 ${order.notes ? `<div class="bg-amber-300 text-slate-950 p-3 rounded-xl font-black">📝 ${esc(order.notes)}</div>` : ''}
                 ${order.waiter_name ? `<p class="text-xs text-slate-400 mt-3">Mesero: ${esc(order.waiter_name)}</p>` : ''}
@@ -73,6 +86,14 @@
                 document.getElementById(`count-${status}`).textContent = list.length;
                 document.getElementById(`orders-${status}`).innerHTML = list.length ? list.map(orderCard).join('') : '<p class="text-center text-slate-600 py-12 font-bold">Sin pedidos</p>';
             });
+            const readyModels = orders.filter(o=>o.model_ready).length;
+            document.getElementById('ml-status').textContent = orders.length && readyModels===orders.length ? 'Aprendiendo y ajustando tiempos en cada comanda' : 'Calibrando con los tiempos reales de tu cocina';
+        }
+        async function setPriority(id, value) {
+            const priority = Number(value);
+            const { error } = await db.rpc('set_kitchen_ticket_priority', { p_ticket_id:id, p_priority:priority, p_note:null });
+            if (error) return alert(error.message);
+            await loadOrders();
         }
         async function moveOrder(id, status) {
             const { error } = activeStation === 'all' ? await db.rpc('update_kitchen_ticket_status', { p_ticket_id: id, p_status: status }) : await db.rpc('update_kitchen_ticket_station_status',{p_ticket_id:id,p_station_key:activeStation,p_status:status});
