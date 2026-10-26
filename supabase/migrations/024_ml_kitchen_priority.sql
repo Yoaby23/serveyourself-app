@@ -242,7 +242,7 @@ begin
                p.latitude as restaurant_latitude,p.longitude as restaurant_longitude,p.pickup_prep_minutes,p.dine_in_prep_minutes,p.delivery_prep_minutes,
                d.vehicle_type,m.sample_count,m.mean_absolute_error,
                coalesce(t.predicted_prep_minutes,public.predict_kitchen_minutes(t.id)) as predicted_minutes,
-               coalesce((select jsonb_agg(to_jsonb(s) order by s.id) from public.kitchen_ticket_station_statuses s where s.ticket_id=t.id),'[]'::jsonb) as station_statuses
+               coalesce((select jsonb_agg(to_jsonb(s)) from public.kitchen_ticket_station_statuses s where s.ticket_id=t.id),'[]'::jsonb) as station_statuses
         from public.kitchen_tickets t
         join public.orders o on o.id=t.order_id
         join public.profiles p on p.id=t.restaurant_id
