@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"><title>Cuenta | ServeYourself</title><link rel="icon" href="logo.png"><link rel="stylesheet" href="tailwind.generated.css"><link rel="stylesheet" href="styles.css"></head>
 <body class="bg-slate-50 min-h-screen sy-has-bottom-nav"><header class="sy-page-header"><div><p>ServeYourself</p><h1>Cuenta</h1></div><div id="restaurant-nav" class="sy-restaurant-nav"></div></header>
-<main class="sy-page-shell sy-account-shell"><section class="sy-settings-card"><h2 id="account-name">Tu cuenta</h2><p id="account-email"></p><p id="account-role"></p><p id="account-status" role="status" aria-live="polite">Verificando tu cuenta…</p><form id="account-form" class="sy-account-form"><label>Teléfono<input type="tel" id="account-phone" maxlength="30" autocomplete="tel"></label><label>Dirección<input type="text" id="account-address" maxlength="250" autocomplete="street-address"></label><button type="submit" id="save-account" disabled>Guardar cambios</button></form></section>
+<main class="sy-page-shell sy-account-shell"><section class="sy-settings-card"><h2 id="account-name">Tu cuenta</h2><p id="account-email"></p><p id="account-role"></p><p id="account-status" role="status" aria-live="polite">Verificando tu cuenta…</p></section>
 <section class="sy-settings-card"><h2>Opciones de cuenta</h2><a href="menu.html?section=perfil">Perfil personal y contraseña</a><a href="menu.html?section=pedidos">Mis pedidos personales</a><a href="menu.html">Explorar restaurantes</a><a id="work-return" href="funciones.html" hidden>Volver a mis funciones</a><a href="repartidor.html">Modo repartidor</a><a id="platform-account-link" href="platform-admin.html" hidden>Administración de plataforma</a><button type="button" onclick="window.serveYourself.enableWorkNotifications()">Activar notificaciones</button><button type="button" onclick="window.serveYourself.installApp()">Instalar aplicación</button></section>
 <section class="sy-settings-card"><h2>Privacidad y sesión</h2><a href="privacidad.html">Aviso de privacidad</a><a href="terminos.html">Términos de uso</a><a href="eliminar-cuenta.html">Solicitar eliminación de cuenta</a><button type="button" class="sy-danger" onclick="window.serveYourself.signOut()">Cerrar sesión</button></section></main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script><script src="app-config.js"></script><script src="app.js"></script><script>
@@ -15,16 +15,9 @@ async function init(){
   document.getElementById('account-name').textContent=profile.full_name||'Tu cuenta';
   document.getElementById('account-email').textContent=accountUser.email||'';
   document.getElementById('account-role').textContent=access?({owner:'Propietario',waiter:'Mesero',cashier:'Caja',kitchen:'Cocina',manager:'Encargado',driver:'Repartidor'}[access.staff_role]||'Personal'):'Cuenta personal';
-  document.getElementById('account-phone').value=profile.phone||'';
-  document.getElementById('account-address').value=profile.address||'';
-  document.getElementById('account-status').textContent='';document.getElementById('save-account').disabled=false;
+  document.getElementById('account-status').textContent='';
   const {data:platformAdmin}=await app.supabase.rpc('is_platform_admin');document.getElementById('platform-account-link').hidden=!platformAdmin;
  }catch(error){document.getElementById('account-status').textContent='No se pudo cargar tu cuenta. Recarga para reintentar.';}
 }
-document.getElementById('account-form').addEventListener('submit',async event=>{
- event.preventDefault();if(!accountUser)return;const button=document.getElementById('save-account');button.disabled=true;
- try{const {data,error}=await app.supabase.from('profiles').update({phone:document.getElementById('account-phone').value.trim(),address:document.getElementById('account-address').value.trim()}).eq('id',accountUser.id).select('id').single();if(error||!data)throw error||new Error('No se confirmó el cambio');document.getElementById('account-status').textContent='Datos guardados.';}
- catch(error){document.getElementById('account-status').textContent='No se pudieron guardar los datos. Reintenta.';}
- finally{button.disabled=false;}
-});init();
+init();
 </script></body></html>

@@ -490,8 +490,8 @@
             }
             btn.disabled = true;
             try {
-                const { error: profileError } = await _supabase.from('profiles').update(updates).eq('id', currentUser.id);
-                if (profileError) throw profileError;
+                const { data: savedProfile, error: profileError } = await _supabase.from('profiles').update(updates).eq('id', currentUser.id).select('id').single();
+                if (profileError || !savedProfile) throw profileError || new Error('No se confirmó el guardado del perfil.');
                 const nuevaPass = document.getElementById('edit-pass').value;
                 if (nuevaPass) { const { error: passwordError } = await _supabase.auth.updateUser({ password: nuevaPass }); if (passwordError) throw passwordError; }
                 alert("Perfil actualizado!");

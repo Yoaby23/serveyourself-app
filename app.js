@@ -113,7 +113,7 @@ window.serveYourself = {
 
     restaurantHome(access) {
         if (!access) return 'menu.html';
-        if (access.staff_role === 'owner') return 'admin.html';
+        if (access.staff_role === 'owner') return 'funciones.html';
         if (access.can_deliver_orders) return 'repartidor.html';
         if (access.can_manage_delivery) return 'delivery.html';
         if (access.can_create_orders) return 'pos.html';
@@ -223,7 +223,7 @@ window.serveYourself = {
         const owner = access.staff_role === 'owner';
         const features = [];
         if (owner) features.push({ href: 'admin.html?section=productos', label: 'Productos', icon: 'products', description: 'Administra tu menú y disponibilidad.' });
-        if (owner || access.can_create_orders) features.push({ href: 'pos.html', label: 'Comandas', icon: 'orders', description: 'Mesas, cuentas abiertas y nuevas rondas.' });
+        if (owner || access.can_create_orders) features.push({ href: 'pos.html', label: 'Meseros', icon: 'orders', description: 'Mesas, cuentas abiertas y nuevas rondas.' });
         if (owner || access.can_close_accounts) features.push({ href: 'caja.html', label: 'Caja', icon: 'cash', description: 'Cobros, turnos y cuentas.' });
         if (owner || access.can_view_kitchen) features.push({ href: 'cocina.html', label: 'Cocina', icon: 'kitchen', description: 'Prepara y entrega comandas.' });
         if (owner || access.can_manage_delivery) features.push({ href: 'delivery.html', label: 'Delivery', icon: 'delivery', description: 'Despacho, repartidores y entregas.' });
@@ -242,7 +242,7 @@ window.serveYourself = {
         const home = this.restaurantHome(access);
         const features = this.workFeatures(access);
         const primary = features.filter(item => ['pos.html','caja.html','cocina.html','delivery.html'].includes(item.href) && item.href !== home).slice(0, 2);
-        return [{ href: home, label: 'Inicio', icon: 'home' }, ...primary, { href: 'funciones.html', label: 'Funciones', icon: 'grid' }, { href: 'cuenta.html', label: 'Cuenta', icon: 'account' }];
+        return [{ href: home, label: 'Inicio', icon: 'home' }, ...primary, ...(home === 'funciones.html' ? [] : [{ href: 'funciones.html', label: 'Funciones', icon: 'grid' }]), { href: 'cuenta.html', label: 'Cuenta', icon: 'account' }];
     },
 
     navigationIcon(name) {

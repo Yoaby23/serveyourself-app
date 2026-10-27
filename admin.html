@@ -38,24 +38,6 @@
 
     <main class="max-w-5xl mx-auto p-6 space-y-8">
 
-        <section id="view-home" class="space-y-6">
-            <div><p class="text-xs font-black text-orange-500 uppercase tracking-widest">Administración</p><h2 class="text-3xl font-black text-slate-900 mt-1">Todas las funciones</h2><p class="text-sm text-slate-500 mt-2">Elige qué parte del restaurante deseas administrar.</p></div>
-            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <a href="pos.html" class="admin-feature-card"><span>🧾</span><b>Meseros</b><small>Crea comandas y envíalas directamente a cocina</small></a>
-                <a href="caja.html" class="admin-feature-card"><span>💵</span><b>Caja</b><small>Abre turnos, divide pagos y controla efectivo</small></a>
-                <a href="cocina.html" class="admin-feature-card"><span>👨‍🍳</span><b>Cocina</b><small>Abre la pantalla de preparación</small></a>
-                <a href="delivery.html" class="admin-feature-card"><span>🛵</span><b>Delivery y despacho</b><small>Acepta, asigna y sigue entregas en tiempo real</small></a>
-                <button type="button" onclick="mostrarSeccion('productos')" class="admin-feature-card"><span>🍔</span><b>Menú y productos</b><small>Agrega productos y cambia disponibilidad</small></button>
-                <a href="inventario.html" class="admin-feature-card"><span>📦</span><b>Inventario y recetas</b><small>Ingredientes, estaciones, costos y mínimos</small></a>
-                <a href="reportes.html" class="admin-feature-card"><span>📊</span><b>Reportes</b><small>Ventas, meseros, productos y diferencias</small></a>
-                <a href="clientes.html" class="admin-feature-card"><span>🎟️</span><b>Clientes y promociones</b><small>Cupones, reservaciones y lealtad</small></a>
-                <a href="equipo.html" class="admin-feature-card"><span>👥</span><b>Personal y permisos</b><small>Meseros, cocina y capitanes de caja</small></a>
-                <button type="button" onclick="mostrarSeccion('config')" class="admin-feature-card"><span>⚙️</span><b>Configuración de restaurante</b><small>Horarios, ubicación y métodos de pago</small></button>
-                <a href="qr.html" class="admin-feature-card"><span>▦</span><b>QR del menú</b><small>Genera el código público imprimible</small></a>
-                <a href="menu.html" class="admin-feature-card"><span>🛍️</span><b>Mis pedidos personales</b><small>Cambia a la experiencia de cliente</small></a>
-            </div>
-        </section>
-
         <section id="view-productos" class="hidden space-y-8">
             <h2 class="text-2xl font-black text-slate-900 tracking-tight">Gestión de Menú</h2>
             <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
@@ -156,8 +138,9 @@
 
 
         function mostrarSeccion(seccion) {
+            if (seccion === 'home') { window.location.replace('funciones.html'); return; }
             currentAdminSection = seccion;
-            ['home', 'productos', 'dashboard', 'config'].forEach(id => {
+            ['productos', 'dashboard', 'config'].forEach(id => {
                 document.getElementById(`view-${id}`).classList.toggle('hidden', id !== seccion);
             });
             document.getElementById('admin-back').classList.toggle('hidden', seccion === 'home');
@@ -198,7 +181,8 @@
             document.getElementById('admin-email-display').innerText = user.email;
             cargarConfiguracion(profile);
             const section = new URLSearchParams(window.location.search).get('section');
-            if (['home','productos','dashboard','config'].includes(section)) mostrarSeccion(section);
+            if (!['productos','dashboard','config'].includes(section)) { window.location.replace('funciones.html'); return; }
+            mostrarSeccion(section);
             window.serveYourself.initPushNotifications(user);
 
             cargarProductos();

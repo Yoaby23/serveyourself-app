@@ -25,12 +25,12 @@ for (const file of fs.readdirSync(new URL('..', import.meta.url)).filter(file =>
     });
 }
 
-assert.match(admin, /id="view-home"/, 'El dueño debe iniciar en el panel de funciones');
+assert.doesNotMatch(admin, /id="view-home"/, 'El dueño debe usar el panel compartido de funciones');
 assert.doesNotMatch(admin, /view-pedidos|Pedidos en vivo|Pedidos Activos/, 'El panel no debe duplicar la vista de pedidos en vivo');
-assert.match(admin, /<b>Meseros<\/b>/, 'El acceso al POS debe llamarse Meseros');
-assert.match(admin, /<b>Caja<\/b>/, 'El acceso al corte debe llamarse Caja');
+assert.match(app, /label: 'Meseros'/, 'El acceso al POS debe llamarse Meseros');
+assert.match(app, /label: 'Caja'/, 'El acceso al corte debe llamarse Caja');
 assert.doesNotMatch(admin, /Comandas y caja|Turnos y corte de caja/, 'El panel no debe conservar los nombres anteriores');
-assert.match(admin, /Configuración de restaurante/, 'La sección debe identificarse como Configuración de restaurante');
+assert.match(app, /Configuración/, 'La sección debe identificarse como Configuración de restaurante');
 assert.doesNotMatch(admin, /Mesas y personal|QR imprimible del menú|Abrir punto de venta|Abrir pantalla de cocina/, 'Configuración no debe duplicar accesos disponibles en el inicio');
 assert.doesNotMatch(admin, /id="admin-menu"|toggleAdminMenu/, 'El propietario no debe tener menú desplegable');
 assert.match(read('cuenta.html'), /signOut\(\)/, 'Cuenta debe conservar el cierre de sesión');
@@ -42,7 +42,7 @@ assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
 assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v23/, 'La PWA debe renovar su caché al publicar cambios de producción');
+assert.match(read('sw.js'), /serveyourself-shell-v24/, 'La PWA debe renovar su caché al publicar cambios de producción');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
