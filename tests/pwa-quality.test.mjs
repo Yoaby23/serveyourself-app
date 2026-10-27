@@ -36,7 +36,7 @@ assert.match(sw, /app-icon-192\.png.*app-icon-512\.png/);
 assert.match(sw, /tailwind\.generated\.css/, 'El CSS de producción debe funcionar sin conexión');
 assert.ok(fs.statSync(new URL('../tailwind.generated.css', import.meta.url)).size > 1000, 'El CSS local compilado debe existir');
 
-assert.match(pos, /create_pos_table_order/, 'Las mesas deben permitir cuentas nuevas o existentes');
+assert.match(pos, /create_pos_table_order/, 'Las mesas deben abrir su menú y reutilizar la cuenta existente');
 assert.doesNotMatch(pos, /pending-panel|register_pos_payment|order_payments/, 'Meseros no debe contener funciones de caja');
 assert.match(read('caja.html'), /register_pos_payment_v2/, 'Los pagos manuales deben registrar efectivo y cambio en Caja');
 

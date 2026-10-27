@@ -1120,3 +1120,22 @@ input[type='radio'] {
 
 .sy-sync-status { padding: .6rem 1rem; background: #064e3b; color: #fff; font-weight: 700; }
 .sy-sync-status[data-stale="true"] { background: #991b1b; }
+
+.sy-favorites-status { color: #475569; font-size: .8rem; }
+.sy-favorite-button { margin: .8rem 0 0 auto; display: block; min-width: 44px; min-height: 44px; padding: .5rem .9rem; border-radius: 1rem; background: #fff1ed; color: #9a3412; font-size: 1.5rem; line-height: 1; }
+.sy-favorite-button[aria-pressed="true"] { background: #c2410c; color: white; }
+.sy-favorite-button:disabled { opacity: .5; cursor: wait; }
+.sy-favorite-button:focus-visible, .sy-restaurant-link:focus-visible { outline: 3px solid #ea580c; outline-offset: 3px; }
+.sy-restaurant-link { text-decoration: none; color: inherit; }
+
+.sy-customer-page { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
+.sy-customer-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 60; display: grid; grid-template-columns: repeat(3, 1fr); gap: .3rem; padding: .6rem max(1rem, env(safe-area-inset-right)) calc(.6rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); border-top: 1px solid #e2e8f0; background: rgb(255 255 255 / 97%); box-shadow: 0 -.5rem 2rem rgb(15 23 42 / 6%); }
+.sy-customer-bottom-nav button { display: grid; place-items: center; gap: .2rem; min-height: 3.5rem; border-radius: 1rem; color: #64748b; }
+.sy-customer-bottom-nav button > span { font-size: 1.6rem; line-height: 1; }
+.sy-customer-bottom-nav button > b { font-size: .75rem; }
+.sy-customer-bottom-nav button[aria-current="page"] { color: #c2410c; background: #fff1ed; }
+.sy-customer-bottom-nav button:focus-visible { outline: 3px solid #ea580c; outline-offset: -3px; }
+.sy-home-actions, .sy-account-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+.sy-home-actions a, .sy-home-actions button, .sy-account-actions button { padding: .65rem .9rem; border-radius: .85rem; background: white; border: 1px solid #e2e8f0; color: #334155; font-size: .8rem; font-weight: 800; }
+
+.sy-customer-bottom-nav svg { width: 1.5rem; height: 1.5rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }

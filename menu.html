@@ -45,7 +45,7 @@
         }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen pb-20">
+<body class="sy-customer-page bg-slate-50 min-h-screen pb-20">
 
     <div id="payment-feedback" class="payment-feedback" role="status" aria-live="polite" aria-atomic="true">
         <span id="payment-feedback-icon" class="payment-feedback__icon" aria-hidden="true"></span>
@@ -85,8 +85,9 @@
 
         <section id="sec-explorar" class="space-y-6">
             <header>
-                <h2 class="text-3xl font-black text-slate-900 tracking-tight">Explorar</h2>
-                <p class="text-slate-400 text-sm font-semibold">¿Qué se te antoja hoy?</p>
+                <h2 id="explore-title" class="text-3xl font-black text-slate-900 tracking-tight">Inicio</h2>
+                <p id="explore-subtitle" class="text-slate-400 text-sm font-semibold">¿Qué se te antoja hoy?</p>
+                <div id="home-actions" class="sy-home-actions"></div>
             </header>
 
             <div class="relative group">
@@ -95,6 +96,7 @@
                     class="w-full p-5 pl-14 bg-white rounded-[2rem] border-none shadow-xl shadow-slate-200/40 outline-none text-sm font-bold text-slate-900 focus:ring-2 focus:ring-orange-500/20 transition-all">
             </div>
 
+            <p id="favorites-status" role="status" aria-live="polite" class="sy-favorites-status"></p>
             <button type="button" id="map-toggle" onclick="toggleMap()" class="w-full py-3 bg-blue-50 text-blue-600 rounded-2xl font-black text-xs">🗺️ VER RESTAURANTES EN EL MAPA</button>
             <div id="restaurants-map" class="hidden w-full h-80 rounded-[2rem] overflow-hidden border border-slate-200"></div>
 
@@ -104,10 +106,11 @@
 
         <section id="sec-perfil" class="hidden space-y-6 fade-in">
             <header>
-                <h2 class="text-3xl font-black text-slate-900 tracking-tight">Mi Perfil</h2>
+                <h2 class="text-3xl font-black text-slate-900 tracking-tight">Cuenta</h2>
                 <p class="text-slate-400 text-sm font-semibold">Configura tu cuenta y seguridad.</p>
             </header>
 
+            <div class="sy-account-actions"><button type="button" onclick="mostrarSeccion('pedidos')">Mis pedidos</button><button type="button" onclick="cerrarSesion()">Cerrar sesión</button></div>
             <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-4">
                 <div class="grid grid-cols-1 gap-4 opacity-60">
                     <div>
@@ -174,11 +177,16 @@
         </section>
 
     </main>
+    <nav class="sy-customer-bottom-nav" aria-label="Navegación principal">
+        <button type="button" data-customer-tab="explorar" aria-current="page" onclick="mostrarSeccion('explorar')"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg><b>Inicio</b></button>
+        <button type="button" data-customer-tab="favoritos" onclick="abrirFavoritos()"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg><b>Favoritos <small id="favorites-count"></small></b></button>
+        <button type="button" data-customer-tab="perfil" onclick="mostrarSeccion('perfil')"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg><b>Cuenta</b></button>
+    </nav>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
     <script src="app-config.js"></script>
-    <script src="app.js"></script>
+    <script src="runtime.js"></script><script src="app.js"></script>
     <script>
         const _supabase = window.serveYourself.supabase;
         const escapeHtml = window.serveYourself.escapeHtml;
@@ -187,21 +195,49 @@
         let userRole = null;
         let restaurantAccess = null;
         let searchTimer = null;
+        let restaurantRequest = 0;
         let currentRestaurants = [];
         let mapInstance = null;
+        let matchedRestaurants = [];
+        let favoriteIds = new Set();
+        const pendingFavorites = new Set();
+        let onlyFavorites = false;
+        let favoritesReady = false;
 
         function toggleUserMenu() { document.getElementById('user-menu').classList.toggle('hidden'); }
 
         function mostrarSeccion(id) {
+            const previous = document.body.dataset.activeView || 'explorar';
             document.body.dataset.activeView = id;
-            document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
-            document.getElementById(`sec-${id}`).classList.remove('hidden');
+            document.querySelectorAll('main > section').forEach(section => section.classList.add('hidden'));
+            document.getElementById(`sec-${id === 'favoritos' ? 'explorar' : id}`).classList.remove('hidden');
             document.getElementById('user-menu').classList.add('hidden');
-            const btnBack = document.getElementById('btn-back');
-            const spacer = document.getElementById('nav-spacer');
-            if(id === 'explorar') { btnBack.classList.add('hidden'); spacer.classList.remove('hidden'); }
-            else { btnBack.classList.remove('hidden'); spacer.classList.add('hidden'); }
-            if(id === 'pedidos') cargarHistorialPedidos();
+            const exploring = id === 'explorar' || id === 'favoritos';
+            onlyFavorites = id === 'favoritos';
+            document.getElementById('btn-back').classList.toggle('hidden',id === 'explorar');
+            document.getElementById('nav-spacer').classList.toggle('hidden',id !== 'explorar');
+            document.getElementById('home-actions').classList.toggle('hidden',id !== 'explorar');
+            document.getElementById('explore-title').textContent = onlyFavorites ? 'Favoritos' : 'Inicio';
+            document.getElementById('explore-subtitle').textContent = onlyFavorites ? 'Tus restaurantes guardados, siempre a mano.' : '¿Qué se te antoja hoy?';
+            document.querySelectorAll('[data-customer-tab]').forEach(button => {
+                const selected = button.dataset.customerTab === (id === 'pedidos' ? 'perfil' : id);
+                if (selected) button.setAttribute('aria-current','page');
+                else button.removeAttribute('aria-current');
+            });
+            if (exploring) {
+                renderizarLista(matchedRestaurants);
+                if (previous !== id) {
+                    clearTimeout(searchTimer);
+                    document.getElementById('search-input').value = '';
+                    cargarRestaurantes();
+                }
+            }
+            document.getElementById('restaurants-map').classList.add('hidden');
+            if (id === 'pedidos') cargarHistorialPedidos();
+        }
+        async function abrirFavoritos() {
+            mostrarSeccion('favoritos');
+            if (!favoritesReady) { await cargarFavoritos(); renderizarLista(matchedRestaurants); }
         }
 
         window.addEventListener('sy:back-request', event => {
@@ -242,7 +278,9 @@
                 }
                 renderMenuOptions(profile.role, restaurantAccess);
             }
-            cargarRestaurantes();
+            await cargarFavoritos();
+            await cargarRestaurantes();
+            mostrarSeccion(document.body.dataset.activeView || 'explorar');
             activarPedidosRealtime();
             setInterval(() => {
                 if (!document.getElementById('sec-pedidos').classList.contains('hidden')) cargarHistorialPedidos();
@@ -258,6 +296,9 @@
             html += `<button type="button" onclick="mostrarSeccion('pedidos')" class="${linkClass}"><span>🛍</span> Mis pedidos personales</button>`;
             html += `<button type="button" onclick="window.location.href='repartidor.html'" class="${linkClass}"><span>🛵</span> Modo repartidor</button>`;
             container.innerHTML = html;
+            document.getElementById('home-actions').innerHTML = `<button type="button" onclick="mostrarSeccion('pedidos')">Mis pedidos</button>`
+                + (role === 'negocio' ? '<a href="admin.html">Mi restaurante</a>' : access ? '<a href="' + window.serveYourself.restaurantHome(access) + '">Ir al trabajo</a>' : '')
+                + '<a href="repartidor.html">Repartir</a>';
         }
 
         // LÓGICA DE BÚSQUEDA
@@ -269,6 +310,7 @@
         async function ejecutarBusqueda() {
             const query = document.getElementById('search-input').value.trim().toLowerCase();
             if (!query) { cargarRestaurantes(); return; }
+            const requestVersion = ++restaurantRequest;
 
             // 1. Buscar en perfiles (Negocios)
             const { data: negociosPorNombre, error: businessError } = await _supabase
@@ -282,6 +324,7 @@
                 .select('restaurant_id')
                 .ilike('name', `%${query}%`);
 
+            if (requestVersion !== restaurantRequest) return;
             if (businessError || productsError) {
                 renderizarLista([]);
                 return;
@@ -298,11 +341,13 @@
             const combinados = [...(negociosPorNombre || []), ...(negociosPorProducto || [])];
             const unicos = Array.from(new Map(combinados.map(item => [item.id, item])).values());
 
-            renderizarLista(unicos);
+            if (requestVersion === restaurantRequest) renderizarLista(unicos);
         }
 
         async function cargarRestaurantes() {
+            const requestVersion = ++restaurantRequest;
             const { data: negocios, error } = await _supabase.from('public_restaurants').select('*');
+            if (requestVersion !== restaurantRequest) return;
             if (error) {
                 renderizarLista([]);
                 return;
@@ -310,11 +355,40 @@
             renderizarLista(negocios || []);
         }
 
+        async function cargarFavoritos() {
+            try {
+                const rows = await SYRuntime.allRows(() => _supabase.from('restaurant_favorites').select('restaurant_id').eq('user_id',currentUser.id).order('restaurant_id'));
+                favoriteIds = new Set(rows.map(row => row.restaurant_id));
+                favoritesReady = true;
+                document.getElementById('favorites-status').textContent = '';
+            } catch {
+                favoritesReady = false;
+                document.getElementById('favorites-status').textContent = 'No se pudieron cargar tus favoritos. Toca Favoritos para reintentar.';
+            }
+        }
+        async function toggleFavorite(id) {
+            if (!favoritesReady || pendingFavorites.has(id)) return;
+            pendingFavorites.add(id);
+            renderizarLista(matchedRestaurants);
+            try {
+                await SYRuntime.setFavorite(_supabase,favoriteIds,id,!favoriteIds.has(id));
+                document.getElementById('favorites-status').textContent = favoriteIds.has(id) ? 'Restaurante guardado en favoritos.' : 'Restaurante eliminado de favoritos.';
+            } catch {
+                document.getElementById('favorites-status').textContent = 'No se pudo guardar el cambio. Reintenta.';
+            } finally {
+                pendingFavorites.delete(id);
+                renderizarLista(matchedRestaurants);
+                document.getElementById('restaurants-map').classList.add('hidden');
+            }
+        }
         function renderizarLista(lista) {
+            matchedRestaurants = lista;
+            lista = onlyFavorites ? lista.filter(restaurant => favoriteIds.has(restaurant.id)) : lista;
             currentRestaurants = lista;
+            document.getElementById('favorites-count').textContent = favoriteIds.size ? `(${favoriteIds.size})` : '';
             const contenedor = document.getElementById('lista-restaurantes');
             if (lista.length === 0) {
-                contenedor.innerHTML = '<p class="text-center py-10 text-slate-400 font-bold italic">No encontramos resultados...</p>';
+                contenedor.innerHTML = onlyFavorites ? `<p class="text-center py-10 text-slate-400 font-bold">${favoriteIds.size ? 'No hay favoritos en estos resultados. Cambia la búsqueda.' : 'Todavía no tienes favoritos. Toca el corazón de un restaurante en Inicio para guardarlo.'}</p>` : '<p class="text-center py-10 text-slate-400 font-bold italic">No encontramos resultados...</p>';
                 return;
             }
 
@@ -334,8 +408,8 @@
                 const distance = getDistanceLabel(res);
                 const disponible = abierto && res.accepting_orders !== false;
                 return `
-                <div onclick="window.location.href='restaurante.html?id=${restaurantId}'" class="bg-white p-5 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-pointer relative group ${!abierto ? 'opacity-70 grayscale-[0.3]' : ''}">
-                    <div class="flex gap-5 items-center">
+                <article class="bg-white p-5 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-pointer relative group ${!abierto ? 'opacity-70 grayscale-[0.3]' : ''}">
+                    <a href="restaurante.html?id=${restaurantId}" class="sy-restaurant-link flex gap-5 items-center">
                         <div class="relative shrink-0">
                             <div class="w-20 h-20 rounded-[1.8rem] bg-orange-50 overflow-hidden shadow-inner flex items-center justify-center">
                                 ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="" class="w-full h-full object-cover">` : '<span class="text-4xl">🏪</span>'}
@@ -357,8 +431,9 @@
                                 ${distance ? `<span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full">${distance}</span>` : ''}
                             </div>
                         </div>
-                    </div>
-                </div>`;
+                    </a>
+                    <button type="button" class="sy-favorite-button" aria-label="${favoriteIds.has(res.id) ? 'Quitar de favoritos:' : 'Agregar a favoritos:'} ${escapeHtml(res.business_name)}" aria-pressed="${favoriteIds.has(res.id)}" ${!favoritesReady || pendingFavorites.has(res.id) ? 'disabled' : ''} onclick="toggleFavorite('${restaurantId}')">${favoriteIds.has(res.id) ? '♥' : '♡'}</button>
+                </article>`;
             }).join('');
         }
 
@@ -409,7 +484,7 @@
                         fillOpacity: 1
                     }).addTo(mapInstance).bindTooltip('Tu ubicación');
                     mapInstance.setView([window.userCoordinates.lat, window.userCoordinates.lng], 13);
-                    renderizarLista(currentRestaurants);
+                    renderizarLista(matchedRestaurants);
                 });
             } catch (error) { alert(error.message); }
         }
