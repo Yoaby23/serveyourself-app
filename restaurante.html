@@ -165,7 +165,7 @@
 
             const { data: productos, error: productsError } = await _supabase
                 .from('products')
-                .select('id, name, price, category, image_url, is_available')
+                .select('id, name, price, category, image_url, is_available, inventory_available')
                 .eq('restaurant_id', resId)
                 .order('category');
 
@@ -176,6 +176,21 @@
             renderizarProductos(productos);
         }
 
+        async function refreshMenuProducts() {
+            const { data, error } = await _supabase.from('products').select('id, name, price, category, image_url, is_available, inventory_available').eq('restaurant_id',resId).order('category');
+            if (error) return false;
+            if (JSON.stringify(data || []) !== JSON.stringify([...productosPorId.values()])) {
+                renderizarProductos(data || []);
+                for (const item of carrito) {
+                    const fresh = productosPorId.get(String(item.id));
+                    if (fresh) Object.assign(item,fresh);
+                    const count = document.getElementById(`qty-${item.id}`);
+                    if (count) count.textContent = item.qty;
+                }
+                actualizarInterfazCarrito();
+            }
+            return true;
+        }
         function renderPaymentMethods(res) {
             const options = [];
             if (res.payment_cash) options.push(`<option value="cash">${serviceType === 'delivery' ? 'Efectivo al entregar' : 'Efectivo al recoger'}</option>`);
@@ -287,7 +302,7 @@
                     <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-5 ml-2">${escapeHtml(cat)}</h3>
                     <div class="grid gap-4">
                         ${categorias[cat].map(prod => {
-                            const agotado = !prod.is_available;
+                            const agotado = !prod.is_available || prod.inventory_available === false;
                             const imageUrl = safeImageUrl(prod.image_url);
                             const productId = escapeHtml(prod.id);
                             return `
@@ -318,7 +333,7 @@
 
         function cambiarCantidad(id, cambio) {
             const producto = productosPorId.get(String(id));
-            if (!producto || !producto.is_available) return;
+            if (!producto || !producto.is_available || producto.inventory_available === false) return;
             const index = carrito.findIndex(item => item.id === id);
             if (index !== -1) {
                 carrito[index].qty += cambio;
@@ -388,6 +403,7 @@
             btn.innerText = "ENVIANDO...";
 
             try {
+                if (!await refreshMenuProducts()) throw new Error('No se pudo verificar la disponibilidad. Reintenta con conexión.');
                 const items = carrito.map(item => ({ id: item.id, qty: item.qty }));
                 const user = await window.serveYourself.requireUser();
                 if (!user) return;
@@ -446,7 +462,7 @@
             }
         }
 
-        cargarPagina().then(togglePickupSchedule);
+        cargarPagina().then(() => { togglePickupSchedule(); setInterval(() => { if (!document.hidden) refreshMenuProducts(); },15000); });
     </script>
 </body>
 </html>
