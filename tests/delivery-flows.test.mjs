@@ -33,7 +33,7 @@ assert.match(migration, /assigned_driver_id is distinct from auth\.uid\(\)/, 'So
 assert.match(migration, /payment_method='cash'.*payment_status.*'approved'/s, 'El efectivo se aprueba al confirmar la entrega');
 assert.match(migration, /new\.service_type='delivery'.*new\.delivery_status not in/s, 'Cocina debe esperar aceptación y pago antes de recibir delivery');
 assert.match(store, /Efectivo al entregar/, 'El cliente debe reconocer el cobro en efectivo al recibir');
-assert.match(store, /create_delivery_order/, 'El pedido delivery debe usar la ruta segura dedicada');
+assert.match(store, /createOrderOnce/, 'El pedido delivery debe usar la ruta segura dedicada');
 assert.match(store, /serviceType !== 'delivery' && res\.payment_transfer/, 'Transferencia debe quedar excluida del modo delivery');
 assert.match(dispatch, /accept_delivery_order/, 'Despacho debe aceptar o rechazar pedidos');
 assert.doesNotMatch(dispatch, /assign_delivery_driver|list_delivery_drivers/, 'El restaurante no debe asignar repartidores manualmente');
@@ -66,7 +66,7 @@ assert.match(driver, /syncOfferDialog/, 'El diálogo debe cerrarse si otro repar
 assert.match(driver, /driver-orders-center/, 'El repartidor debe tener un centro persistente de pedidos');
 assert.match(readiness, /delivery_code_attempts[\s\S]*interval '15 minutes'/, 'El código de entrega debe limitar intentos');
 assert.match(readiness, /delivery_driver_ledger/, 'Las ganancias y el efectivo deben quedar en un libro contable');
-assert.match(refund, /\/refunds/, 'Los pedidos pagados que se cancelan deben reembolsarse');
+assert.match(read('supabase/functions/_shared/refunds.ts'), /\/refunds/, 'Los pedidos pagados que se cancelan deben reembolsarse');
 assert.match(tracking, /updateMap/, 'El cliente debe ver el seguimiento');
 assert.match(preference, /delivery-fee/, 'Mercado Pago debe incluir la tarifa de envío');
 assert.match(read('sw.js'), /delivery\.html.*repartidor\.html.*delivery-tracking\.html/, 'La PWA debe precargar las pantallas de delivery');

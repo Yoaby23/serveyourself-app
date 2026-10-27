@@ -1,6 +1,7 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { getValidMercadoPagoToken } from '../_shared/mercado-pago.ts';
+import { refundOrder } from '../_shared/refunds.ts';
 
 async function validMercadoPagoSignature(request: Request, paymentId: string | null) {
   const secret = Deno.env.get('MERCADO_PAGO_WEBHOOK_SECRET');
@@ -96,8 +97,9 @@ Deno.serve(async (request) => {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
       const searchResult = await searchResponse.json().catch(() => ({}));
+      if (!searchResponse.ok) throw new Error('No se pudo consultar Mercado Pago');
       const matchingPayment = Array.isArray(searchResult?.results)
-        ? searchResult.results.find((candidate: Record<string, unknown>) =>
+        ? searchResult.results.sort((a: any, b: any) => { const ranks: Record<string, number> = { refunded: 4, charged_back: 4, approved: 3, pending: 2, in_process: 2 }; return (ranks[b.status] || 0) - (ranks[a.status] || 0) || Date.parse(b.date_last_updated || b.date_created) - Date.parse(a.date_last_updated || a.date_created); }).find((candidate: Record<string, unknown>) =>
           String(candidate.external_reference) === String(order.id)
           && Math.abs(Number(candidate.transaction_amount) - Number(order.total)) <= 0.01)
         : null;
@@ -105,11 +107,12 @@ Deno.serve(async (request) => {
       if (!searchResponse.ok || !paymentId) {
         const expiresAt = new Date(order.payment_expires_at ?? new Date(order.created_at).getTime() + 20 * 60 * 1000).getTime();
         if (expiresAt <= Date.now() && order.payment_status === 'pending') {
-          await admin.from('orders').update({
+          const { error: expirationError } = await admin.from('orders').update({
             payment_status: 'expired',
             status: 'cancelado',
             cancellation_reason: 'Tiempo de pago agotado (20 minutos)'
           }).eq('id', order.id).eq('payment_status', 'pending');
+          if (expirationError) throw expirationError;
         }
         console.log('No Mercado Pago payment found for order', { orderId });
         return new Response('payment not found', { status: 404, headers: corsHeaders(request) });
@@ -132,62 +135,23 @@ Deno.serve(async (request) => {
       return new Response('amount mismatch', { status: 409, headers: corsHeaders(request) });
     }
 
+    if (payment.currency_id !== 'MXN') return new Response('currency mismatch', { status: 409, headers: corsHeaders(request) });
+    const { data: refundOperation, error: refundError } = await admin.from('payment_refund_operations').select('*').eq('order_id', order.id).maybeSingle();
+    if (refundError) throw refundError;
     const expiresAt = new Date(order.payment_expires_at ?? new Date(order.created_at).getTime() + 20 * 60 * 1000).getTime();
-    const paymentCreatedAt = new Date(payment.date_created ?? Date.now()).getTime();
-    if (paymentCreatedAt > expiresAt) {
-      if (payment.status === 'approved') {
-        const refundResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}/refunds`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-            'X-Idempotency-Key': `expired-refund-order-${order.id}`
-          },
-          body: '{}'
-        });
-        if (!refundResponse.ok) {
-          console.error('Expired payment refund failed', { orderId, paymentId, status: refundResponse.status });
-          return new Response('refund failed', { status: 500, headers: corsHeaders(request) });
-        }
-      }
-      await admin.from('orders').update({
-        payment_status: payment.status === 'approved' ? 'refunded' : 'expired',
-        status: 'cancelado',
-        cancellation_reason: payment.status === 'approved'
-          ? 'Pago recibido fuera de tiempo y reembolsado automáticamente'
-          : 'Tiempo de pago agotado (20 minutos)',
-        mercado_pago_payment_id: String(paymentId)
-      }).eq('id', order.id);
-      return new Response('payment window expired', { status: 410, headers: corsHeaders(request) });
+    const paymentCreatedAt = new Date(payment.date_created).getTime();
+    if (!Number.isFinite(paymentCreatedAt)) throw new Error('Invalid payment date');
+    if (refundOperation?.status === 'pending') {
+      await refundOrder(admin, order, refundOperation.payment_id, refundOperation.reason, refundOperation.actor_id);
+      return new Response('refund reconciled', { headers: corsHeaders(request) });
     }
-
-    const statusMap: Record<string, string> = {
-      approved: 'approved',
-      rejected: 'rejected',
-      cancelled: 'rejected',
-      refunded: 'refunded',
-      charged_back: 'refunded'
-    };
-    const paymentStatus = statusMap[payment.status] ?? 'pending';
-    const updates: Record<string, unknown> = {
-        payment_status: paymentStatus,
-        mercado_pago_payment_id: String(paymentId)
-    };
-    if (paymentStatus === 'approved' && order.cancellation_reason === 'Tiempo de pago agotado (20 minutos)') {
-      updates.status = 'pendiente';
-      updates.cancellation_reason = null;
+    if (paymentCreatedAt > expiresAt && payment.status === 'approved') {
+      await refundOrder(admin, order, String(paymentId), 'Pago recibido fuera de tiempo y reembolsado automáticamente');
+      return new Response('late payment refunded', { headers: corsHeaders(request) });
     }
-    if (paymentStatus === 'rejected') {
-      updates.status = 'cancelado';
-      updates.cancellation_reason = 'El pago en línea fue rechazado. Crea un pedido nuevo.';
-    }
-    const { error: updateError } = await admin.from('orders')
-      .update(updates)
-      .eq('id', orderId);
-    if (updateError) {
-      console.error('Could not update Mercado Pago order', { orderId, paymentId, updateError });
-      return new Response('database error', { status: 500, headers: corsHeaders(request) });
-    }
+    const { data: reconciliation, error: updateError } = await admin.rpc('reconcile_order_payment', { p_order_id: order.id, p_payment: payment });
+    if (updateError) throw updateError;
+    const paymentStatus = reconciliation?.payment_status || order.payment_status;
 
     console.log('Mercado Pago order reconciled', { orderId, paymentId, paymentStatus });
     return new Response('ok', { status: 200, headers: corsHeaders(request) });

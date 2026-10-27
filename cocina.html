@@ -15,13 +15,14 @@
         <div><span class="kitchen-ml-dot"></span><b>Orden inteligente activo</b><small id="ml-status">Calibrando con los tiempos reales de tu cocina</small></div>
         <p>La cola combina preparación, hora prometida y llegada del repartidor. Cocina conserva el control.</p>
     </section>
+    <p id="sync-status" role="status" aria-live="polite" class="sy-sync-status">Conectando con cocina…</p>
     <main class="p-3 grid lg:grid-cols-2 gap-3 min-h-[calc(100vh-76px)]">
         <section class="kitchen-column"><div class="kitchen-heading bg-orange-500"><span>Nuevos</span><b id="count-pendiente">0</b></div><div id="orders-pendiente" class="kitchen-list"></div></section>
         <section class="kitchen-column"><div class="kitchen-heading bg-blue-600"><span>Preparando</span><b id="count-preparando">0</b></div><div id="orders-preparando" class="kitchen-list"></div></section>
     </main>
     <audio id="new-order-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
     <aside id="availability-panel" class="hidden fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-white text-slate-950 shadow-2xl p-5 overflow-y-auto"><div class="flex justify-between"><div><p class="text-xs font-black uppercase text-orange-500">Menú del turno</p><h2 class="text-xl font-black">Disponibilidad</h2></div><button type="button" onclick="toggleAvailability()" class="w-10 h-10 rounded-xl bg-slate-100 font-black">×</button></div><div id="availability-list" class="mt-5 space-y-2"></div></aside>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script><script src="app-config.js"></script><script src="app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script><script src="app-config.js"></script><script src="runtime.js"></script><script src="app.js"></script>
     <script>
         const db = window.serveYourself.supabase, esc = window.serveYourself.escapeHtml;
         let access, orders = [], stations = [], products = [], tables = [], activeStation = 'all', soundEnabled = false, timer, syncTimer, refreshTimer, loadingOrders = false, refreshQueued = false;
@@ -48,12 +49,25 @@
             if (!access) return;
             if (loadingOrders) { refreshQueued = true; return; }
             loadingOrders = true;
-            const { data, error } = await db.rpc('list_kitchen_priority_queue', { p_restaurant_id: access.restaurant_id });
-            loadingOrders = false;
-            if (refreshQueued) { refreshQueued = false; scheduleLoad(); }
-            if (error) return console.warn('No se pudieron sincronizar los pedidos:', error.message);
-            orders = Array.isArray(data) ? data : []; render();
+            try {
+                const { data, error } = await db.rpc('list_kitchen_priority_queue', { p_restaurant_id: access.restaurant_id });
+                if (error) throw error;
+                orders = Array.isArray(data) ? data : [];
+                render();
+                const status = document.getElementById('sync-status');
+                status.textContent = `Sincronizado · ${new Date().toLocaleTimeString('es-MX')}`;
+                status.dataset.stale = 'false';
+            } catch (error) {
+                const status = document.getElementById('sync-status');
+                status.textContent = 'Sin conexión con cocina. Los pedidos pueden estar desactualizados. Reintentando…';
+                status.dataset.stale = 'true';
+                console.warn('No se pudieron sincronizar los pedidos:', error.message);
+            } finally {
+                loadingOrders = false;
+                if (refreshQueued) { refreshQueued = false; scheduleLoad(); }
+            }
         }
+
         function elapsed(date) {
             const minutes = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 60000));
             if (minutes < 1) return 'ahora'; if (minutes < 60) return `${minutes} min`; return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
@@ -102,7 +116,7 @@
             const { error: notificationError } = await db.functions.invoke('send-order-notification', { body: { ticketId: id } });
             if (notificationError) console.warn('No se pudo enviar la notificación push:', notificationError.message);
         }
-        document.getElementById('sound-button').addEventListener('click', () => { soundEnabled = !soundEnabled; document.getElementById('sound-button').textContent = soundEnabled ? '🔊 Sonido activo' : '🔇 Activar sonido'; if (soundEnabled) document.getElementById('new-order-sound').play().then(a => { a.pause(); a.currentTime = 0; }).catch(() => {}); });
+        document.getElementById('sound-button').addEventListener('click', () => { soundEnabled = !soundEnabled; document.getElementById('sound-button').textContent = soundEnabled ? '🔊 Sonido activo' : '🔇 Activar sonido'; if (soundEnabled) SYRuntime.previewSound(document.getElementById('new-order-sound')).catch(() => {}); });
         document.getElementById('station-filter').addEventListener('change',e=>{activeStation=e.target.value;render();});
         function toggleAvailability(){document.getElementById('availability-panel').classList.toggle('hidden');}
         function renderAvailability(){document.getElementById('availability-list').innerHTML=products.map(p=>`<div class="flex justify-between items-center p-3 rounded-xl ${p.is_available?'bg-slate-50':'bg-red-50'}"><b>${esc(p.name)}</b><button type="button" onclick="setAvailability('${p.id}',${!p.is_available})" class="text-xs font-black ${p.is_available?'text-red-500':'text-green-600'}">${p.is_available?'AGOTAR':'REACTIVAR'}</button></div>`).join('');}

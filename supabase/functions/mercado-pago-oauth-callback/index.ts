@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
 
 function redirect(appUrl: string, status: string) {
   return Response.redirect(`${appUrl}/admin.html?mercado_pago=${encodeURIComponent(status)}`, 302);

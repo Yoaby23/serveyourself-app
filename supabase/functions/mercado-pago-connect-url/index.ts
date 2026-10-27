@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts';
 
 function base64Url(bytes: Uint8Array) {
