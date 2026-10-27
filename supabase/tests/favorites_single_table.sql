@@ -16,12 +16,14 @@ begin
  perform set_config('request.jwt.claim.sub',owner_id::text,true);
  perform public.open_cash_shift(owner_id,0);
  items:=jsonb_build_array(jsonb_build_object('id',product_id,'qty',1));
+ execute 'set local role authenticated';
  perform set_config('request.jwt.claim.sub',first_waiter::text,true);
  first_order:=public.create_pos_table_order(owner_id,items,'First round','dine_in',table_id,'cash',null);
  perform set_config('request.jwt.claim.sub',second_waiter::text,true);
  second_order:=public.create_pos_table_order(owner_id,items,'Second round','dine_in',table_id,'cash',null);
  assert first_order->>'id'=second_order->>'id','second waiter created another account';
  assert (second_order->>'total')::numeric=200,'round totals not accumulated';
+ execute 'reset role'; -- Inspect fixtures as administrator; waiters cannot read all kitchen tickets.
  assert (select count(*)=2 from public.kitchen_tickets where order_id=(first_order->>'id')::bigint),'rounds must have separate kitchen tickets';
  execute 'set local role authenticated';
  select count(*) into summary_count from public.list_pos_table_accounts(owner_id);
