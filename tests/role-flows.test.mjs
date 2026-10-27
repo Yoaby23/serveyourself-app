@@ -32,9 +32,8 @@ assert.match(admin, /<b>Caja<\/b>/, 'El acceso al corte debe llamarse Caja');
 assert.doesNotMatch(admin, /Comandas y caja|Turnos y corte de caja/, 'El panel no debe conservar los nombres anteriores');
 assert.match(admin, /Configuración de restaurante/, 'La sección debe identificarse como Configuración de restaurante');
 assert.doesNotMatch(admin, /Mesas y personal|QR imprimible del menú|Abrir punto de venta|Abrir pantalla de cocina/, 'Configuración no debe duplicar accesos disponibles en el inicio');
-const adminDropdown = admin.slice(admin.indexOf('id="admin-menu"'), admin.indexOf('</nav>'));
-assert.doesNotMatch(adminDropdown, /href=|mostrarSeccion\(/, 'El menú del perfil no debe repetir accesos del panel principal');
-assert.match(adminDropdown, /cerrarSesion\(\)/, 'El menú del perfil debe conservar el cierre de sesión');
+assert.doesNotMatch(admin, /id="admin-menu"|toggleAdminMenu/, 'El propietario no debe tener menú desplegable');
+assert.match(read('cuenta.html'), /signOut\(\)/, 'Cuenta debe conservar el cierre de sesión');
 assert.match(app, /renderRestaurantNavigation/, 'Debe existir navegación común');
 assert.match(app, /persistSession: true/, 'La aplicación instalada debe conservar la sesión');
 assert.match(app, /autoRefreshToken: true/, 'La sesión guardada debe renovar su token automáticamente');
@@ -43,7 +42,7 @@ assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
 assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v20/, 'La PWA debe renovar su caché al publicar cambios de producción');
+assert.match(read('sw.js'), /serveyourself-shell-v21/, 'La PWA debe renovar su caché al publicar cambios de producción');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
@@ -74,24 +73,20 @@ assert.match(notification, /created_by/, 'La notificación debe dirigirse al cre
 assert.match(notification, /ticket\?\.id \?\? order\.id/, 'La notificación debe indicar qué comanda independiente está lista');
 
 function renderNavigation(access) {
-    const container = { innerHTML: '', contains: () => false };
+    const containers = new Map();
+    const element = () => ({ innerHTML: '', textContent: '', setAttribute() {}, style: { setProperty() {} }, dataset: {} });
+    containers.set('restaurant-nav', element());
     const document = {
-        getElementById: id => id === 'restaurant-nav' ? container : null,
-        addEventListener: () => {},
-        querySelector: () => null,
-        createElement: () => ({ dataset: {}, set src(_value) {}, set defer(_value) {} }),
-        head: { appendChild: () => {} }
+        body: { classList: { add() {} }, appendChild(node) { containers.set(node.id,node); } },
+        getElementById: id => containers.get(id) || null,
+        addEventListener() {}, querySelector: query => query.includes('.sy-restaurant-nav') ? containers.get('restaurant-nav') : null,
+        createElement: () => element(), head: { appendChild() {} }
     };
-    const window = {
-        location: { origin: 'https://example.test' },
-        history: { length: 1 },
-        addEventListener: () => {},
-        supabase: { createClient: () => ({}) }
-    };
+    const window = { location: { origin: 'https://example.test', pathname: '/funciones.html' }, history: { length: 1 }, addEventListener() {}, supabase: { createClient: () => ({}) } };
     window.window = window;
-    vm.runInNewContext(app, { window, document, navigator: {}, location: window.location, URL, fetch: () => {}, alert: () => {} });
+    vm.runInNewContext(app, { window, document, navigator: {}, location: window.location, URL, fetch() {}, alert() {} });
     window.serveYourself.renderRestaurantNavigation({ business_name: 'Restaurante prueba', ...access });
-    return container.innerHTML;
+    return containers.get('sy-work-bottom-nav').innerHTML + window.serveYourself.workFeatures(access).map(item => item.href).join(' ');
 }
 
 const ownerNav = renderNavigation({ staff_role: 'owner', can_create_orders: true, can_view_kitchen: true, can_close_accounts: true });

@@ -49,6 +49,8 @@ window.serveYourself = {
             window.location.replace('index.html');
             return null;
         }
+        const page = (window.location.pathname || '').split('/').pop();
+        if (['restaurante.html','delivery-tracking.html','eliminar-cuenta.html','unirse.html','repartidor-registro.html'].includes(page)) this.renderPersonalNavigation();
         return user;
     },
 
@@ -216,66 +218,78 @@ window.serveYourself = {
         document.body.appendChild(button);
     },
 
-    renderRestaurantNavigation(access, options = {}) {
-        const container = document.getElementById(options.containerId || 'restaurant-nav');
-        if (!container || !access) return;
-        this._currentRestaurantAccess = access;
-        document.querySelector('.sy-global-back')?.remove();
-        const dark = Boolean(options.dark);
-        const triggerClass = dark ? 'sy-nav-trigger sy-nav-trigger-dark' : 'sy-nav-trigger';
-        const page = (window.location.pathname || '/index.html').split('/').pop() || 'index.html';
-        const mainPages = ['admin.html', 'pos.html', 'caja.html', 'cocina.html', 'delivery.html', 'repartidor.html'];
-        const showBack = options.showBack ?? !mainPages.includes(page);
-        const links = [];
-        links.push(`<a href="${this.restaurantHome(access)}">🏠 Inicio de trabajo</a>`);
-        if (access.can_create_orders) links.push('<a href="pos.html">🧾 Comandas</a>');
-        if (access.can_close_accounts) links.push('<a href="caja.html">💵 Caja y cuentas</a>');
-        if (access.can_view_kitchen) links.push('<a href="cocina.html">👨‍🍳 Cocina</a>');
-        if (access.can_manage_delivery || access.staff_role === 'owner') links.push('<a href="delivery.html">🛵 Delivery y despacho</a>');
-        if (access.staff_role === 'owner') {
-            links.push('<a href="equipo.html">👥 Personal y permisos</a>');
-            links.push('<a href="inventario.html">📦 Inventario y recetas</a>');
-            links.push('<a href="reportes.html">📊 Reportes operativos</a>');
-            links.push('<a href="clientes.html">🎟️ Clientes y promociones</a>');
-            links.push('<a href="qr.html">▦ QR del menú</a>');
-        }
-        links.push('<a href="menu.html">🛍️ Mis pedidos personales</a>');
-        links.push('<a href="repartidor.html">🛵 Modo repartidor</a>');
-        container.innerHTML = `
-            <div class="sy-nav-actions">
-                ${showBack ? `<button type="button" data-sy-back class="${triggerClass}" onclick="window.serveYourself.goBack('${this.restaurantHome(access)}')" aria-label="Volver">←</button>` : ''}
-                <button type="button" class="${triggerClass}" onclick="window.serveYourself.toggleRestaurantMenu()" aria-label="Abrir menú" aria-expanded="false">☰</button>
-            </div>
-            <div id="restaurant-menu-dropdown" class="sy-nav-dropdown hidden">
-                <div class="sy-nav-identity"><small>${this.escapeHtml(access.staff_role === 'owner' ? 'Propietario' : 'Personal')}</small><b>${this.escapeHtml(access.business_name)}</b></div>
-                <nav>${links.join('')}</nav>
-                <button type="button" onclick="window.serveYourself.enableWorkNotifications()">🔔 Activar notificaciones</button>
-                <button type="button" onclick="window.serveYourself.installApp()">📲 Instalar aplicación</button>
-                <button type="button" class="sy-nav-logout" onclick="window.serveYourself.signOut()">Cerrar sesión</button>
-            </div>`;
-        if (typeof this.supabase.rpc === 'function') {
-            this.supabase.rpc('is_platform_admin').then(({ data }) => {
-                if (!data || document.getElementById('sy-platform-admin-link')) return;
-                const menu = container.querySelector('.sy-nav-dropdown nav');
-                menu?.insertAdjacentHTML('beforeend', '<a id="sy-platform-admin-link" href="platform-admin.html">🛡️ Plataforma y repartidores</a>');
-            }).catch(() => {});
-        }
-        if (!this._restaurantMenuListener) {
-            document.addEventListener('click', event => {
-                const dropdown = document.getElementById('restaurant-menu-dropdown');
-                const nav = document.getElementById(options.containerId || 'restaurant-nav');
-                if (dropdown && nav && !nav.contains(event.target)) dropdown.classList.add('hidden');
-            });
-            this._restaurantMenuListener = true;
-        }
+    workFeatures(access) {
+        if (!access) return [];
+        const owner = access.staff_role === 'owner';
+        const features = [];
+        if (owner) features.push({ href: 'admin.html?section=productos', label: 'Productos', icon: 'products', description: 'Administra tu menú y disponibilidad.' });
+        if (owner || access.can_create_orders) features.push({ href: 'pos.html', label: 'Comandas', icon: 'orders', description: 'Mesas, cuentas abiertas y nuevas rondas.' });
+        if (owner || access.can_close_accounts) features.push({ href: 'caja.html', label: 'Caja', icon: 'cash', description: 'Cobros, turnos y cuentas.' });
+        if (owner || access.can_view_kitchen) features.push({ href: 'cocina.html', label: 'Cocina', icon: 'kitchen', description: 'Prepara y entrega comandas.' });
+        if (owner || access.can_manage_delivery) features.push({ href: 'delivery.html', label: 'Delivery', icon: 'delivery', description: 'Despacho, repartidores y entregas.' });
+        if (owner) features.push(
+            { href: 'equipo.html', label: 'Personal y mesas', icon: 'people', description: 'Invitaciones, permisos y salón.' },
+            { href: 'inventario.html', label: 'Inventario', icon: 'products', description: 'Ingredientes, recetas y estaciones.' },
+            { href: 'reportes.html', label: 'Reportes', icon: 'chart', description: 'Ventas y resultados del restaurante.' },
+            { href: 'clientes.html', label: 'Clientes', icon: 'people', description: 'Promociones, reservas y lealtad.' },
+            { href: 'qr.html', label: 'Menú QR', icon: 'grid', description: 'Imprime el acceso al menú público.' },
+            { href: 'admin.html?section=config', label: 'Configuración', icon: 'settings', description: 'Horarios, pagos y datos del negocio.' }
+        );
+        return features;
     },
 
-    toggleRestaurantMenu() {
-        const dropdown = document.getElementById('restaurant-menu-dropdown');
-        if (!dropdown) return;
-        const hidden = dropdown.classList.toggle('hidden');
-        const trigger = dropdown.parentElement?.querySelector('[aria-expanded]');
-        if (trigger) trigger.setAttribute('aria-expanded', String(!hidden));
+    workBottomItems(access) {
+        const home = this.restaurantHome(access);
+        const features = this.workFeatures(access);
+        const primary = features.filter(item => ['pos.html','caja.html','cocina.html','delivery.html'].includes(item.href) && item.href !== home).slice(0, 2);
+        return [{ href: home, label: 'Inicio', icon: 'home' }, ...primary, { href: 'funciones.html', label: 'Funciones', icon: 'grid' }, { href: 'cuenta.html', label: 'Cuenta', icon: 'account' }];
+    },
+
+    navigationIcon(name) {
+        const paths = {
+            home: '<path d="m3 10 9-7 9 7v10H15v-7H9v7H3Z"/>',
+            account: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
+            grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+            orders: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',
+            cash: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/>',
+            kitchen: '<path d="M5 12a4 4 0 0 1 1-8 6 6 0 0 1 12 0 4 4 0 0 1 1 8v8H5ZM5 16h14"/>',
+            delivery: '<path d="M3 6h11v12H3ZM14 10h4l3 4v4h-7"/><circle cx="7" cy="19" r="2"/><circle cx="18" cy="19" r="2"/>',
+            products: '<path d="m3 7 9-4 9 4v10l-9 4-9-4ZM3 7l9 4 9-4M12 11v10"/>',
+            people: '<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 5"/>',
+            chart: '<path d="M4 3v18h17M8 16v-5M13 16V6M18 16v-8"/>',
+            settings: '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
+            heart: '<path d="M20 4a5 5 0 0 0-8 2 5 5 0 0 0-8-2C-2 10 12 21 12 21S26 10 20 4Z"/>'
+        };
+        return `<svg aria-hidden="true" viewBox="0 0 24 24">${paths[name] || paths.grid}</svg>`;
+    },
+
+    renderBottomNavigation(items, options = {}) {
+        const id = options.id || 'sy-work-bottom-nav';
+        let nav = document.getElementById(id);
+        if (!nav) { nav = document.createElement('nav'); nav.id = id; document.body.appendChild(nav); }
+        nav.className = `sy-role-bottom-nav no-print${options.dark ? ' sy-role-bottom-nav-dark' : ''}`;
+        nav.setAttribute('aria-label', options.label || 'Navegación de trabajo');
+        nav.style.setProperty('--nav-columns', items.length);
+        const page = (window.location.pathname || '/index.html').split('/').pop();
+        nav.innerHTML = items.map(item => `<a href="${this.escapeHtml(item.href)}" ${item.href.split('?')[0] === page ? 'aria-current="page"' : ''}>${this.navigationIcon(item.icon)}<span>${this.escapeHtml(item.label)}</span></a>`).join('');
+        document.body.classList.add('sy-has-bottom-nav');
+        document.querySelector('.sy-global-back')?.remove();
+    },
+
+    renderRestaurantNavigation(access, options = {}) {
+        if (!access) return;
+        this._currentRestaurantAccess = access;
+        const container = document.getElementById(options.containerId || 'restaurant-nav');
+        if (container) container.textContent = access.staff_role === 'owner' ? 'Propietario' : ({ waiter: 'Mesero', kitchen: 'Cocina', cashier: 'Caja', manager: 'Encargado', driver: 'Repartidor' }[access.staff_role] || 'Personal');
+        this.renderBottomNavigation(this.workBottomItems(access), { dark: Boolean(options.dark) });
+    },
+
+    renderPersonalNavigation() {
+        this.renderBottomNavigation([
+            { href: 'menu.html', label: 'Inicio', icon: 'home' },
+            { href: 'menu.html?section=favoritos', label: 'Favoritos', icon: 'heart' },
+            { href: 'menu.html?section=perfil', label: 'Cuenta', icon: 'account' }
+        ], { id: 'sy-personal-bottom-nav', label: 'Navegación principal' });
     },
 
     async enableWorkNotifications() {

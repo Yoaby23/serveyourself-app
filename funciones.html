@@ -1,0 +1,17 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Funciones | ServeYourself</title><link rel="icon" href="logo.png"><link rel="stylesheet" href="tailwind.generated.css"><link rel="stylesheet" href="styles.css"></head>
+<body class="bg-slate-50 min-h-screen sy-has-bottom-nav"><header class="sy-page-header"><div><p>Tu espacio de trabajo</p><h1>Funciones</h1></div><div id="restaurant-nav" class="sy-restaurant-nav"></div></header>
+<main class="sy-page-shell"><p id="work-identity" class="sy-page-intro">Cargando tus funciones…</p><div id="work-status" role="status" aria-live="polite"></div><div id="work-features" class="sy-feature-grid"></div><section class="sy-settings-card"><h2>También puedes</h2><a href="menu.html?section=pedidos">Ver mis pedidos personales</a><a href="repartidor.html">Entrar en modo repartidor</a></section></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script><script src="app-config.js"></script><script src="app.js"></script><script>
+const app=window.serveYourself;
+async function init(){
+ try{
+  const access=await app.requireRestaurantAccess();if(!access)return;
+  app.renderRestaurantNavigation(access);
+  document.getElementById('work-identity').textContent=access.business_name;
+  const features=app.workFeatures(access);
+  const {data:platformAdmin}=await app.supabase.rpc('is_platform_admin');
+  if(platformAdmin)features.push({href:'platform-admin.html',label:'Plataforma',icon:'people',description:'Revisar altas y gestionar repartidores.'});
+  document.getElementById('work-features').innerHTML=features.map(item=>`<a class="sy-feature-card" href="${app.escapeHtml(item.href)}">${app.navigationIcon(item.icon)}<b>${app.escapeHtml(item.label)}</b><p>${app.escapeHtml(item.description)}</p></a>`).join('')||'<p>No tienes funciones operativas asignadas. Consulta con el propietario.</p>';
+ }catch(error){document.getElementById('work-status').textContent='No se pudieron cargar tus funciones. Recarga para reintentar.';}
+}init();
+</script></body></html>

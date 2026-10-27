@@ -61,13 +61,13 @@
                 <a href="repartidor-registro.html?edit=1">Editar datos del repartidor <span>›</span></a>
                 <a href="menu.html">Mis pedidos personales <span>›</span></a>
                 <button type="button" onclick="window.serveYourself.enableWorkNotifications()">Activar notificaciones <span>›</span></button>
-                <button type="button" class="danger" onclick="window.serveYourself.signOut()">Cerrar sesión <span>›</span></button>
+                <button type="button" onclick="window.serveYourself.installApp()">Instalar aplicación <span>›</span></button><a href="cuenta.html">Cuenta personal <span>›</span></a><a href="privacidad.html">Privacidad <span>›</span></a><a href="terminos.html">Términos de uso <span>›</span></a><a href="eliminar-cuenta.html">Solicitar eliminación de cuenta <span>›</span></a><button type="button" class="danger" onclick="window.serveYourself.signOut()">Cerrar sesión <span>›</span></button>
             </article>
         </section>
     </main>
 
     <nav class="driver-bottom-nav" aria-label="Navegación del repartidor">
-        <button type="button" class="active" data-tab="home" onclick="showDriverTab('home',this)"><span>⌂</span><b>Inicio</b></button>
+        <button type="button" class="active" aria-current="page" data-tab="home" onclick="showDriverTab('home',this)"><span>⌂</span><b>Inicio</b></button>
         <button type="button" data-tab="orders-center" onclick="showDriverTab('orders-center',this)"><span>▤</span><b>Pedidos</b></button>
         <button type="button" data-tab="earnings" onclick="showDriverTab('earnings',this)"><span>↗</span><b>Ganancias</b></button>
         <button type="button" data-tab="account" onclick="showDriverTab('account',this)"><span>●</span><b>Cuenta</b></button>
@@ -102,7 +102,7 @@ const vehicles={motorcycle:'Motocicleta',bicycle:'Bicicleta',car:'Automóvil',wa
 let user,profile,offers=[],orders=[],history=[],finances={},currentOrder=null,currentOffer=null,watchId=null,trackingOrderId=null,map,driverMarker,destinationMarker,refreshing=false,refreshQueued=false,refreshTimer=null,toastTimer=null,promptedOffers=new Set();
 
 function toast(message,type='ok'){const el=document.getElementById('driver-toast');el.textContent=message;el.className=`driver-toast show ${type}`;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.className='driver-toast',3200)}
-function showDriverTab(tab,button){document.querySelectorAll('.driver-view').forEach(v=>v.classList.add('hidden'));document.getElementById(`driver-${tab}`).classList.remove('hidden');document.querySelectorAll('.driver-bottom-nav button').forEach(b=>b.classList.toggle('active',b===button));if(tab==='earnings')renderHistory();window.scrollTo({top:0,behavior:'smooth'})}
+function showDriverTab(tab,button){document.querySelectorAll('.driver-view').forEach(v=>v.classList.add('hidden'));document.getElementById(`driver-${tab}`).classList.remove('hidden');document.querySelectorAll('.driver-bottom-nav button').forEach(b=>{b.classList.toggle('active',b===button);if(b===button)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});if(tab==='earnings')renderHistory();window.scrollTo({top:0,behavior:'smooth'})}
 function openOrdersCenter(){const dialog=document.getElementById('offer-dialog');if(dialog.open)dialog.close();showDriverTab('orders-center',document.querySelector('[data-tab="orders-center"]'))}
 function setLive(state){const pill=document.getElementById('live-pill'),copy=document.getElementById('live-copy');pill.classList.toggle('offline',state!=='SUBSCRIBED');copy.textContent=state==='SUBSCRIBED'?'En tiempo real':navigator.onLine?'Reconectando':'Sin conexión'}
 function scheduleRefresh(){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>load(true),180)}

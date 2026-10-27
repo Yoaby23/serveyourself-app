@@ -3,7 +3,7 @@
 <head>
     <link rel="icon" href="logo.png" type="image/png">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>serveyourself | Panel Realtime</title>
     <link rel="stylesheet" href="tailwind.generated.css">
     <link rel="stylesheet" href="styles.css">
@@ -28,23 +28,11 @@
     <nav class="bg-white/90 backdrop-blur-md p-4 sticky top-0 z-50 border-b border-slate-100">
         <div class="flex justify-between items-center relative max-w-5xl mx-auto">
             <button type="button" id="admin-back" data-sy-back onclick="adminBack()" class="hidden w-10 h-10 rounded-xl bg-orange-50 text-orange-600 font-black" title="Volver" aria-label="Volver a la vista anterior">←</button>
-            <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2">
+            <div class="flex items-center gap-2 min-w-0">
                 <h1 class="text-lg font-black tracking-tighter text-slate-900">serve<span class="text-orange-500">yourself</span></h1>
             </div>
 
-            <div class="relative">
-                <button type="button" onclick="toggleAdminMenu()" class="w-10 h-10 bg-slate-900 text-white rounded-full flex items-center justify-center font-black">🏪</button>
-                <div id="admin-menu" class="hidden absolute top-14 right-0 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden fade-in-down">
-                    <div class="p-4 border-b border-slate-50 bg-slate-50/50">
-                        <p id="biz-name-display" class="text-sm font-black text-slate-900 italic">Cargando...</p>
-                        <p id="admin-email-display" class="text-xs font-medium text-slate-500">...</p>
-                    </div>
-                    <div class="p-2 bg-slate-50 border-t border-slate-100">
-                        <button type="button" onclick="window.serveYourself.installApp()" class="block text-center w-full py-2.5 text-sm font-bold text-slate-700 hover:bg-white rounded-xl transition-colors">📲 Instalar aplicación</button>
-                        <button type="button" onclick="cerrarSesion()" class="block text-center w-full py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors">Cerrar sesión</button>
-                    </div>
-                </div>
-            </div>
+            <div class="sy-header-identity"><b id="biz-name-display">Mi restaurante</b><small id="admin-email-display"></small></div><div id="restaurant-nav" class="sy-restaurant-nav"></div>
         </div>
     </nav>
 
@@ -166,14 +154,12 @@
         let currentProfile = null;
         let currentAdminSection = 'home';
 
-        function toggleAdminMenu() { document.getElementById('admin-menu').classList.toggle('hidden'); }
 
         function mostrarSeccion(seccion) {
             currentAdminSection = seccion;
             ['home', 'productos', 'dashboard', 'config'].forEach(id => {
                 document.getElementById(`view-${id}`).classList.toggle('hidden', id !== seccion);
             });
-            document.getElementById('admin-menu').classList.add('hidden');
             document.getElementById('admin-back').classList.toggle('hidden', seccion === 'home');
             if (seccion === 'dashboard') cargarDashboard();
         }
@@ -206,9 +192,13 @@
             }
             currentRestaurantId = user.id;
             currentProfile = profile;
+            const access = await window.serveYourself.getRestaurantAccess();
+            window.serveYourself.renderRestaurantNavigation(access);
             document.getElementById('biz-name-display').innerText = profile.business_name;
             document.getElementById('admin-email-display').innerText = user.email;
             cargarConfiguracion(profile);
+            const section = new URLSearchParams(window.location.search).get('section');
+            if (['home','productos','dashboard','config'].includes(section)) mostrarSeccion(section);
             window.serveYourself.initPushNotifications(user);
 
             cargarProductos();

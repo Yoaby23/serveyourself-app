@@ -30,6 +30,6 @@ assert.match(customer, /createOrderOnce/, 'El horario debe guardarse junto al pe
 assert.match(driver, /\['accepted','preparing','ready_for_dispatch','picked_up','on_the_way','arrived'\]/, 'El repartidor debe compartir ubicación durante toda la asignación');
 assert.match(admin, /cfg-pickup-prep/, 'El restaurante debe configurar el tiempo inicial de pickup');
 assert.match(admin, /cfg-dine-in-prep/, 'El restaurante debe configurar el tiempo inicial de mesa');
-assert.match(worker, /serveyourself-shell-v20/, 'La PWA debe invalidar la caché anterior');
+assert.match(worker, /serveyourself-shell-v21/, 'La PWA debe invalidar la caché anterior');
 
 console.log('OK: priorización ML, ETA y pickup programado validados.');
