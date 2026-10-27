@@ -148,14 +148,13 @@
         }
 
         function adminBack() {
-            if (currentAdminSection !== 'home') mostrarSeccion('home');
-            else return;
+            window.serveYourself.goBack('funciones.html');
         }
 
         window.addEventListener('sy:back-request', event => {
             if (currentAdminSection !== 'home') {
                 event.preventDefault();
-                mostrarSeccion('home');
+                adminBack();
             }
         });
 

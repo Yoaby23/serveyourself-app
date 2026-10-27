@@ -160,7 +160,9 @@ window.serveYourself = {
     },
 
     goBack(fallback = 'index.html') {
-        if (window.history.length > 1) window.history.back();
+        let internalPrevious=false;
+        try { internalPrevious=Boolean(document.referrer)&&new URL(document.referrer).origin===window.location.origin; } catch {}
+        if (internalPrevious && window.history.length > 1) window.history.back();
         else window.location.href = fallback;
     },
 
@@ -432,3 +434,11 @@ if (document.readyState === 'loading') {
         }
     });
 })();
+
+// Existing back links use the actual in-app history; href is only a direct-entry fallback.
+document.addEventListener('click', event => {
+    const link=event.target?.closest?.('a[data-sy-back]');
+    if(!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button>0)return;
+    event.preventDefault();
+    window.serveYourself.goBack(link.getAttribute('href')||'menu.html');
+});

@@ -58,7 +58,7 @@
 
     <nav class="bg-white/80 backdrop-blur-xl p-4 sticky top-0 z-50 border-b border-slate-100">
         <div class="flex justify-between items-center max-w-md mx-auto relative">
-            <button type="button" data-sy-back onclick="mostrarSeccion('explorar')" id="btn-back" class="hidden w-10 h-10 flex items-center justify-center text-slate-900 font-bold" aria-label="Volver a explorar">←</button>
+            <button type="button" data-sy-back onclick="mostrarSeccion('perfil')" id="btn-back" class="hidden w-10 h-10 flex items-center justify-center text-slate-900 font-bold" aria-label="Volver a Cuenta">←</button>
             <span id="nav-spacer" class="w-10 h-10" aria-hidden="true"></span>
 
             <h1 class="absolute left-1/2 transform -translate-x-1/2 text-xl font-black tracking-tighter text-slate-900">
@@ -198,11 +198,12 @@
         function mostrarSeccion(id) {
             const previous = document.body.dataset.activeView || 'explorar';
             document.body.dataset.activeView = id;
+            if(window.history?.replaceState) { const sectionUrl=new URL(window.location.href); sectionUrl.searchParams.set('section',id); window.history.replaceState(window.history.state,'',sectionUrl); }
             document.querySelectorAll('main > section').forEach(section => section.classList.add('hidden'));
             document.getElementById(`sec-${id === 'favoritos' ? 'explorar' : id}`).classList.remove('hidden');
             const exploring = id === 'explorar' || id === 'favoritos';
             onlyFavorites = id === 'favoritos';
-            document.getElementById('btn-back').classList.toggle('hidden',id === 'explorar');
+            document.getElementById('btn-back').classList.toggle('hidden',id !== 'pedidos');
             document.getElementById('nav-spacer').classList.toggle('hidden',id !== 'explorar');
             document.getElementById('home-actions').classList.toggle('hidden',id !== 'explorar');
             document.getElementById('explore-title').textContent = onlyFavorites ? 'Favoritos' : 'Inicio';
@@ -229,9 +230,9 @@
         }
 
         window.addEventListener('sy:back-request', event => {
-            if ((document.body.dataset.activeView || 'explorar') !== 'explorar') {
+            if (document.body.dataset.activeView === 'pedidos') {
                 event.preventDefault();
-                mostrarSeccion('explorar');
+                mostrarSeccion('perfil');
             }
         });
 
