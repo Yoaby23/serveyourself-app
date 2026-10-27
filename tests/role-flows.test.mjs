@@ -43,7 +43,7 @@ assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
 assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v18/, 'La PWA debe renovar su caché al publicar cambios de producción');
+assert.match(read('sw.js'), /serveyourself-shell-v19/, 'La PWA debe renovar su caché al publicar cambios de producción');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
@@ -157,7 +157,7 @@ assert.doesNotMatch(read('cocina.html'), /Esperando pago en línea/, 'Cocina no 
 assert.match(read('caja.html'), /Pagos en línea por confirmar/, 'Caja debe poder revisar pagos en línea pendientes');
 assert.match(read('menu.html'), /Pago vencido · haz un pedido nuevo/, 'El cliente debe saber que necesita crear otro pedido');
 assert.match(read('supabase/functions/create-mercado-pago-preference/index.ts'), /expiration_date_to/, 'La preferencia debe vencer junto con el pedido');
-assert.match(read('supabase/functions/mercado-pago-webhook/index.ts'), /payment window expired/, 'El webhook debe rechazar pagos creados fuera del plazo');
+assert.match(read('supabase/functions/mercado-pago-webhook/index.ts'), /late payment refunded/, 'El webhook debe rechazar pagos creados fuera del plazo');
 
 const automaticAccounts = read('supabase/migrations/012_automatic_table_accounts.sql');
 assert.match(automaticAccounts, /pg_advisory_xact_lock/, 'La cuenta automática por mesa debe evitar carreras entre meseros');

@@ -1117,3 +1117,6 @@ input[type='radio'] {
         margin: 5mm;
     }
 }
+
+.sy-sync-status { padding: .6rem 1rem; background: #064e3b; color: #fff; font-weight: 700; }
+.sy-sync-status[data-stale="true"] { background: #991b1b; }

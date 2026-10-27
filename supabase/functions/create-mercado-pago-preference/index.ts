@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts';
 import { getValidMercadoPagoToken } from '../_shared/mercado-pago.ts';
 
@@ -22,7 +22,7 @@ Deno.serve(async (request) => {
     const { orderId } = await request.json();
     const { data: order, error: orderError } = await userClient
       .from('orders')
-      .select('id, customer_id, restaurant_id, restaurant_name, items, total, delivery_fee, service_type, payment_method, payment_status, created_at, payment_expires_at')
+      .select('id, customer_id, restaurant_id, restaurant_name, items, total, delivery_fee, service_type, payment_method, payment_status, created_at, payment_expires_at, mercado_pago_preference_id')
       .eq('id', orderId)
       .single();
     if (orderError || !order || order.customer_id !== user.id) {
@@ -43,6 +43,12 @@ Deno.serve(async (request) => {
       return jsonResponse(request, { error: 'El tiempo para pagar terminó. Crea un pedido nuevo.' }, 410);
     }
     const accessToken = await getValidMercadoPagoToken(adminClient, order.restaurant_id);
+    if (order.mercado_pago_preference_id) {
+      const existingResponse = await fetch(`https://api.mercadopago.com/checkout/preferences/${order.mercado_pago_preference_id}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+      const existing = await existingResponse.json();
+      if (!existingResponse.ok || !existing.init_point) throw new Error('No se pudo recuperar el pago pendiente. Reintenta sin crear otro pedido.');
+      return jsonResponse(request, { checkoutUrl: existing.init_point, preferenceId: existing.id });
+    }
     const appUrl = Deno.env.get('APP_URL') ?? 'https://serveyourself-app.vercel.app';
     const feePercent = Math.max(0, Math.min(100, Number(Deno.env.get('MERCADO_PAGO_FEE_PERCENT') ?? 0)));
     const marketplaceFee = Math.round(Number(order.total) * feePercent) / 100;
@@ -87,9 +93,10 @@ Deno.serve(async (request) => {
     const preference = await preferenceResponse.json();
     if (!preferenceResponse.ok) throw new Error(preference.message ?? 'No se pudo iniciar el pago');
 
-    await adminClient.from('orders')
+    const { data: saved, error: saveError } = await adminClient.from('orders')
       .update({ mercado_pago_preference_id: preference.id })
-      .eq('id', order.id);
+      .eq('id', order.id).eq('payment_status', 'pending').select('id').single();
+    if (saveError || !saved) throw new Error('No se pudo guardar la referencia del pago. Reintenta desde tus pedidos.');
 
     return jsonResponse(request, { checkoutUrl: preference.init_point, preferenceId: preference.id });
   } catch (error) {

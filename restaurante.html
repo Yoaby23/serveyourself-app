@@ -113,7 +113,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app-config.js"></script>
-    <script src="app.js"></script>
+    <script src="runtime.js"></script><script src="app.js"></script>
     <script>
         const _supabase = window.serveYourself.supabase;
         const escapeHtml = window.serveYourself.escapeHtml;
@@ -389,21 +389,38 @@
 
             try {
                 const items = carrito.map(item => ({ id: item.id, qty: item.qty }));
-                let result;
+                const user = await window.serveYourself.requireUser();
+                if (!user) return;
+                const storageKey = `sy-order-attempt:${user.id}:${resId}`;
+                let payload = { restaurant_id: resId, items, notes: notas.slice(0, 500), payment_method: paymentMethod, service_type: serviceType };
                 if (serviceType === 'delivery') {
                     const point = deliveryMarker.getLatLng();
-                    const name = document.getElementById('delivery-name').value.trim(), phone = document.getElementById('delivery-phone').value.trim(), address = document.getElementById('delivery-address').value.trim(), reference = document.getElementById('delivery-reference').value.trim();
-                    result = await _supabase.rpc('create_delivery_order', { p_restaurant_id: resId, p_items: items, p_notes: notas.slice(0, 500), p_payment_method: paymentMethod, p_address: address, p_reference: reference, p_latitude: point.lat, p_longitude: point.lng, p_contact_name: name, p_contact_phone: phone, p_scheduled_for: null });
-                    if (!result.error && document.getElementById('save-address').checked) await _supabase.from('customer_addresses').insert({ customer_id: (await _supabase.auth.getUser()).data.user.id, label: 'Casa', address, reference: reference || null, latitude: point.lat, longitude: point.lng, contact_name: name, contact_phone: phone, is_default: savedAddresses.length === 0 });
+                    payload = { ...payload, latitude: point.lat, longitude: point.lng,
+                        contact_name: document.getElementById('delivery-name').value.trim(),
+                        contact_phone: document.getElementById('delivery-phone').value.trim(),
+                        address: document.getElementById('delivery-address').value.trim(),
+                        reference: document.getElementById('delivery-reference').value.trim() };
                 } else {
                     const scheduled = document.getElementById('pickup-timing').value === 'scheduled';
-                    const scheduledValue = document.getElementById('pickup-scheduled-for').value;
-                    if (scheduled && !scheduledValue) throw new Error('Selecciona la fecha y hora de recogida.');
-                    result = await _supabase.rpc('create_scheduled_pickup_order', { p_restaurant_id: resId, p_items: items, p_notes: notas.slice(0, 500), p_payment_method: paymentMethod, p_scheduled_for: scheduled ? new Date(scheduledValue).toISOString() : null });
+                    const value = document.getElementById('pickup-scheduled-for').value;
+                    if (scheduled && !value) throw new Error('Selecciona la fecha y hora de recogida.');
+                    payload.scheduled_for = scheduled ? new Date(value).toISOString() : null;
                 }
-                const { data: order, error } = result;
-
-                if (error) throw error;
+                const order = await SYRuntime.createOrderOnce(_supabase, sessionStorage, storageKey, payload);
+                if (order.payment_status === 'approved' || order.status === 'cancelado') {
+                    sessionStorage.removeItem(storageKey);
+                    alert('Este pedido ya fue procesado. Revisa su estado en tus pedidos.');
+                    window.location.href = serviceType === 'delivery' ? `delivery-tracking.html?id=${order.id}` : 'menu.html';
+                    return;
+                }
+                if (serviceType === 'delivery' && document.getElementById('save-address').checked) {
+                    const addressKey = `${storageKey}:address:${order.id}`;
+                    if (!sessionStorage.getItem(addressKey)) {
+                        const { error: addressError } = await _supabase.from('customer_addresses').insert({ customer_id: user.id, label: 'Casa', address: payload.address, reference: payload.reference || null, latitude: payload.latitude, longitude: payload.longitude, contact_name: payload.contact_name, contact_phone: payload.contact_phone, is_default: savedAddresses.length === 0 });
+                        if (addressError) console.warn('El pedido se guardó, pero no la dirección:', addressError.message);
+                        else sessionStorage.setItem(addressKey, 'saved');
+                    }
+                }
 
                 if (paymentMethod === 'mercado_pago') {
                     const { data: checkout, error: checkoutError } = await _supabase.functions.invoke('create-mercado-pago-preference', { body: { orderId: order.id } });
@@ -412,6 +429,7 @@
                     return;
                 }
 
+                sessionStorage.removeItem(storageKey);
                 if (serviceType === 'delivery') { window.location.href = `delivery-tracking.html?id=${order.id}`; return; }
                 alert(paymentMethod === 'transfer' ? 'Pedido enviado. Realiza la transferencia con los datos indicados.' : '¡Pedido enviado con éxito!');
                 carrito = [];

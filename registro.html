@@ -65,7 +65,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
     <script src="app-config.js"></script>
-    <script src="app.js"></script>
+    <script src="runtime.js"></script><script src="app.js"></script>
     <script>
         const _supabase = window.serveYourself.supabase;
 
@@ -169,10 +169,7 @@
                     const { data: { user }, error: userError } = await _supabase.auth.getUser();
                     if (userError || !user) throw userError || new Error('La sesión del proveedor terminó.');
 
-                    const { error: profileError } = await _supabase
-                        .from('profiles')
-                        .update(profileData)
-                        .eq('id', user.id);
+                    const { error: profileError } = await _supabase.rpc('complete_business_registration', { p_profile: profileData });
                     if (profileError) throw profileError;
 
                     window.location.replace('admin.html');

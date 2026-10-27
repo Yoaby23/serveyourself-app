@@ -24,12 +24,13 @@ export async function getValidMercadoPagoToken(admin: any, restaurantId: string)
   const token = await response.json();
   if (!response.ok || !token.access_token) throw new Error('No se pudo renovar Mercado Pago');
 
-  await admin.from('restaurant_payment_accounts').update({
+  const { data: saved, error: saveError } = await admin.from('restaurant_payment_accounts').update({
     access_token: token.access_token,
     refresh_token: token.refresh_token ?? account.refresh_token,
     token_expires_at: new Date(Date.now() + Number(token.expires_in ?? 0) * 1000).toISOString(),
     updated_at: new Date().toISOString()
-  }).eq('restaurant_id', restaurantId);
+  }).eq('restaurant_id', restaurantId).select('restaurant_id').single();
+  if (saveError || !saved) throw new Error('No se pudo guardar la renovación de Mercado Pago. Reintenta o vuelve a conectar la cuenta.');
 
   return token.access_token;
 }
