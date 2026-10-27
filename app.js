@@ -407,3 +407,28 @@ if (document.readyState === 'loading') {
     window.serveYourself.ensureGlobalBackButton();
     window.serveYourself.enableSwipeBack();
 }
+
+// Keep the app viewport stable while retaining scrolling and in-map controls.
+// Browser menus and OS accessibility magnification remain outside app control.
+(() => {
+    const preventPageZoom = event => {
+        if (event.cancelable) event.preventDefault();
+    };
+    ['gesturestart', 'gesturechange'].forEach(type => {
+        document.addEventListener(type, preventPageZoom, { passive: false });
+    });
+    document.addEventListener('touchmove', event => {
+        // Leaflet handles its own map gestures; these do not scale the page.
+        if (event.touches.length > 1 && !event.target?.closest?.('.leaflet-container')) {
+            preventPageZoom(event);
+        }
+    }, { passive: false });
+    document.addEventListener('wheel', event => {
+        if (event.ctrlKey || event.metaKey) preventPageZoom(event);
+    }, { passive: false });
+    document.addEventListener('keydown', event => {
+        if ((event.ctrlKey || event.metaKey) && ['+', '-', '=', '0'].includes(event.key)) {
+            preventPageZoom(event);
+        }
+    });
+})();
