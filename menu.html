@@ -3,7 +3,7 @@
 <head>
     <link rel="icon" href="logo.png" type="image/png">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>serveyourself | Menú</title>
     <link rel="stylesheet" href="tailwind.generated.css">
     <link rel="stylesheet" href="styles.css">
@@ -65,19 +65,7 @@
                 serve<span class="text-orange-500">yourself</span>
             </h1>
 
-            <div class="relative">
-                <button type="button" onclick="toggleUserMenu()" class="w-10 h-10 bg-slate-100 text-slate-700 hover:bg-orange-500 hover:text-white rounded-full flex items-center justify-center font-black transition-all shadow-sm">👤</button>
-                <div id="user-menu" class="hidden absolute top-14 right-0 w-64 bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden fade-in z-[60]">
-                    <div class="p-6 border-b border-slate-50 bg-slate-50/50">
-                        <p id="user-name-display" class="text-sm font-black text-slate-900 leading-none italic">Cargando...</p>
-                        <p id="user-role-display" class="text-[10px] font-bold text-orange-500 uppercase tracking-[0.2em] mt-2">...</p>
-                    </div>
-                    <div id="menu-options" class="flex flex-col py-3"></div>
-                    <div class="p-3 bg-slate-50 border-t border-slate-100">
-                        <button type="button" onclick="cerrarSesion()" class="w-full py-3 text-sm font-black text-red-500 hover:bg-red-50 rounded-2xl transition-colors uppercase">Cerrar Sesión</button>
-                    </div>
-                </div>
-            </div>
+            <span class="w-10 h-10" aria-hidden="true"></span>
         </div>
     </nav>
 
@@ -110,6 +98,8 @@
                 <p class="text-slate-400 text-sm font-semibold">Configura tu cuenta y seguridad.</p>
             </header>
 
+            <div class="sy-account-identity"><b id="user-name-display">Tu cuenta</b><span id="user-role-display"></span></div>
+            <div id="menu-options" class="sy-account-actions"></div>
             <div class="sy-account-actions"><button type="button" onclick="mostrarSeccion('pedidos')">Mis pedidos</button><button type="button" onclick="cerrarSesion()">Cerrar sesión</button></div>
             <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-4">
                 <div class="grid grid-cols-1 gap-4 opacity-60">
@@ -119,7 +109,7 @@
                     </div>
                     <div>
                         <label class="text-[9px] font-black text-slate-400 uppercase ml-2">Nombre registrado (No editable)</label>
-                        <input type="text" id="edit-name" disabled class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 text-slate-500 font-bold text-sm outline-none cursor-not-allowed">
+                        <input type="text" id="edit-name" readonly disabled class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 text-slate-500 font-bold text-sm outline-none cursor-not-allowed">
                     </div>
                 </div>
 
@@ -135,7 +125,7 @@
                 <div id="campos-negocio" class="hidden space-y-4 pt-4 border-t border-slate-50">
                     <div class="opacity-60">
                         <label class="text-[9px] font-black text-orange-500 uppercase ml-2">Nombre Comercial</label>
-                        <input type="text" id="edit-biz-name" disabled class="w-full p-4 bg-orange-50/30 rounded-2xl border border-orange-100 text-orange-700 font-bold text-sm cursor-not-allowed">
+                        <input type="text" id="edit-biz-name" readonly disabled class="w-full p-4 bg-orange-50/30 rounded-2xl border border-orange-100 text-orange-700 font-bold text-sm cursor-not-allowed">
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
@@ -204,14 +194,12 @@
         let onlyFavorites = false;
         let favoritesReady = false;
 
-        function toggleUserMenu() { document.getElementById('user-menu').classList.toggle('hidden'); }
 
         function mostrarSeccion(id) {
             const previous = document.body.dataset.activeView || 'explorar';
             document.body.dataset.activeView = id;
             document.querySelectorAll('main > section').forEach(section => section.classList.add('hidden'));
             document.getElementById(`sec-${id === 'favoritos' ? 'explorar' : id}`).classList.remove('hidden');
-            document.getElementById('user-menu').classList.add('hidden');
             const exploring = id === 'explorar' || id === 'favoritos';
             onlyFavorites = id === 'favoritos';
             document.getElementById('btn-back').classList.toggle('hidden',id === 'explorar');
@@ -280,7 +268,8 @@
             }
             await cargarFavoritos();
             await cargarRestaurantes();
-            mostrarSeccion(document.body.dataset.activeView || 'explorar');
+            const requestedSection = new URLSearchParams(window.location.search).get('section');
+            mostrarSeccion(['explorar','favoritos','perfil','pedidos'].includes(requestedSection) ? requestedSection : (document.body.dataset.activeView || 'explorar'));
             activarPedidosRealtime();
             setInterval(() => {
                 if (!document.getElementById('sec-pedidos').classList.contains('hidden')) cargarHistorialPedidos();
@@ -290,12 +279,15 @@
         function renderMenuOptions(role, access) {
             const container = document.getElementById('menu-options');
             const linkClass = "text-left px-7 py-3.5 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all flex items-center gap-3";
-            let html = `<button type="button" onclick="mostrarSeccion('perfil')" class="${linkClass}"><span>👤</span> Mi Perfil</button>`;
+            let html = '';
             if (role === 'negocio') html += `<button type="button" onclick="window.location.href='admin.html'" class="${linkClass}"><span>⚙</span> Mi Panel de Control</button>`;
             else if (access) html += `<button type="button" onclick="window.location.href=window.serveYourself.restaurantHome(restaurantAccess)" class="${linkClass}"><span>🏪</span> Volver al restaurante</button>`;
             html += `<button type="button" onclick="mostrarSeccion('pedidos')" class="${linkClass}"><span>🛍</span> Mis pedidos personales</button>`;
             html += `<button type="button" onclick="window.location.href='repartidor.html'" class="${linkClass}"><span>🛵</span> Modo repartidor</button>`;
+            html += `<button type="button" onclick="window.serveYourself.installApp()" class="${linkClass}">Instalar aplicación</button>`;
+            html += '<a id="customer-platform-link" href="platform-admin.html" hidden>Administración de plataforma</a>';
             container.innerHTML = html;
+            _supabase.rpc('is_platform_admin').then(({data,error}) => { const link=document.getElementById('customer-platform-link');if(link)link.hidden=Boolean(error)||!data; }).catch(() => {});
             document.getElementById('home-actions').innerHTML = `<button type="button" onclick="mostrarSeccion('pedidos')">Mis pedidos</button>`
                 + (role === 'negocio' ? '<a href="admin.html">Mi restaurante</a>' : access ? '<a href="' + window.serveYourself.restaurantHome(access) + '">Ir al trabajo</a>' : '')
                 + '<a href="repartidor.html">Repartir</a>';
@@ -498,9 +490,10 @@
             }
             btn.disabled = true;
             try {
-                await _supabase.from('profiles').update(updates).eq('id', currentUser.id);
+                const { error: profileError } = await _supabase.from('profiles').update(updates).eq('id', currentUser.id);
+                if (profileError) throw profileError;
                 const nuevaPass = document.getElementById('edit-pass').value;
-                if (nuevaPass) await _supabase.auth.updateUser({ password: nuevaPass });
+                if (nuevaPass) { const { error: passwordError } = await _supabase.auth.updateUser({ password: nuevaPass }); if (passwordError) throw passwordError; }
                 alert("Perfil actualizado!");
                 location.reload();
             } catch (err) { alert(err.message); } finally { btn.disabled = false; }

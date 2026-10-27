@@ -491,96 +491,6 @@ input[type='radio'] {
     z-index: 70;
 }
 
-.sy-nav-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.sy-nav-trigger {
-    display: grid;
-    width: 2.75rem;
-    height: 2.75rem;
-    place-items: center;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.9rem;
-    color: #0f172a;
-    background: #fff;
-    font-size: 1.1rem;
-    font-weight: 900;
-    box-shadow: 0 5px 16px rgb(15 23 42 / 7%);
-}
-
-.sy-nav-trigger-dark {
-    border-color: #334155;
-    color: #fff;
-    background: #1e293b;
-}
-
-.sy-nav-dropdown {
-    position: absolute;
-    top: calc(100% + 0.65rem);
-    right: 0;
-    width: min(19rem, calc(100vw - 2rem));
-    overflow: hidden;
-    border: 1px solid #e2e8f0;
-    border-radius: 1.25rem;
-    color: #0f172a;
-    background: #fff;
-    box-shadow: 0 24px 60px rgb(15 23 42 / 18%);
-}
-
-.sy-nav-identity {
-    display: flex;
-    flex-direction: column;
-    padding: 1rem 1.1rem;
-    border-bottom: 1px solid #f1f5f9;
-    background: #f8fafc;
-}
-
-.sy-nav-identity small {
-    color: #f97316;
-    font-size: 0.65rem;
-    font-weight: 900;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.sy-nav-identity b {
-    margin-top: 0.2rem;
-    font-size: 0.9rem;
-}
-
-.sy-nav-dropdown nav {
-    display: flex;
-    flex-direction: column;
-    padding: 0.45rem;
-}
-
-.sy-nav-dropdown a,
-.sy-nav-dropdown > button {
-    display: block;
-    width: 100%;
-    padding: 0.8rem 0.9rem;
-    border-radius: 0.8rem;
-    color: #334155;
-    background: transparent;
-    text-align: left;
-    font-size: 0.82rem;
-    font-weight: 800;
-}
-
-.sy-nav-dropdown a:hover,
-.sy-nav-dropdown > button:hover {
-    color: #ea580c;
-    background: #fff7ed;
-}
-
-.sy-nav-dropdown .sy-nav-logout {
-    border-top: 1px solid #f1f5f9;
-    border-radius: 0;
-    color: #dc2626;
-}
-
 .ready-order-alert {
     position: fixed;
     right: 1rem;
@@ -1139,3 +1049,36 @@ input[type='radio'] {
 .sy-home-actions a, .sy-home-actions button, .sy-account-actions button { padding: .65rem .9rem; border-radius: .85rem; background: white; border: 1px solid #e2e8f0; color: #334155; font-size: .8rem; font-weight: 800; }
 
 .sy-customer-bottom-nav svg { width: 1.5rem; height: 1.5rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Navigation stays outside sticky headers; all fixed controls reserve its safe area. */
+body.sy-has-bottom-nav { padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)); scroll-padding-bottom: calc(7rem + env(safe-area-inset-bottom)); }
+.sy-restaurant-nav { position: static; color: #64748b; font-size: .75rem; font-weight: 800; white-space: nowrap; }
+.sy-role-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 70; display: grid; grid-template-columns: repeat(var(--nav-columns, 3), minmax(0, 1fr)); gap: .2rem; padding: .5rem max(.5rem, env(safe-area-inset-right)) calc(.5rem + env(safe-area-inset-bottom)) max(.5rem, env(safe-area-inset-left)); border-top: 1px solid #e2e8f0; background: rgb(255 255 255 / 98%); color: #475569; box-shadow: 0 -.25rem 1rem rgb(15 23 42 / 6%); }
+.sy-role-bottom-nav a { display: grid; place-items: center; align-content: center; gap: .3rem; min-height: 3.5rem; min-width: 0; padding: .3rem; border-radius: .8rem; text-decoration: none; color: inherit; font-size: .7rem; font-weight: 800; overflow-wrap: anywhere; text-align: center; }
+.sy-role-bottom-nav svg, .sy-feature-card svg { width: 1.5rem; height: 1.5rem; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.sy-role-bottom-nav a[aria-current="page"] { background: #fff1ed; color: #c2410c; }
+.sy-role-bottom-nav a:focus-visible, .sy-feature-card:focus-visible { outline: 3px solid #f97316; outline-offset: -3px; }
+.sy-role-bottom-nav-dark { background: #0f172a; color: #cbd5e1; border-color: #334155; }
+.sy-role-bottom-nav-dark a[aria-current="page"] { color: #fdba74; background: #334155; }
+.sy-page-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: white; border-bottom: 1px solid #e2e8f0; padding: 1rem max(1rem, calc((100vw - 1100px) / 2)); }
+.sy-page-header h1 { font-size: 1.6rem; font-weight: 900; color: #0f172a; }
+.sy-page-header p { color: #c2410c; font-size: .7rem; text-transform: uppercase; font-weight: 800; }
+.sy-page-shell { width: min(100%, 1100px); margin: 0 auto; padding: 1.25rem; }
+.sy-page-intro { margin-bottom: 1rem; color: #475569; font-weight: 700; }
+.sy-feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 1rem; }
+.sy-feature-card { display: grid; align-content: start; gap: .7rem; padding: 1.25rem; border-radius: 1.4rem; background: white; border: 1px solid #e2e8f0; color: #0f172a; text-decoration: none; min-height: 150px; }
+.sy-feature-card svg { color: #c2410c; }.sy-feature-card b { font-weight: 900; }.sy-feature-card p { font-size: .85rem; color: #64748b; }
+.sy-settings-card { padding: 1.25rem; background: white; border: 1px solid #e2e8f0; border-radius: 1.4rem; margin: 1rem 0; }
+.sy-settings-card h2 { font-size: 1.15rem; font-weight: 900; margin-bottom: .75rem; }
+.sy-settings-card > a, .sy-settings-card > button { display: block; width: 100%; text-align: left; padding: .85rem .2rem; min-height: 44px; border-top: 1px solid #f1f5f9; font-weight: 700; font-size: .9rem; }
+.sy-settings-card [hidden] { display: none; }.sy-settings-card .sy-danger { color: #b91c1c; }
+.sy-account-shell { max-width: 760px; }.sy-account-form { display: grid; gap: 1rem; margin-top: 1rem; }
+.sy-account-form label { font-size: .85rem; font-weight: 800; }.sy-account-form input { display: block; width: 100%; margin-top: .4rem; padding: .8rem; border: 1px solid #cbd5e1; border-radius: .8rem; }
+.sy-account-form button { padding: 1rem; border-radius: 1rem; background: #0f172a; color: white; font-weight: 800; }.sy-account-form button:disabled { opacity: .5; }
+.sy-header-identity { margin-left: auto; display: grid; text-align: right; max-width: 45%; min-width: 0; }.sy-header-identity b, .sy-header-identity small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.sy-header-identity small { font-size: .7rem; color: #64748b; }
+.sy-account-identity { display: grid; gap: .3rem; color: #334155; }.sy-account-identity span { font-size: .75rem; color: #64748b; }
+body.sy-has-bottom-nav .ready-order-alert { bottom: calc(6.5rem + env(safe-area-inset-bottom)); }
+@media (max-width: 640px) { .sy-header-identity { max-width: 42%; }.sy-header-identity small { display: none; } .sy-role-bottom-nav a { font-size: .65rem; }.sy-page-shell { padding: 1rem; } }
+@media print { .sy-role-bottom-nav, .sy-customer-bottom-nav, .driver-bottom-nav { display: none !important; } body.sy-has-bottom-nav, body.sy-customer-page { padding-bottom: 0; } }
+
+.sy-header-identity + .sy-restaurant-nav { display: none; }
