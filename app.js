@@ -206,15 +206,15 @@ window.serveYourself = {
         if (!document.body || !document.querySelector) return;
         const page = (window.location.pathname || '/index.html').split('/').pop() || 'index.html';
         const mainPages = ['index.html', 'menu.html', 'admin.html', 'pos.html', 'caja.html', 'cocina.html', 'delivery.html', 'repartidor.html'];
-        if (mainPages.includes(page) || document.querySelector('[data-sy-back], .sy-restaurant-nav')) return;
+        if (mainPages.includes(page) || page === 'funciones.html' || document.querySelector('[data-sy-back], .sy-global-back')) return;
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'sy-global-back no-print';
         button.dataset.syBack = 'true';
         button.setAttribute('aria-label', 'Volver a la vista anterior');
         button.setAttribute('title', 'Volver');
-        button.textContent = '←';
-        button.addEventListener('click', () => this.goBack('index.html'));
+        button.innerHTML = '<span aria-hidden="true">←</span><span>Volver</span>';
+        button.addEventListener('click', () => this.goBack(this._currentRestaurantAccess ? this.restaurantHome(this._currentRestaurantAccess) : 'menu.html'));
         document.body.appendChild(button);
     },
 
@@ -260,7 +260,7 @@ window.serveYourself = {
             settings: '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
             heart: '<path d="M20 4a5 5 0 0 0-8 2 5 5 0 0 0-8-2C-2 10 12 21 12 21S26 10 20 4Z"/>'
         };
-        return `<svg aria-hidden="true" viewBox="0 0 24 24">${paths[name] || paths.grid}</svg>`;
+        return `<svg class="sy-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths[name] || paths.grid}</svg>`;
     },
 
     renderBottomNavigation(items, options = {}) {
@@ -273,7 +273,7 @@ window.serveYourself = {
         const page = (window.location.pathname || '/index.html').split('/').pop();
         nav.innerHTML = items.map(item => `<a href="${this.escapeHtml(item.href)}" ${item.href.split('?')[0] === page ? 'aria-current="page"' : ''}>${this.navigationIcon(item.icon)}<span>${this.escapeHtml(item.label)}</span></a>`).join('');
         document.body.classList.add('sy-has-bottom-nav');
-        document.querySelector('.sy-global-back')?.remove();
+        this.ensureGlobalBackButton();
     },
 
     renderRestaurantNavigation(access, options = {}) {

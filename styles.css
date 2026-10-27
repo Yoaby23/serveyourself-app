@@ -1092,3 +1092,20 @@ body.sy-has-bottom-nav .ready-order-alert { bottom: calc(6.5rem + env(safe-area-
 .kitchen-resource-warning { margin-top: .8rem; padding: .8rem; border: 1px solid #fca5a5; border-radius: .8rem; background: #450a0a; color: #fecaca; font-size: .85rem; }
 .kitchen-resource-note { color: #cbd5e1; font-size: .75rem; margin-top: .7rem; }
 .kitchen-card button:disabled { opacity: .55; cursor: not-allowed; }
+
+/* Shared visual language for symbols and secondary actions across every role. */
+.sy-icon, .sy-favorite-button svg { display: inline-block; width: 1.35rem; height: 1.35rem; flex-shrink: 0; vertical-align: middle; }
+.sy-favorite-button { display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+.sy-favorite-button svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.sy-favorite-button[aria-pressed="true"] svg { fill: currentColor; }
+.sy-global-back { display: flex; gap: .4rem; width: auto; height: 2.75rem; padding: 0 .85rem; font-size: .875rem; font-weight: 700; box-shadow: 0 2px 8px rgb(15 23 42 / 8%); }
+body.sy-has-bottom-nav .sy-global-back { bottom: calc(6rem + env(safe-area-inset-bottom)); }
+.sy-settings-card a, .sy-settings-card button { min-height: 44px; }
+@media print { .sy-global-back { display: none !important; } }
+
+/* Keep secondary controls and typography consistent with the shared account UI. */
+button, input, select, textarea { letter-spacing: normal; }
+button { text-transform: none; }
+.sy-settings-card, .sy-feature-card { border-radius: 1.25rem; }
+.sy-page-header h1 { font-weight: 800; letter-spacing: -.025em; }
+.sy-global-back span:first-child { font-size: 1.15rem; line-height: 1; }

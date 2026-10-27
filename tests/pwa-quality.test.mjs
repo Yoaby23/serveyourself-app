@@ -19,7 +19,7 @@ for (const file of htmlFiles) {
 }
 
 assert.match(app, /ensureGlobalBackButton/, 'Debe existir un regreso común para pantallas sin navegación propia');
-assert.match(app, /\[data-sy-back\], \.sy-restaurant-nav/, 'El regreso común debe evitar botones duplicados');
+assert.match(app, /\[data-sy-back\], \.sy-global-back/, 'El regreso común debe evitar botones duplicados');
 assert.match(app, /display-mode: standalone/, 'La instalación debe detectar cuando la PWA ya está abierta como aplicación');
 assert.match(app, /apple-mobile-web-app-capable/, 'iPhone debe recibir metadatos de aplicación web');
 assert.match(app, /beforeinstallprompt/, 'Android y escritorio deben ofrecer el instalador del navegador');
