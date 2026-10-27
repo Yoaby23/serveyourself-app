@@ -33,6 +33,13 @@
             if (error) throw error;
             return data;
         },
+        async setFavorite(db, favorites, restaurantId, wanted) {
+            const { data, error } = await db.rpc('set_restaurant_favorite', { p_restaurant_id: restaurantId, p_favorite: wanted });
+            if (error) throw error;
+            if (data === true) favorites.add(restaurantId);
+            else if (data === false) favorites.delete(restaurantId);
+            else throw new Error('No se confirmó el favorito');
+        },
         async previewSound(audio) {
             await audio.play();
             audio.pause();

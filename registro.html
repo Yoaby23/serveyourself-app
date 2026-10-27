@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-auth-pending>
 <head>
     <link rel="icon" href="logo.png" type="image/png">
     <meta charset="UTF-8">
@@ -10,9 +10,48 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800;900&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        html[data-auth-pending] body > :not(#auth-splash) { display: none !important; }
+        #auth-splash { display: none; }
+        html[data-auth-pending] #auth-splash { display: grid; position: fixed; inset: 0; place-items: center; background: #f8fafc; z-index: 1000; }
+        .auth-splash-content { text-align: center; padding: 2rem; font-family: system-ui, sans-serif; }
+        .auth-splash-content img { width: 100px; height: 100px; object-fit: contain; margin: 0 auto 1.25rem; }
+        .auth-splash-content h1 { font-size: 1.75rem; font-weight: 900; color: #0f172a; letter-spacing: -.06em; }
+        .auth-splash-content h1 span { color: #f97316; }
+        .auth-splash-content p { margin-top: 1rem; color: #64748b; font-size: .9rem; }
+        .auth-splash-spinner { width: 24px; height: 24px; margin: 1.25rem auto; border: 3px solid #fed7aa; border-top-color: #f97316; border-radius: 50%; animation: auth-spin .8s linear infinite; }
+        #auth-retry[hidden] { display: none; }
+        #auth-retry { margin-top: 1rem; border: 0; border-radius: 1rem; background: #c2410c; color: white; padding: .85rem 1.5rem; font-weight: 800; }
+        @keyframes auth-spin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) { .auth-splash-spinner { animation: none; } }
     </style>
+    <script>
+        window.authStartup = (() => {
+            let timer;
+            function fail() {
+                const message = document.getElementById('auth-startup-message');
+                if (message) message.textContent = 'No se pudo verificar la sesión. Revisa tu conexión y reintenta.';
+                const retry = document.getElementById('auth-retry');
+                if (retry) retry.hidden = false;
+            }
+            timer = setTimeout(fail, 15000);
+            return { fail, finish() { clearTimeout(timer); document.documentElement.removeAttribute('data-auth-pending'); }, redirect(url) { clearTimeout(timer); window.location.replace(url); } };
+        })();
+    </script>
+
 </head>
 <body class="bg-slate-50">
+    <div id="auth-splash" role="status" aria-live="polite" aria-label="Verificando sesión">
+        <div class="auth-splash-content">
+            <img src="logo.png" alt="Logo de ServeYourself">
+            <h1>serve<span>yourself</span></h1>
+            <div class="auth-splash-spinner" aria-hidden="true"></div>
+            <p id="auth-startup-message">Verificando tu sesión…</p>
+            <button type="button" id="auth-retry" hidden onclick="location.reload()">Reintentar</button>
+            <noscript><p>Activa JavaScript para abrir la aplicación.</p></noscript>
+        </div>
+    </div>
+
     <main class="max-w-md mx-auto p-6 min-h-screen flex flex-col justify-center">
         <div class="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100">
             <a href="index.html" class="text-orange-500 font-bold mb-6 inline-block hover:opacity-70 transition-all">← Regresar</a>
@@ -114,15 +153,22 @@
         }
 
         async function completeOAuthRegistration() {
-            if (!isOAuthReturn) return;
 
             try {
                 const { data: { session }, error } = await _supabase.auth.getSession();
                 if (error) throw error;
-                if (!session?.user) throw new Error('No se recibió una sesión válida del proveedor.');
+                if (!session?.user) {
+                    if (isOAuthReturn) throw new Error('No se recibió una sesión válida del proveedor.');
+                    window.authStartup.finish(); return;
+                }
+                const { data: { user }, error: userError } = await _supabase.auth.getUser();
+                if (userError) throw userError;
+                if (!user) { window.authStartup.finish(); return; }
+                const profile = await window.serveYourself.getOrCreateProfile(user);
 
-                if (role !== 'negocio') {
-                    window.location.replace(requestedNextPage || 'menu.html');
+                if (role !== 'negocio' || profile.role === 'negocio') {
+                    const destination = profile.role === 'negocio' ? 'admin.html' : window.serveYourself.restaurantHome(await window.serveYourself.getRestaurantAccess());
+                    window.authStartup.redirect(requestedNextPage || destination);
                     return;
                 }
 
@@ -139,9 +185,10 @@
                 document.getElementById('form-subtitle').textContent = 'Tu cuenta ya está conectada. Agrega los datos del negocio para terminar.';
                 document.getElementById('btn-register').textContent = 'CREAR MI RESTAURANTE';
                 document.getElementById('ui-form').dataset.oauth = 'true';
+                window.authStartup.finish();
             } catch (error) {
-                alert('No fue posible completar el registro: ' + error.message);
-                window.location.replace(`registro.html?role=${role}`);
+                if (error.status === 401 || ['refresh_token_not_found','refresh_token_already_used','session_not_found','bad_jwt','user_not_found'].includes(error.code)) window.authStartup.finish();
+                else { console.warn('No se pudo verificar el registro:', error.message); window.authStartup.fail(); }
             }
         }
 
