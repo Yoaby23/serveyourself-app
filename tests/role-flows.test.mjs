@@ -42,7 +42,7 @@ assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
 assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v25/, 'La PWA debe renovar su caché al publicar cambios de producción');
+assert.match(read('sw.js'), /serveyourself-shell-v26/, 'La PWA debe renovar su caché al publicar cambios de producción');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
@@ -107,12 +107,11 @@ assert.match(cashierNav, /caja\.html/, 'El capitán de caja debe acceder a cuent
 assert.doesNotMatch(cashierNav, /cocina\.html|equipo\.html|qr\.html/, 'Caja no debe ver cocina ni administración');
 
 const operations = read('supabase/migrations/008_restaurant_operations_suite.sql');
-for (const feature of ['cash_shifts','order_payments','order_audit_logs','kitchen_stations','ingredients','product_recipes','coupons','reservations','loyalty_customers']) {
+for (const feature of ['cash_shifts','order_payments','order_audit_logs','kitchen_stations','coupons','reservations','loyalty_customers']) {
     assert.match(operations, new RegExp(`public\\.${feature}`), `La migración operativa debe incluir ${feature}`);
 }
 assert.match(operations, /register_pos_payment/, 'Debe soportar pagos parciales y combinados');
 assert.match(operations, /split_pos_order/, 'Debe permitir dividir una cuenta por productos');
-assert.match(operations, /deduct_order_inventory/, 'Debe descontar inventario mediante recetas');
 assert.match(read('caja.html'), /CERRAR TURNO/, 'Caja debe permitir realizar el corte');
 assert.match(read('caja.html'), /register_pos_payment_v2/, 'Caja debe registrar el efectivo recibido');
 assert.match(read('caja.html'), /Efectivo recibido/, 'Caja debe capturar el importe recibido');
@@ -126,7 +125,7 @@ assert.match(app, /enableSwipeBack/, 'La aplicación debe habilitar el gesto de 
 assert.doesNotMatch(index, />\s*Instalar ServeYourself\s*</, 'La portada no debe mostrar un botón de instalación');
 assert.match(index, /sy:back-request/, 'El acceso debe responder al gesto de regreso entre sus vistas');
 assert.match(read('inventario.html'), /inventory-page/, 'Inventario debe activar sus correcciones móviles');
-assert.match(read('inventario.html'), /Recetas/, 'Debe existir gestión de recetas');
+assert.doesNotMatch(read('inventario.html'), /Ingredientes|Recetas/, 'Las estaciones no deben gestionar ingredientes');
 assert.match(read('reportes.html'), /EXPORTAR CSV/, 'Los reportes deben poder exportarse');
 assert.match(read('clientes.html'), /Clientes frecuentes/, 'Debe existir el programa de lealtad');
 assert.match(pos, /get_pos_shift_status/, 'El POS debe comprobar que Caja tenga un turno abierto');

@@ -13,7 +13,7 @@
     </header>
     <section class="kitchen-intelligence" aria-live="polite">
         <div><span class="kitchen-ml-dot"></span><b>Orden recomendado de cocina</b><small id="ml-status">Calibrando con los tiempos reales de tu cocina</small></div>
-        <p>Prioridad manual, hora de entrega e insumos disponibles. Revisa los faltantes antes de comenzar.</p>
+        <p>Prioridad manual y hora de entrega. Marca los productos fuera de stock desde Disponibilidad.</p>
     </section>
     <p id="sync-status" role="status" aria-live="polite" class="sy-sync-status">Conectando con cocina…</p>
     <main class="p-3 grid lg:grid-cols-2 gap-3 min-h-[calc(100vh-76px)]">
@@ -32,7 +32,7 @@
             document.getElementById('restaurant-name').textContent = access.business_name;
             window.serveYourself.renderRestaurantNavigation(access, { dark: true });
             window.serveYourself.initPushNotifications(access.user);
-            const [{ data: stationData }, { data: productData }, { data: tableData }] = await Promise.all([db.from('kitchen_stations').select('*').eq('restaurant_id',access.restaurant_id).eq('is_active',true).order('name'),db.from('products').select('id,name,kitchen_station_id,is_available,inventory_available').eq('restaurant_id',access.restaurant_id).order('name'),db.from('restaurant_tables').select('id,name').eq('restaurant_id',access.restaurant_id)]);
+            const [{ data: stationData }, { data: productData }, { data: tableData }] = await Promise.all([db.from('kitchen_stations').select('*').eq('restaurant_id',access.restaurant_id).eq('is_active',true).order('name'),db.from('products').select('id,name,kitchen_station_id,is_available').eq('restaurant_id',access.restaurant_id).order('name'),db.from('restaurant_tables').select('id,name').eq('restaurant_id',access.restaurant_id)]);
             stations=stationData||[];products=productData||[];tables=tableData||[];document.getElementById('station-filter').innerHTML += stations.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');renderAvailability();
             await loadOrders();
             db.channel(`kitchen-${access.restaurant_id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'kitchen_tickets', filter: `restaurant_id=eq.${access.restaurant_id}` }, payload => {
@@ -83,8 +83,6 @@
             const startIn = minutesUntil(order.recommended_start_at), urgent = order.priority_override > 0 || startIn <= 0;
             const startLabel = stationState === 'preparando' ? 'EN PREPARACIÓN' : startIn > 1 ? `INICIAR EN ${startIn} MIN` : 'INICIAR AHORA';
             const modelLabel = order.model_ready ? `Tiempos reales · error de validación ${Number(order.mean_absolute_error || 0).toFixed(1)} min` : Number(order.sample_count || 0) < Number(order.minimum_samples || 10) ? `Calibrando tiempos · ${Number(order.sample_count || 0)}/${Number(order.minimum_samples || 10)} · usando tiempo configurado` : 'Usando tiempo configurado para esta comanda';
-            const blocked = stationState === 'pendiente' && order.has_shortage;
-            const resources = blocked ? `<div class="kitchen-resource-warning"><b>No se puede comenzar: faltan insumos</b>${(order.missing_ingredients || []).map(item => `<p>${esc(item.name)}: faltan ${Number(item.shortage).toFixed(3)} ${esc(item.unit)}</p>`).join('')}</div>` : order.untracked_products > 0 ? '<p class="kitchen-resource-note">Control parcial de insumos: hay productos sin receta configurada.</p>' : '<p class="kitchen-resource-note">Insumos verificados por receta.</p>';
             return `<article class="kitchen-card ${urgent ? 'kitchen-due' : ''} ${order.priority_override === 2 ? 'kitchen-urgent' : ''}">
                 <div class="kitchen-card-priority"><span>#${position + 1} · ${esc(startLabel)}</span><select aria-label="Prioridad de comanda ${order.id}" onchange="setPriority(${order.id},this.value)" class="kitchen-priority-select"><option value="-1" ${order.priority_override===-1?'selected':''}>Posponer</option><option value="0" ${order.priority_override===0?'selected':''}>Normal</option><option value="1" ${order.priority_override===1?'selected':''}>Alta</option><option value="2" ${order.priority_override===2?'selected':''}>Urgente</option></select></div>
                 <div class="flex items-start justify-between gap-3"><div><p class="text-2xl font-black">Comanda #${order.id}</p><p class="text-xs text-slate-400">Cuenta #${order.order_id}</p><p class="text-sm font-black text-orange-400 mt-1">${esc(location)}</p></div><div class="text-right"><p class="kitchen-clock">${elapsed(order.created_at)}</p><p class="text-xs text-slate-400 mt-1">${timeLabel(order.created_at)}</p></div></div>
@@ -93,8 +91,7 @@
                 <div class="my-4 space-y-2">${visibleItems.map(item => `<div class="flex gap-3 text-lg font-extrabold"><span class="text-orange-400 min-w-8">${Number(item.qty)}×</span><span>${esc(item.nombre)}</span></div>`).join('')}</div>
                 ${order.notes ? `<div class="bg-amber-300 text-slate-950 p-3 rounded-xl font-black"> ${esc(order.notes)}</div>` : ''}
                 ${order.waiter_name ? `<p class="text-xs text-slate-400 mt-3">Mesero: ${esc(order.waiter_name)}</p>` : ''}
-                ${resources}
-                <button type="button" ${blocked ? 'disabled aria-disabled="true"' : ''} onclick="moveOrder(${order.id}, '${status}')" class="w-full mt-4 py-4 rounded-xl ${stationState === 'listo' ? 'bg-emerald-500' : 'bg-white text-slate-950'} font-black text-base">${blocked ? 'ESPERANDO INSUMOS' : label}</button>
+                <button type="button" onclick="moveOrder(${order.id}, '${status}')" class="w-full mt-4 py-4 rounded-xl ${stationState === 'listo' ? 'bg-emerald-500' : 'bg-white text-slate-950'} font-black text-base">${label}</button>
             </article>`;
         }
         function render() {
@@ -121,8 +118,8 @@
         }
         document.getElementById('sound-button').addEventListener('click', () => { soundEnabled = !soundEnabled; document.getElementById('sound-button').textContent = soundEnabled ? ' Sonido activo' : ' Activar sonido'; if (soundEnabled) SYRuntime.previewSound(document.getElementById('new-order-sound')).catch(() => {}); });
         document.getElementById('station-filter').addEventListener('change',e=>{activeStation=e.target.value;render();});
-        async function toggleAvailability(){const panel=document.getElementById('availability-panel');if(!panel.classList.contains('hidden')){panel.classList.add('hidden');return;}const{data,error}=await db.from('products').select('id,name,kitchen_station_id,is_available,inventory_available').eq('restaurant_id',access.restaurant_id).order('name');if(error)return alert('No se pudo actualizar la disponibilidad. Reintenta.');products=data||[];renderAvailability();panel.classList.remove('hidden');}
-        function renderAvailability(){document.getElementById('availability-list').innerHTML=products.map(p=>`<div class="flex justify-between items-center p-3 rounded-xl ${p.is_available && p.inventory_available !== false ? 'bg-slate-50' : 'bg-red-50'}"><div><b>${esc(p.name)}</b>${p.inventory_available === false ? '<p class="text-xs text-red-600">Sin insumos suficientes</p>' : ''}</div><button type="button" onclick="setAvailability('${p.id}',${!p.is_available})" class="text-xs font-black ${p.is_available?'text-red-500':'text-green-600'}">${p.is_available?'AGOTAR':'REACTIVAR'}</button></div>`).join('');}
+        async function toggleAvailability(){const panel=document.getElementById('availability-panel');if(!panel.classList.contains('hidden')){panel.classList.add('hidden');return;}const{data,error}=await db.from('products').select('id,name,kitchen_station_id,is_available').eq('restaurant_id',access.restaurant_id).order('name');if(error)return alert('No se pudo actualizar la disponibilidad. Reintenta.');products=data||[];renderAvailability();panel.classList.remove('hidden');}
+        function renderAvailability(){document.getElementById('availability-list').innerHTML=products.map(p=>`<div class="flex justify-between items-center p-3 rounded-xl ${p.is_available ? 'bg-slate-50' : 'bg-red-50'}"><div><b>${esc(p.name)}</b></div><button type="button" onclick="setAvailability('${p.id}',${!p.is_available})" class="text-xs font-black ${p.is_available?'text-red-500':'text-green-600'}">${p.is_available?'Marcar fuera de stock':'Marcar disponible'}</button></div>`).join('');}
         async function setAvailability(id,value){const{error}=await db.rpc('set_product_availability',{p_product_id:id,p_available:value});if(error)return alert(error.message);const p=products.find(x=>x.id===id);if(p)p.is_available=value;renderAvailability();}
         document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadOrders(); });
         window.addEventListener('pageshow', loadOrders);

@@ -12,13 +12,11 @@ function kitchen(){
  return {context,elements};
 }
 const base={id:1,order_id:1,status:'pendiente',service_type:'pickup',items:[{id:'p',nombre:'Plato',qty:1}],created_at:new Date().toISOString(),recommended_start_at:new Date().toISOString(),target_ready_at:new Date().toISOString(),predicted_prep_minutes:20,priority_override:0,minimum_samples:10,sample_count:0,missing_ingredients:[],untracked_products:0};
-test('shortage blocks start and explains exact ingredient deficit',()=>{
- const ui=kitchen();ui.context.order={...base,has_shortage:true,missing_ingredients:[{name:'Harina',shortage:1,unit:'kg'}]};
- const html=vm.runInContext('orderCard(order,0)',ui.context);assert.match(html,/disabled aria-disabled="true"/);assert.match(html,/Harina: faltan 1.000 kg/);assert.match(html,/ESPERANDO INSUMOS/);
-});
-test('ready resources allow preparation; missing recipes explicitly show partial tracking',()=>{
- const ui=kitchen();ui.context.order={...base,has_shortage:false,untracked_products:1};
- const html=vm.runInContext('orderCard(order,0)',ui.context);assert.doesNotMatch(html,/disabled aria-disabled/);assert.match(html,/Control parcial de insumos/);assert.match(html,/Calibrando tiempos/);
+test('accepted tickets start without ingredient or recipe restrictions',()=>{
+ const ui=kitchen();ui.context.order={...base,has_shortage:true,untracked_products:1};
+ const html=vm.runInContext('orderCard(order,0)',ui.context);
+ assert.doesNotMatch(html,/disabled aria-disabled|insumos|receta/i);
+ assert.match(html,/moveOrder/);
 });
 test('validation error is displayed without claiming a confidence interval',()=>{
  const ui=kitchen();ui.context.order={...base,has_shortage:false,model_ready:true,sample_count:12,mean_absolute_error:1.5};
