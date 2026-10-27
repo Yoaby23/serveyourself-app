@@ -18,7 +18,7 @@ const code=[...html.matchAll(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/g)].
 function waiterScreen(rows,{error=false,open=true}={}){
  const elements=new Map();const element=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',textContent:'',value:'',classList:{add(){},toggle(){},remove(){},contains(){return false;}},addEventListener(){}});return elements.get(id);};
  const alerts=[];let summaries=0;
- const context=vm.createContext({Map,Set,console,Number,setTimeout,clearTimeout,document:{getElementById:element,addEventListener(){}},window:{serveYourself:{supabase:{async rpc(name){if(name==='get_pos_shift_status')return {data:{is_open:open}};summaries++;return error?{error:{message:'Offline'}}:{data:rows};}},escapeHtml:v=>v},scrollTo(){},addEventListener(){}},alert:message=>alerts.push(message)});
+ const context=vm.createContext({Map,Set,console,Number,setTimeout,clearTimeout,document:{getElementById:element,addEventListener(){}},window:{serveYourself:{navigationIcon:()=>'<svg aria-hidden="true"></svg>',supabase:{async rpc(name){if(name==='get_pos_shift_status')return {data:{is_open:open}};summaries++;return error?{error:{message:'Offline'}}:{data:rows};}},escapeHtml:v=>v},scrollTo(){},addEventListener(){}},alert:message=>alerts.push(message)});
  vm.runInContext(code,context);
  vm.runInContext("access={restaurant_id:'restaurant-1'};tables=[{id:4,name:'Mesa 4'}];",context);
  return {context,elements,alerts,get summaries(){return summaries;}};
@@ -48,7 +48,7 @@ function customerScreen() {
  const code=[...html.matchAll(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]).join('\n').replace('conciliarRetornoMercadoPago().finally(() => inicializar());','');
  const elements=new Map();const make=id=>{if(!elements.has(id))elements.set(id,{id,textContent:'',innerHTML:'',value:'',dataset:{},attributes:{},classList:{add(){},remove(){},toggle(){}},setAttribute(k,v){this.attributes[k]=v;},removeAttribute(k){delete this.attributes[k];}});return elements.get(id);};
  const tabs=['explorar','favoritos','perfil'].map(id=>{const e=make('tab-'+id);e.dataset.customerTab=id;return e;});
- const context=vm.createContext({Map,Set,Date,console,Number,setTimeout,clearTimeout,SYRuntime:runtime,window:{serveYourself:{supabase:{},escapeHtml:v=>String(v),safeImageUrl:()=>''},addEventListener(){}},document:{body:{dataset:{}},getElementById:make,querySelectorAll:query=>query==='[data-customer-tab]'?tabs:[]}});
+ const context=vm.createContext({Map,Set,Date,console,Number,setTimeout,clearTimeout,SYRuntime:runtime,window:{serveYourself:{navigationIcon:()=>'<svg aria-hidden="true"></svg>',supabase:{},escapeHtml:v=>String(v),safeImageUrl:()=>''},addEventListener(){}},document:{body:{dataset:{}},getElementById:make,querySelectorAll:query=>query==='[data-customer-tab]'?tabs:[]}});
  vm.runInContext(code,context);vm.runInContext('cargarRestaurantes=async()=>{};cargarHistorialPedidos=async()=>{};',context);
  return {context,elements,tabs,html};
 }

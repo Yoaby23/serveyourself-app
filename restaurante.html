@@ -84,7 +84,7 @@
                 <input type="text" id="delivery-phone" maxlength="30" inputmode="tel" placeholder="Teléfono" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
                 <input type="text" id="delivery-address" maxlength="300" placeholder="Calle, número, colonia y ciudad" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
                 <input type="text" id="delivery-reference" maxlength="300" placeholder="Referencias (color, entre calles, timbre)" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
-                <button type="button" onclick="useMyLocation()" class="w-full py-3 rounded-2xl bg-blue-50 text-blue-700 text-xs font-black">📍 USAR MI UBICACIÓN</button>
+                <button type="button" onclick="useMyLocation()" class="w-full py-3 rounded-2xl bg-blue-50 text-blue-700 text-xs font-black"> USAR MI UBICACIÓN</button>
                 <div id="delivery-map" class="h-52 rounded-2xl overflow-hidden border"></div>
                 <label class="flex items-center gap-2 text-xs font-bold text-slate-500"><input id="save-address" type="checkbox"> Guardar esta dirección</label>
                 <div id="delivery-quote" class="p-4 bg-orange-50 text-orange-700 rounded-2xl text-sm font-bold">Selecciona el punto exacto en el mapa.</div>
@@ -310,7 +310,7 @@
                                 <div class="flex items-center gap-4 flex-1">
                                     ${imageUrl
                                         ? `<img src="${escapeHtml(imageUrl)}" alt="" class="w-16 h-16 rounded-2xl object-cover">`
-                                        : `<div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-xl">🍽️</div>`}
+                                        : `<div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-xl"><svg class="sy-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v7M3 3v5a3 3 0 0 0 6 0V3M6 11v10M18 3v18M18 3c-5 3-5 10 0 10"/></svg></div>`}
                                     <div>
                                         <h4 class="font-bold text-slate-900 text-sm leading-tight">${escapeHtml(prod.name)}</h4>
                                         <p class="${agotado ? 'text-slate-400' : 'text-orange-500'} font-black text-sm mt-1">

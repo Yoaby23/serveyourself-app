@@ -46,7 +46,7 @@
                     <input type="number" id="prod-price" placeholder="Precio" min="0.01" step="0.01" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold" required>
                     <input type="text" id="prod-category" placeholder="Categoría" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold" required>
                     <label class="block p-4 bg-orange-50 border border-orange-100 rounded-2xl text-sm font-bold text-orange-700 cursor-pointer">
-                        📷 Seleccionar fotografía
+                         Seleccionar fotografía
                         <input type="file" id="prod-file" accept="image/jpeg,image/png,image/webp,image/avif" class="hidden">
                     </label>
                     <button type="submit" id="btn-save-prod" class="w-full bg-slate-900 text-white font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest hover:bg-orange-500 transition-colors">Agregar</button>
@@ -86,7 +86,7 @@
                     <input id="cfg-lat" type="number" step="any" placeholder="Latitud" class="p-4 bg-slate-50 rounded-2xl text-sm font-bold">
                     <input id="cfg-lng" type="number" step="any" placeholder="Longitud" class="p-4 bg-slate-50 rounded-2xl text-sm font-bold">
                 </div>
-                <button type="button" onclick="usarUbicacionActual()" class="w-full py-3 bg-blue-50 text-blue-600 rounded-2xl font-black text-xs">📍 USAR MI UBICACIÓN ACTUAL</button>
+                <button type="button" onclick="usarUbicacionActual()" class="w-full py-3 bg-blue-50 text-blue-600 rounded-2xl font-black text-xs"> USAR MI UBICACIÓN ACTUAL</button>
                 <div class="border-t border-slate-100 pt-4 space-y-3">
                     <div><p class="text-[10px] font-black text-slate-400 uppercase">Tiempos iniciales de cocina</p><p class="text-xs text-slate-400 mt-1">El modelo inteligente usará estos valores mientras aprende de las primeras 5 comandas de cada servicio.</p></div>
                     <div class="grid grid-cols-2 gap-3">
@@ -205,7 +205,7 @@
                     </div>
                     <div class="flex items-center gap-3">
                         <input type="checkbox" ${p.is_available ? 'checked' : ''} onchange="toggleDisponibilidad('${p.id}', ${p.is_available})" class="w-4 h-4 accent-green-500">
-                        <button type="button" onclick="eliminarProducto('${p.id}')" class="text-slate-300">🗑️</button>
+                        <button type="button" onclick="eliminarProducto('${p.id}')" class="text-slate-300">Eliminar</button>
                     </div>
                 </div>
             `).join('');
@@ -262,7 +262,7 @@
             document.getElementById('cfg-online').checked = profile.payment_online ?? false;
             document.getElementById('cfg-online').disabled = !profile.mercado_pago_connected;
             document.getElementById('mp-status').innerText = profile.mercado_pago_connected
-                ? '✅ Cuenta de Mercado Pago conectada'
+                ? ' Cuenta de Mercado Pago conectada'
                 : 'Conecta tu cuenta para aceptar pagos en línea.';
             document.getElementById('mp-connect').classList.toggle('hidden', profile.mercado_pago_connected);
             document.getElementById('mp-disconnect').classList.toggle('hidden', !profile.mercado_pago_connected);
