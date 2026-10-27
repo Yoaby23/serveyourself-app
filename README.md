@@ -123,11 +123,11 @@ Ejecuta después:
 
 Esta migración agrega cuentas abiertas y divisibles, pagos parciales o combinados,
 propinas, turnos y cortes de caja, movimientos de efectivo, cancelaciones auditadas,
-estaciones de cocina, inventario por recetas, cupones, reservaciones y clientes
+estaciones de cocina, disponibilidad manual de productos, cupones, reservaciones y clientes
 frecuentes. Las nuevas pantallas son:
 
 - `caja.html`: turnos, precuentas, abonos, división, traslado y cancelación.
-- `inventario.html`: ingredientes, existencias, recetas y estaciones.
+- `inventario.html`: estaciones de cocina y asignación de productos (ruta histórica).
 - `reportes.html`: ventas, meseros, productos, caja y exportación CSV/PDF.
 - `clientes.html`: cupones, reservaciones y lealtad.
 
@@ -228,16 +228,12 @@ Para la lógica actual aplica también, después de las migraciones anteriores:
 
 `supabase/migrations/20261027010208_inventory_adjustment_precision.sql`
 
-La prioridad manual es estricta entre las comandas que pueden prepararse. Después se
-considera la hora recomendada de inicio, calculada con el tiempo estimado y la hora de
-recogida o llegada aproximada del repartidor. Una comanda sin insumos muestra el faltante
-y no puede comenzar. Cada ronda conserva su ticket y descuenta sus ingredientes una sola
-vez, aunque intervengan varias estaciones. Los productos sin receta se identifican como
-control parcial; hay que cargar ingredientes, existencias y recetas reales para activarlo.
-
-Las existencias no se reservan por tener una comanda en espera. La disponibilidad se
-verifica al pedir y nuevamente bajo bloqueo al comenzar: pedidos que compitan por el
-mismo stock pueden quedar esperando reposición. Un pago ya aprobado siempre se registra.
+Aplica finalmente `supabase/migrations/20261027212314_remove_ingredient_inventory.sql`.
+La disponibilidad depende únicamente de `products.is_available`: el restaurante marca
+cada producto disponible o fuera de stock. No existen ingredientes, recetas ni descuentos
+automáticos. Los pedidos nuevos validan disponibilidad en el servidor y las comandas
+ya aceptadas pueden continuar. La prioridad manual, los tiempos estimados, las estaciones
+y la planificación por hora de entrega siguen funcionando.
 
 Los tiempos iniciales se ajustan en **Configuración de restaurante**. El cliente puede
 elegir pickup inmediato o programado hasta con siete días de anticipación. No requiere

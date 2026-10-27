@@ -229,7 +229,7 @@ window.serveYourself = {
         if (owner || access.can_manage_delivery) features.push({ href: 'delivery.html', label: 'Delivery', icon: 'delivery', description: 'Despacho, repartidores y entregas.' });
         if (owner) features.push(
             { href: 'equipo.html', label: 'Personal y mesas', icon: 'people', description: 'Invitaciones, permisos y salón.' },
-            { href: 'inventario.html', label: 'Inventario', icon: 'products', description: 'Ingredientes, recetas y estaciones.' },
+            { href: 'inventario.html', label: 'Estaciones', icon: 'kitchen', description: 'Organiza cocina, barra y asignación de productos.' },
             { href: 'reportes.html', label: 'Reportes', icon: 'chart', description: 'Ventas y resultados del restaurante.' },
             { href: 'clientes.html', label: 'Clientes', icon: 'people', description: 'Promociones, reservas y lealtad.' },
             { href: 'qr.html', label: 'Menú QR', icon: 'grid', description: 'Imprime el acceso al menú público.' },

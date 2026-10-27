@@ -697,8 +697,6 @@ input[type='radio'] {
     .cashier-page input,
     .cashier-page select,
     .cashier-page textarea { font-size: 16px !important; }
-    .inventory-page #ingredient-form { grid-template-columns: 1fr; }
-    .inventory-page #ingredient-form > * { grid-column: auto; }
     .inventory-page #station-form { display: grid; grid-template-columns: minmax(0,1fr) 3.5rem; }
     .inventory-page #station-form button { grid-column: 1 / -1; min-height: 3rem; }
     .inventory-page input,
@@ -1089,8 +1087,6 @@ body.sy-has-bottom-nav .ready-order-alert { bottom: calc(6.5rem + env(safe-area-
 
 .sy-header-identity + .sy-restaurant-nav { display: none; }
 
-.kitchen-resource-warning { margin-top: .8rem; padding: .8rem; border: 1px solid #fca5a5; border-radius: .8rem; background: #450a0a; color: #fecaca; font-size: .85rem; }
-.kitchen-resource-note { color: #cbd5e1; font-size: .75rem; margin-top: .7rem; }
 .kitchen-card button:disabled { opacity: .55; cursor: not-allowed; }
 
 /* Shared visual language for symbols and secondary actions across every role. */
