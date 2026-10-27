@@ -216,13 +216,28 @@ Ejecuta al final:
 
 `supabase/migrations/024_ml_kitchen_priority.sql`
 
-La cola de Cocina aprende los minutos reales de preparación de cada restaurante y
-tipo de servicio. Durante las primeras cinco comandas usa los tiempos configurados;
-después entrena automáticamente una regresión con cantidad de productos, complejidad
-de la comanda y horario de alta demanda. El orden recomendado también considera la
-hora programada de pickup y la ubicación en vivo del repartidor para que delivery se
-termine cerca de su llegada. Los responsables de cocina pueden mantener, elevar,
-marcar urgente o posponer una comanda sin desactivar el aprendizaje.
+La cola utiliza tiempos configurados hasta contar con al menos diez muestras reales
+por restaurante y tipo de servicio. El modelo estima cantidad, variedad y horario pico
+sin sumar dos veces el mismo efecto. Se valida con el 20% más reciente de las muestras
+antes de utilizarlo y vuelve al tiempo configurado cuando el error es alto, faltan datos
+del horario o aparecen productos/cantidades no representados en el historial.
+
+Para la lógica actual aplica también, después de las migraciones anteriores:
+
+`supabase/migrations/20261027004452_kitchen_priority_inventory_model.sql`
+
+`supabase/migrations/20261027010208_inventory_adjustment_precision.sql`
+
+La prioridad manual es estricta entre las comandas que pueden prepararse. Después se
+considera la hora recomendada de inicio, calculada con el tiempo estimado y la hora de
+recogida o llegada aproximada del repartidor. Una comanda sin insumos muestra el faltante
+y no puede comenzar. Cada ronda conserva su ticket y descuenta sus ingredientes una sola
+vez, aunque intervengan varias estaciones. Los productos sin receta se identifican como
+control parcial; hay que cargar ingredientes, existencias y recetas reales para activarlo.
+
+Las existencias no se reservan por tener una comanda en espera. La disponibilidad se
+verifica al pedir y nuevamente bajo bloqueo al comenzar: pedidos que compitan por el
+mismo stock pueden quedar esperando reposición. Un pago ya aprobado siempre se registra.
 
 Los tiempos iniciales se ajustan en **Configuración de restaurante**. El cliente puede
 elegir pickup inmediato o programado hasta con siete días de anticipación. No requiere

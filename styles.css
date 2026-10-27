@@ -1082,3 +1082,7 @@ body.sy-has-bottom-nav .ready-order-alert { bottom: calc(6.5rem + env(safe-area-
 @media print { .sy-role-bottom-nav, .sy-customer-bottom-nav, .driver-bottom-nav { display: none !important; } body.sy-has-bottom-nav, body.sy-customer-page { padding-bottom: 0; } }
 
 .sy-header-identity + .sy-restaurant-nav { display: none; }
+
+.kitchen-resource-warning { margin-top: .8rem; padding: .8rem; border: 1px solid #fca5a5; border-radius: .8rem; background: #450a0a; color: #fecaca; font-size: .85rem; }
+.kitchen-resource-note { color: #cbd5e1; font-size: .75rem; margin-top: .7rem; }
+.kitchen-card button:disabled { opacity: .55; cursor: not-allowed; }
