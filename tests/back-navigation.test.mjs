@@ -8,3 +8,5 @@ function run(referrer,length){let back=0;const location={origin:'https://app.tes
 test('back returns to actual same-origin history',()=>{assert.equal(run('https://app.test/equipo.html',2).back,1);});
 test('external entry never sends the user outside the app',()=>{assert.deepEqual(run('https://external.test',4),{back:0,href:'funciones.html'});});
 test('direct entry and empty history use safe fallback',()=>{assert.equal(run('',1).href,'funciones.html');assert.equal(run('https://app.test/menu.html',1).back,0);});
+
+test('back skips authentication screens to avoid redirect loops',()=>{for(const page of ['index.html','registro.html','recuperar.html'])assert.equal(run('https://app.test/'+page,3).href,'funciones.html');});

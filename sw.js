@@ -1,7 +1,7 @@
 // Push failure must not prevent the app's own offline support from installing.
 try { importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js'); }
 catch (error) { console.warn('Push no disponible; soporte sin conexión activo.', error); }
-const CACHE = 'serveyourself-shell-v27';
+const CACHE = 'serveyourself-shell-v28';
 const SHELL = ['/index.html','/registro.html','/recuperar.html','/privacidad.html','/terminos.html','/eliminar-cuenta.html','/menu.html','/admin.html','/pos.html','/caja.html','/cocina.html','/delivery.html','/repartidor.html','/repartidor-registro.html','/delivery-tracking.html','/platform-admin.html','/funciones.html','/cuenta.html','/tailwind.generated.css','/styles.css','/runtime.js','/app.js','/app-config.js','/manifest.webmanifest','/app-icon.svg','/app-icon-192.png','/app-icon-512.png','/logo.png'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('serveyourself-shell-') && key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())));

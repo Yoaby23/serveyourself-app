@@ -210,8 +210,19 @@
             `).join('');
         }
 
-        window.toggleDisponibilidad = async (id, actual) => { await _supabase.from('products').update({ is_available: !actual }).eq('id', id); cargarProductos(); };
-        window.eliminarProducto = async (id) => { if (confirm("¿Borrar?")) { await _supabase.from('products').delete().eq('id', id); cargarProductos(); } };
+        window.toggleDisponibilidad = async (id, actual) => {
+            try { const { error } = await _supabase.from('products').update({ is_available: !actual }).eq('id', id).select('id').single();
+                if (error) throw error;
+            } catch { alert('No se pudo cambiar la disponibilidad. Inténtalo de nuevo.'); }
+            await cargarProductos();
+        };
+        window.eliminarProducto = async (id) => {
+            if (!confirm('¿Eliminar este producto del menú?')) return;
+            try { const { error } = await _supabase.from('products').delete().eq('id', id).select('id').single();
+                if (error) throw error;
+                await cargarProductos();
+            } catch { alert('No se pudo eliminar el producto. Inténtalo de nuevo.'); }
+        };
 
         document.getElementById('add-product-form').addEventListener('submit', async (e) => {
             e.preventDefault();
