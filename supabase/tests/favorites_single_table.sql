@@ -58,5 +58,13 @@ begin
  assert blocked,'closed account accepted another round';
  new_order:=public.create_pos_table_order(owner_id,items,'New sitting','dine_in',table_id,'cash',null,'QA Cliente');
  assert new_order->>'id'<>first_order->>'id','new sitting reused paid account';
+ -- Revoking staff access must hide even previously created kitchen rounds.
+ execute 'reset role';
+ update public.restaurant_staff set is_active=false where user_id=first_waiter;
+ execute 'set local role authenticated';
+ perform set_config('request.jwt.claim.sub',first_waiter::text,true);
+ assert (select count(*)=0 from public.kitchen_tickets where restaurant_id=owner_id),'Inactive waiter retained kitchen access';
+ assert (select count(*)=0 from public.kitchen_ticket_station_statuses where restaurant_id=owner_id),'Inactive waiter retained station access';
+ execute 'reset role';
  raise notice 'Favorites and single table account database checks passed';
 end;$$;

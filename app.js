@@ -161,7 +161,11 @@ window.serveYourself = {
 
     goBack(fallback = 'index.html') {
         let internalPrevious=false;
-        try { internalPrevious=Boolean(document.referrer)&&new URL(document.referrer).origin===window.location.origin; } catch {}
+        try {
+            const previous=new URL(document.referrer);
+            const page=previous.pathname.split('/').pop()||'index.html';
+            internalPrevious=previous.origin===window.location.origin && !['index.html','registro.html','recuperar.html'].includes(page);
+        } catch {}
         if (internalPrevious && window.history.length > 1) window.history.back();
         else window.location.href = fallback;
     },

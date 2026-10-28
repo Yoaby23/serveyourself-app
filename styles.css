@@ -1105,3 +1105,14 @@ button { text-transform: none; }
 .sy-settings-card, .sy-feature-card { border-radius: 1.25rem; }
 .sy-page-header h1 { font-weight: 800; letter-spacing: -.025em; }
 .sy-global-back span:first-child { font-size: 1.15rem; line-height: 1; }
+
+/* Consistent secondary actions, long names and keyboard navigation. */
+.sy-action-danger { color: #b91c1c; font-size: .875rem; font-weight: 700; min-height: 44px; padding: .5rem .75rem; border-radius: .75rem; }
+.sy-action-danger:hover { background: #fef2f2; }
+.sy-feature-card, .sy-settings-card, .sy-account-identity { overflow-wrap: anywhere; min-width: 0; }
+#table-list b, #staff-list p { overflow-wrap: anywhere; min-width: 0; }
+#table-list button { flex-shrink: 0; }
+button:focus-visible, a[href]:focus-visible { outline: 3px solid #c2410c; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
