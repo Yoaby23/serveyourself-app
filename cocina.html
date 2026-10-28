@@ -77,7 +77,7 @@
         function orderCard(order, position) {
             const stationState = activeStation === 'all' ? order.status : (order.kitchen_ticket_station_statuses?.find(s=>s.station_key===activeStation)?.status || order.status);
             const [status, label] = nextStatus[stationState];
-            const location = order.service_type === 'dine_in' ? (tables.find(table=>Number(table.id)===Number(order.table_id))?.name || 'Mesa') : order.service_type === 'delivery' ? ' Delivery' : 'Para llevar';
+            const location = order.service_type === 'dine_in' ? (tables.find(table=>Number(table.id)===Number(order.table_id))?.name || 'Mesa') : order.service_type === 'delivery' ? ' Delivery' : 'Para llevar' + (order.pickup_name ? ' · '+order.pickup_name : '');
             const roundItems = order.items;
             const visibleItems = activeStation === 'all' ? roundItems : roundItems.filter(item => String(item.station_id || products.find(p=>p.id===item.id)?.kitchen_station_id || 'general') === activeStation);
             const startIn = minutesUntil(order.recommended_start_at), urgent = order.priority_override > 0 || startIn <= 0;

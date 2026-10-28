@@ -18,9 +18,9 @@ begin
  items:=jsonb_build_array(jsonb_build_object('id',product_id,'qty',1));
  execute 'set local role authenticated';
  perform set_config('request.jwt.claim.sub',first_waiter::text,true);
- first_order:=public.create_pos_table_order(owner_id,items,'First round','dine_in',table_id,'cash',null);
+ first_order:=public.create_pos_table_order(owner_id,items,'First round','dine_in',table_id,'cash',null,'QA Cliente');
  perform set_config('request.jwt.claim.sub',second_waiter::text,true);
- second_order:=public.create_pos_table_order(owner_id,items,'Second round','dine_in',table_id,'cash',null);
+ second_order:=public.create_pos_table_order(owner_id,items,'Second round','dine_in',table_id,'cash',null,'QA Cliente');
  assert first_order->>'id'=second_order->>'id','second waiter created another account';
  assert (second_order->>'total')::numeric=200,'round totals not accumulated';
  execute 'reset role'; -- Inspect fixtures as administrator; waiters cannot read all kitchen tickets.
@@ -54,9 +54,9 @@ begin
  update public.orders set payment_status='approved' where id=(first_order->>'id')::bigint;
  perform set_config('request.jwt.claim.sub',first_waiter::text,true);
  blocked:=false;
- begin perform public.create_pos_table_order(owner_id,items,'Stale round','dine_in',table_id,'cash',(first_order->>'id')::bigint);exception when others then blocked:=true;end;
+ begin perform public.create_pos_table_order(owner_id,items,'Stale round','dine_in',table_id,'cash',(first_order->>'id')::bigint,'QA Cliente');exception when others then blocked:=true;end;
  assert blocked,'closed account accepted another round';
- new_order:=public.create_pos_table_order(owner_id,items,'New sitting','dine_in',table_id,'cash',null);
+ new_order:=public.create_pos_table_order(owner_id,items,'New sitting','dine_in',table_id,'cash',null,'QA Cliente');
  assert new_order->>'id'<>first_order->>'id','new sitting reused paid account';
  raise notice 'Favorites and single table account database checks passed';
 end;$$;

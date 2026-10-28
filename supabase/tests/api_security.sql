@@ -5,7 +5,7 @@ begin
   assert not has_function_privilege('authenticated','public.'||signature,'EXECUTE'), 'Legacy function still callable: '||signature;
   assert not has_function_privilege('anon','public.'||signature,'EXECUTE'), 'Anonymous execution: '||signature;
  end loop;
- assert has_function_privilege('authenticated','public.create_pos_table_order(uuid,jsonb,text,text,bigint,text,bigint)','EXECUTE');
+ assert has_function_privilege('authenticated','public.create_pos_table_order(uuid,jsonb,text,text,bigint,text,bigint,text)','EXECUTE');
  assert has_function_privilege('authenticated','public.create_customer_order_once(uuid,jsonb)','EXECUTE');
  assert not has_any_column_privilege('authenticated','public.orders','UPDATE'), 'Orders still directly writable';
  execute 'set local role authenticated';
