@@ -14,6 +14,6 @@ export function corsHeaders(request: Request): Record<string, string> {
 export function jsonResponse(request: Request, body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders(request), 'Content-Type': 'application/json' }
+    headers: { ...corsHeaders(request), 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
   });
 }

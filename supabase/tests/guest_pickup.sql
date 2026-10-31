@@ -1,0 +1,90 @@
+-- Execute in a transaction and roll back; no real customers or payments are used.
+do $$
+declare owner_id uuid:=gen_random_uuid(); other_id uuid:=gen_random_uuid(); product_id uuid; items jsonb;
+ first_order jsonb; repeated jsonb; blocked boolean; n integer;
+ token text:=repeat('a',64); client text:=repeat('b',64);
+begin
+ insert into auth.users(id,email,raw_user_meta_data) values
+ (owner_id,'qa-'||owner_id||'@example.invalid','{"role":"negocio","business_name":"Guest QA"}'),
+ (other_id,'qa-'||other_id||'@example.invalid','{"full_name":"Other"}');
+ insert into public.products(restaurant_id,name,price,is_available) values(owner_id,'QA pickup meal',25,true) returning id into product_id;
+ items:=jsonb_build_array(jsonb_build_object('id',product_id,'qty',2,'price',0.01));
+ assert not (select guest_pickup_enabled from public.profiles where id=owner_id),'Guest mode enabled by default';
+ assert not has_table_privilege('anon','public.guest_checkout_requests','SELECT');
+ assert not has_table_privilege('authenticated','public.guest_checkout_requests','SELECT');
+ assert not has_function_privilege('anon','public.create_guest_pickup_order(text,text,uuid,jsonb,text)','EXECUTE');
+ assert not has_function_privilege('authenticated','public.create_guest_pickup_order(text,text,uuid,jsonb,text)','EXECUTE');
+ execute 'set local role service_role';
+ blocked:=false;
+ begin perform public.create_guest_pickup_order(token,client,owner_id,items,'Ana');exception when raise_exception then blocked:=true;end;
+ assert blocked,'Disabled restaurant accepted guest order';
+ update public.profiles set guest_pickup_enabled=true,payment_online=true,mercado_pago_connected=true,open_time=null,close_time=null where id=owner_id;
+ update public.profiles set accepting_orders=false where id=owner_id;
+ blocked:=false;
+ begin perform public.create_guest_pickup_order(token,client,owner_id,items,'Ana');exception when raise_exception then blocked:=true;end;
+ assert blocked,'Restaurant not accepting orders accepted guest order';
+ update public.profiles set accepting_orders=true,payment_online=false where id=owner_id;
+ blocked:=false;
+ begin perform public.create_guest_pickup_order(token,client,owner_id,items,'Ana');exception when raise_exception then blocked:=true;end;
+ assert blocked,'Restaurant without online payment accepted guest order';
+ update public.profiles set payment_online=true where id=owner_id;
+ blocked:=false;
+ begin perform public.create_guest_pickup_order(token,client,owner_id,jsonb_build_array(jsonb_build_object('id',product_id,'qty',0)),'Ana');exception when raise_exception then blocked:=true;end;
+ assert blocked,'Zero quantity accepted';
+ blocked:=false;
+ begin perform public.create_guest_pickup_order(token,client,owner_id,items,'  ');exception when raise_exception then blocked:=true;end;
+ assert blocked,'Blank pickup name accepted';
+ blocked:=false;
+ begin perform public.create_guest_pickup_order(token,client,owner_id,items||items,'Ana');exception when raise_exception then blocked:=true;end;
+ assert blocked,'Duplicate product entries accepted';
+ update public.products set is_available=false where id=product_id;
+ blocked:=false;
+ begin perform public.create_guest_pickup_order(token,client,owner_id,items,'Ana');exception when raise_exception then blocked:=true;end;
+ assert blocked,'Sold-out product accepted';
+ update public.products set is_available=true where id=product_id;
+ first_order:=public.create_guest_pickup_order(token,client,owner_id,items,' Ana ');
+ assert (first_order->>'total')::numeric=50,'Client price trusted';
+ assert first_order->>'pickup_name'='Ana';
+ assert first_order->>'customer_id' is null,'Guest created a fake customer';
+ assert first_order->>'payment_status'='pending' and first_order->>'payment_method'='mercado_pago';
+ assert (select count(*)=0 from public.kitchen_tickets where order_id=(first_order->>'id')::bigint),'Unpaid guest reached kitchen';
+ repeated:=public.create_guest_pickup_order(token,client,owner_id,items,'Ana');
+ assert repeated->>'id'=first_order->>'id','Retry duplicated order';
+ blocked:=false;
+ begin perform public.create_guest_pickup_order(token,client,owner_id,items,'Different');exception when raise_exception then blocked:=true;end;
+ assert blocked,'Token reused for another payload';
+ -- Forged payment metadata cannot authorize kitchen work.
+ blocked:=false;
+ begin perform public.reconcile_order_payment((first_order->>'id')::bigint,jsonb_build_object('id','qa-payment','external_reference',first_order->>'id','currency_id','MXN','transaction_amount',1,'status','approved','date_last_updated',now()));exception when raise_exception then blocked:=true;end;
+ assert blocked,'Wrong payment amount accepted';
+ perform public.reconcile_order_payment((first_order->>'id')::bigint,jsonb_build_object('id','qa-payment-'||owner_id,'external_reference',first_order->>'id','currency_id','MXN','transaction_amount',50,'status','approved','date_last_updated',now()));
+ assert (select count(*)=1 from public.kitchen_tickets where order_id=(first_order->>'id')::bigint),'Paid guest missing kitchen ticket';
+ perform public.reconcile_order_payment((first_order->>'id')::bigint,jsonb_build_object('id','qa-payment-'||owner_id,'external_reference',first_order->>'id','currency_id','MXN','transaction_amount',50,'status','approved','date_last_updated',now()));
+ assert (select count(*)=1 from public.kitchen_tickets where order_id=(first_order->>'id')::bigint),'Duplicate webhook duplicated kitchen ticket';
+ -- Active request count is bounded and idempotent retries are not charged again.
+ for n in 1..9 loop
+  perform public.create_guest_pickup_order(lpad(to_hex(n),64,'0'),client,owner_id,items,'Ana');
+ end loop;
+ blocked:=false;
+ begin perform public.create_guest_pickup_order(repeat('c',64),client,owner_id,items,'Ana');exception when raise_exception then blocked:=true;end;
+ assert blocked,'Client request limit bypassed';
+ repeated:=public.create_guest_pickup_order(token,client,owner_id,items,'Ana');
+ assert repeated->>'id'=first_order->>'id','Rate limit blocked safe retry';
+ update public.profiles set guest_pickup_enabled=false where id=owner_id;
+ blocked:=false;
+ begin perform public.create_guest_pickup_order(repeat('d',64),repeat('e',64),owner_id,items,'Ana');exception when raise_exception then blocked:=true;end;
+ assert blocked,'Disabled guest mode accepted new order';
+ execute 'reset role';
+ perform set_config('request.jwt.claim.sub',other_id::text,true);
+ execute 'set local role authenticated';
+ update public.profiles set guest_pickup_enabled=true where id=owner_id;
+ get diagnostics n=row_count;
+ assert n=0,'Another user changed restaurant setting';
+ assert (select count(*)=0 from public.orders where id=(first_order->>'id')::bigint),'Guest order leaked to another user';
+ execute 'reset role';
+ perform set_config('request.jwt.claim.sub',owner_id::text,true);
+ execute 'set local role authenticated';
+ update public.profiles set guest_pickup_enabled=true where id=owner_id;
+ assert (select guest_pickup_enabled from public.public_qr_restaurants where id=owner_id),'Owner cannot enable guest pickup';
+ execute 'reset role';
+end $$;
