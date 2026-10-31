@@ -1132,7 +1132,7 @@ button:focus-visible, a[href]:focus-visible { outline: 3px solid #c2410c; outlin
 #guest-pay, #resume-payment { background: #0f172a; color: #fff; }
 #guest-pay { width: 100%; }
 #guest-checkout label { display: block; font-weight: 700; margin-top: 1rem; }
-#guest-checkout input { width: 100%; padding: .75rem; border: 1px solid #cbd5e1; border-radius: .75rem; margin: .4rem 0; }
+#guest-checkout input, #guest-checkout select { width: 100%; padding: .75rem; border: 1px solid #cbd5e1; border-radius: .75rem; margin: .4rem 0; }
 #cart-total { font-weight: 800; margin: 1rem 0; }
 .sy-guest-cart-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; border-bottom: 1px solid #e2e8f0; padding: .75rem 0; }
 .sy-guest-cart-row > span { flex: 1 1 120px; overflow-wrap: anywhere; }

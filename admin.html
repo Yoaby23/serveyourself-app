@@ -112,7 +112,7 @@
                     <label class="flex gap-3 text-sm font-bold"><input id="cfg-transfer" type="checkbox" class="accent-orange-500"> Transferencia</label>
                     <label class="flex gap-3 text-sm font-bold"><input id="cfg-online" type="checkbox" class="accent-orange-500"> Mercado Pago</label>
                     <label class="flex gap-3 text-sm font-bold"><input id="cfg-guest-pickup" type="checkbox" class="accent-orange-500"> Pedidos para llevar sin cuenta</label>
-                    <p class="text-xs text-slate-500">Permite pedir desde el menú público con nombre y pago en Mercado Pago. Cocina recibe el pedido cuando el pago se confirma.</p>
+                    <p class="text-xs text-slate-500">Permite pedir desde el menú público con nombre y pago en efectivo en caja o Mercado Pago. Cocina recibe el pedido cuando se confirma el pago.</p>
                     <div id="mp-status-card" class="p-4 rounded-2xl border border-slate-100 bg-slate-50">
                         <p id="mp-status" class="text-xs font-black text-slate-600">Consultando Mercado Pago...</p>
                         <button id="mp-connect" type="button" onclick="conectarMercadoPago()" class="w-full mt-3 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase">Conectar Mercado Pago</button>
@@ -272,8 +272,8 @@
             document.getElementById('cfg-cash').checked = profile.payment_cash ?? true;
             document.getElementById('cfg-transfer').checked = profile.payment_transfer ?? false;
             document.getElementById('cfg-online').checked = profile.payment_online ?? false;
-            document.getElementById('cfg-guest-pickup').checked = Boolean(profile.guest_pickup_enabled && profile.mercado_pago_connected && profile.payment_online);
-            document.getElementById('cfg-guest-pickup').disabled = !profile.mercado_pago_connected;
+            document.getElementById('cfg-guest-pickup').checked = Boolean(profile.guest_pickup_enabled && (profile.payment_cash || (profile.mercado_pago_connected && profile.payment_online)));
+            document.getElementById('cfg-guest-pickup').disabled = false;
             document.getElementById('cfg-online').disabled = !profile.mercado_pago_connected;
             document.getElementById('mp-status').innerText = profile.mercado_pago_connected
                 ? ' Cuenta de Mercado Pago conectada'
@@ -338,7 +338,7 @@
                 bank_account_holder: document.getElementById('cfg-holder').value.trim() || null,
                 bank_clabe: clabe || null
             };
-            if (updates.guest_pickup_enabled && (!updates.payment_online || !currentProfile.mercado_pago_connected)) { alert('Activa Mercado Pago para permitir pedidos sin cuenta.'); return; }
+            if (updates.guest_pickup_enabled && !updates.payment_cash && !(updates.payment_online && currentProfile.mercado_pago_connected)) { alert('Activa efectivo o Mercado Pago para permitir pedidos sin cuenta.'); return; }
             if (!updates.payment_cash && !updates.payment_transfer && !updates.payment_online) {
                 alert('Activa por lo menos un método de pago.'); return;
             }

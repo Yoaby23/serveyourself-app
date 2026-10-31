@@ -1,30 +1,41 @@
 # Pedidos para llevar sin cuenta
 
-El propietario activa **Pedidos para llevar sin cuenta** en Configuración del restaurante, junto a Mercado Pago. La opción está apagada por defecto. Se requieren Mercado Pago conectado, pagos en línea activos, restaurante aceptando pedidos y horario abierto. El menú público/QR conserva su consulta sin cuenta aunque esta opción esté desactivada.
+El propietario activa **Pedidos para llevar sin cuenta** en Configuración del restaurante. Debe habilitar efectivo o Mercado Pago (este último requiere cuenta conectada). La opción está apagada por defecto; las preferencias existentes no se reinician. El menú público muestra únicamente las formas de pago habilitadas y sigue siendo consultable aunque no se permita pedir.
 
-## Flujo
+## Flujo del cliente
 
-1. El visitante agrega productos en `menu-publico.html?id=RESTAURANTE`, indica nombre para recoger y continúa al pago. No se crea un usuario de Auth ni un perfil ficticio.
-2. El navegador guarda una clave aleatoria de 256 bits antes de solicitar el pedido. El servidor almacena solo su hash, valida disponibilidad/cantidades y calcula el total desde los precios de la base de datos. El pedido es exclusivamente online/pickup/Mercado Pago, inicialmente pendiente.
-3. El servicio de preferencias existente comprueba la sesión del cliente autenticado o la clave privada del pedido invitado. Reutiliza preferencias existentes y la clave de idempotencia por pedido. Los pedidos autenticados y de delivery mantienen su flujo.
-4. El webhook existente verifica la firma y consulta el pago con Mercado Pago. La referencia, importe y moneda deben corresponder al pedido. Solo al aprobarlo aparece una comanda en cocina. Una URL de regreso que diga `payment=success` no confirma nada por sí misma.
-5. La pantalla pública muestra el estado con sondeo y actualización manual. El acceso privado dura siete días, puede copiarse y utiliza el fragmento URL (no se envía como query ni al proveedor). El navegador conserva también recibos por número de pedido para regresar a pagos anteriores sin confundirlos con el último carrito.
+1. Agrega productos en `menu-publico.html?id=RESTAURANTE`, indica su nombre y elige forma de pago. No se crea un usuario ni un perfil ficticio.
+2. El navegador guarda una clave aleatoria de 256 bits antes de solicitar el pedido. El servidor almacena su hash, comprueba horario, disponibilidad y cantidades, y calcula el total desde los precios de la base de datos. El pedido comienza pendiente, con `payment_before_kitchen=true`.
+3. **Efectivo:** permanece en la pantalla del pedido con la indicación de pasar a caja. No abre Mercado Pago y no crea ninguna comanda todavía. El cajero encuentra el pedido por número/nombre en las cuentas pendientes, registra el importe completo y el efectivo recibido. El sistema calcula cambio, registra el pago en el turno abierto y crea una sola comanda. Se utiliza el mismo RPC y formulario de cobro; el invitado no puede cambiar su estado de pago.
+4. **Mercado Pago:** el servicio de preferencias verifica la sesión del cliente o el acceso privado del invitado. El webhook comprueba firma, referencia, importe y moneda antes de aprobar y generar la comanda. `payment=success` en la URL no confirma el pago.
+5. El cliente consulta el estado con sondeo o actualización manual. Puede copiar su acceso privado, válido por siete días. Los recibos se conservan en el navegador por número de pedido, evitando confundir el regreso de un pago anterior con el carrito más reciente.
 
-El pago pendiente vence en 20 minutos. Desactivar la opción impide pedidos nuevos; no invalida pedidos ya iniciados ni accesos de seguimiento. El cierre/stock se valida al crear el pedido; no se descarta un pedido ya aceptado porque el producto se marque agotado después. Mercado Pago puede pedir datos propios para procesar el pago, aunque ServeYourself no exija registro.
+El pago en línea vence en 20 minutos; el efectivo no utiliza ese vencimiento. Desactivar la opción impide solicitudes nuevas, pero no borra las existentes. Los pedidos de efectivo ya aceptados se pueden cobrar aunque después se desactive ese método. Un cambio de disponibilidad no descarta automáticamente pedidos ya aceptados.
+
+## Corte de caja
+
+**Cerrar turno** cancela automáticamente los pedidos para llevar sin ningún pago registrado, anteriores al inicio del cierre, de ese restaurante: solicitudes del menú público (efectivo/Mercado Pago), otros pedidos web sin pagar y cuentas POS para llevar sin abonos. Desaparecen de los pendientes y sus comandas, si existían, quedan canceladas.
+
+No se borran físicamente: se conserva la orden y un evento de auditoría vinculado al turno. El acceso privado muestra «Pedido cancelado». **Corte previo / imprimir** no cancela nada. Un nuevo intento de cierre sobre un turno cerrado no vuelve a cancelar pedidos.
+
+Los pedidos pagados o a crédito se conservan. Las cuentas POS con abonos pendientes o mesas abiertas bloquean el cierre hasta liquidarse o resolverse. Un cierre fallido revierte todas las cancelaciones de esa operación. El efectivo cobrado a invitados se incluye en ventas, efectivo esperado y diferencia del turno.
+
+Si Mercado Pago confirma un pago después de que el corte canceló su pedido, la conciliación transaccional devuelve `refund_required`. El webhook tramita el reembolso idempotente existente, incluso si había leído el pedido antes del corte. No lo reactiva ni lo manda a cocina. Si falla el proveedor, devuelve error para permitir reintentar; no se anuncia un reembolso completado sin confirmación.
 
 ## Seguridad y recuperación
 
-- `guest_checkout_requests` tiene RLS y ninguna concesión a anon/authenticated. La función SQL de creación solo es ejecutable por service_role. La vista pública conserva únicamente SELECT para clientes.
-- Los servicios Edge públicos validan el cuerpo y la clave; cambiar únicamente orderId no autoriza acceso. No se exponen correo, credenciales del comercio ni datos de otros compradores.
-- El mismo token y payload reutiliza el pedido. Otro payload con el mismo token se rechaza. Se bloquea el doble toque en la interfaz y una respuesta ambigua permite reintentar la misma solicitud.
-- Hay límites transaccionales: 10 pedidos nuevos por huella de dirección en 20 minutos y 100 pagos pendientes por restaurante en esa ventana. La dirección depende del encabezado proporcionado por el proxy; esto es un límite básico, no una protección completa contra bots, proxies distribuidos o abuso. Los reintentos idempotentes no consumen nuevas solicitudes.
-- Las respuestas no se almacenan en caché. El acceso privado es una credencial: quien lo tenga puede ver el nombre, contenido, total y estado de ese pedido y retomar su pago pendiente. No debe compartirse.
-- El endpoint de preferencias valida internamente usuario JWT o acceso invitado; por eso verify_jwt del gateway está desactivado. El resto de funciones conserva su configuración.
+- `guest_checkout_requests` tiene RLS y ninguna concesión a anon/authenticated. Las dos firmas de creación son exclusivas de service_role; la firma antigua delega en la nueva con Mercado Pago para clientes almacenados en caché.
+- El token se guarda como hash en servidor y se comparte mediante fragmento URL, no como query ni con el proveedor. Es una credencial: permite consultar y retomar únicamente ese pedido; no debe compartirse.
+- Precios, pago aprobado y acceso a cocina no se aceptan del navegador. El método elegido se valida contra la configuración. Una repetición con el mismo token y payload reutiliza el pedido; cambiar el método con ese token se rechaza.
+- Solo personal autorizado para caja cobra, con turno abierto, efectivo suficiente e importe completo en pedidos invitados. Los dobles envíos no duplican pagos ni comandas.
+- Los pedidos sin customer_id no autorizan a extraños a cancelarlos. La cancelación del invitado pendiente está permitida al dueño o caja del restaurante; un pedido ya pagado requiere resolver el reembolso.
+- Límites básicos: 10 solicitudes nuevas por huella de dirección en 20 minutos y 100 pendientes por restaurante en esa ventana. La dirección depende del proxy; no constituye una defensa completa contra bots o proxies distribuidos.
+- Respuestas Edge sin caché. El endpoint de preferencias autentica internamente por JWT de usuario o acceso privado; no concede acceso por conocer el número del pedido.
 
 ## Validación
 
-76 pruebas Node aprobadas: incluyen 12 pruebas del acceso/pago y 7 del menú invitado y configuración. Se ejecutan handlers reales con dependencias del proveedor simuladas; no son cobros reales.
+87 pruebas Node aprobadas, incluidas selección de efectivo, recuperación, tarjetas de caja, bloqueos de corte y reembolso después del cierre. Los handlers del proveedor se prueban con dependencias simuladas.
 
-6 suites SQL con rollback aprobadas: permisos del catálogo/API, favoritos/cuenta compartida, cocina, fiabilidad de pagos y guest_pickup. Esta última comprueba opción apagada, falta de pago online, nombre vacío, cantidad cero, agotados, precio manipulado, idempotencia, aislamiento, límite de solicitudes y una sola comanda después de confirmación válida simulada.
+7 suites SQL con rollback aprobadas: catalog_security, api_security, favorites_single_table, kitchen_priority_inventory, qa_reliability, guest_pickup y guest_cash_and_cut. La última prueba permisos reales, caja cerrada, pago completo/cambio, no duplicación, corte con fuentes mixtas, conservación de abonos/pagados y rechazo de una aprobación tardía que intentaría reactivar un pedido.
 
-No se ha realizado un cobro real ni un recorrido de extremo a extremo con una cuenta de pruebas de Mercado Pago. Esa aceptación requiere un comercio conectado y un pago de prueba; no se inventa una confirmación del proveedor. La opción queda apagada para todos los comercios existentes hasta que el propietario la active.
+No se han realizado cobros reales, reembolsos reales ni una prueba física de entrega de efectivo. Falta la aceptación por rol/dispositivo y la integración completa con una cuenta de prueba de Mercado Pago. Los fixtures de SQL se revierten al finalizar.

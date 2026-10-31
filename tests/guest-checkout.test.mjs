@@ -70,3 +70,11 @@ test('guest creation sends only validated payload fields and hashes capabilities
  const f=await setup({file:'guest-pickup'});const response=await f.request({action:'create',token,restaurantId:'restaurant',items:[{id:'p',qty:2}],name:'Ana',payment_status:'approved',total:1});assert.equal(response.status,200);
  const call=f.calls.find(c=>c.rpc);assert.equal(call.args.p_token_hash,await sha256(token));assert.equal(call.args.p_name,'Ana');assert.equal(call.args.payment_status,undefined);assert.equal(call.args.total,undefined);assert.equal(response.headers.get('cache-control'),'no-store');
 });
+
+test('cash guest request cannot create a Mercado Pago preference',async()=>{
+ const f=await setup({order:{...freshOrder(),payment_method:'cash'}});assert.equal((await f.request({orderId:42,guestToken:token})).status,409);assert.equal(f.provider.length,0);
+});
+test('guest endpoint sends the selected cash method to the protected creation RPC',async()=>{
+ const f=await setup({file:'guest-pickup'});await f.request({action:'create',token,restaurantId:'restaurant',items:[{id:'p',qty:2}],name:'Ana',paymentMethod:'cash'});
+ assert.equal(f.calls.find(c=>c.rpc).args.p_payment_method,'cash');
+});

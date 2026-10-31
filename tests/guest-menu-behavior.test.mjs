@@ -5,12 +5,12 @@ import vm from 'node:vm';
 const code=fs.readFileSync(new URL('../guest-menu.js',import.meta.url),'utf8');
 const token='a'.repeat(64), older='b'.repeat(64);
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
-async function screen({enabled=true,query='',stored={},storageFails=false,createFails=false,pauseCreate=false}={}){
+async function screen({enabled=true,query='',stored={},storageFails=false,createFails=false,pauseCreate=false,paymentMethod='mercado_pago',cashEnabled=false,onlineEnabled=true,orderStatus='pendiente',paymentStatus='pending'}={}){
  const elements=new Map(),calls=[],redirects=[];const storage=new Map(Object.entries(stored));let release;
  const gate=new Promise(resolve=>release=resolve);
  const element=id=>{if(!elements.has(id))elements.set(id,{value:'Ana',textContent:'',innerHTML:'',hidden:false,disabled:false,listeners:{},addEventListener(name,fn){this.listeners[name]=fn;}});return elements.get(id);};
- const restaurant={id:'rest',business_name:'Test',guest_pickup_enabled:enabled,accepting_orders:true};
- const order={id:42,restaurant_id:'rest',pickup_name:'Ana',items:[{nombre:'Comida',price:25,qty:1}],total:25,status:'pendiente',payment_status:'pending'};
+ const restaurant={id:'rest',business_name:'Test',guest_pickup_enabled:enabled,accepting_orders:true,payment_cash:cashEnabled,payment_online:onlineEnabled};
+ const order={id:42,restaurant_id:'rest',pickup_name:'Ana',items:[{nombre:'Comida',price:25,qty:1}],total:25,status:orderStatus,payment_status:paymentStatus,payment_method:paymentMethod};
  const db={from(name){const q={select(){return this;},eq(){return this;},order(){return this;},single:async()=>({data:restaurant}),then(resolve){resolve({data:[{id:'p',name:'Comida',price:25,category:'Comida'}]});}};return q;},functions:{async invoke(name,{body}){
   calls.push({name,body});
   if(body.action==='create'){if(pauseCreate)await gate;if(createFails)return {error:{message:'offline'}};return {data:{order,expired:false}};}
@@ -46,9 +46,22 @@ test('returning to an older payment uses that receipt instead of the latest cart
 test('guest setting reflects effective payment availability after disconnect',()=>{
  const html=fs.readFileSync(new URL('../admin.html',import.meta.url),'utf8');
  const method=html.slice(html.indexOf('        function cargarConfiguracion('),html.indexOf('        function usarUbicacionActual'));
- for(const [connected,online,expected] of [[false,true,false],[true,false,false],[true,true,true]]){
+ for(const [connected,online,cash,expected] of [[false,true,false,false],[true,false,false,false],[true,true,false,true],[false,false,true,true]]){
   const elements=new Map();const get=id=>{if(!elements.has(id))elements.set(id,{classList:{toggle(){}}});return elements.get(id);};
-  vm.runInNewContext(method+'cargarConfiguracion(profile)',{document:{getElementById:get},profile:{guest_pickup_enabled:true,mercado_pago_connected:connected,payment_online:online}});
-  assert.equal(get('cfg-guest-pickup').checked,expected);assert.equal(get('cfg-guest-pickup').disabled,!connected);
+  vm.runInNewContext(method+'cargarConfiguracion(profile)',{document:{getElementById:get},profile:{guest_pickup_enabled:true,mercado_pago_connected:connected,payment_online:online,payment_cash:cash}});
+  assert.equal(get('cfg-guest-pickup').checked,expected);assert.equal(get('cfg-guest-pickup').disabled,false);
  }
+});
+
+test('cash pickup saves a pending request without opening Mercado Pago',async()=>{
+ const ui=await screen({paymentMethod:'cash',cashEnabled:true,onlineEnabled:false});ui.add();ui.pay();await tick();
+ assert.equal(ui.calls.length,1);assert.equal(ui.calls[0].body.paymentMethod,'cash');assert.equal(ui.redirects.length,0);
+ assert.match(ui.elements.get('receipt-details').innerHTML,/Pendiente de pago en caja/);assert.equal(ui.elements.get('resume-payment').hidden,true);
+});
+test('cash choice is only rendered when the restaurant accepts it',async()=>{
+ const ui=await screen();assert.ok(!ui.elements.get('guest-payment-method').innerHTML.includes('value="cash"'));
+});
+test('cancelled cash request stops offering payment and displays cancellation',async()=>{
+ const ui=await screen({paymentMethod:'cash',orderStatus:'cancelado',stored:{'sy-guest-checkout:rest':JSON.stringify({token,orderId:42})}});
+ assert.match(ui.elements.get('receipt-details').innerHTML,/Pedido cancelado/);assert.equal(ui.elements.get('resume-payment').hidden,true);
 });
