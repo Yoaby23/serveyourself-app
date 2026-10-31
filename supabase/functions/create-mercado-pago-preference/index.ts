@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts';
+import { guestOrderId } from '../_shared/guest-access.ts';
 import { getValidMercadoPagoToken } from '../_shared/mercado-pago.ts';
 
 Deno.serve(async (request) => {
@@ -7,32 +8,34 @@ Deno.serve(async (request) => {
   if (request.method !== 'POST') return jsonResponse(request, { error: 'Método no permitido' }, 405);
 
   try {
-    const authorization = request.headers.get('Authorization');
-    if (!authorization) return jsonResponse(request, { error: 'Sesión requerida' }, 401);
-
+    const body = await request.json();
+    const { orderId, guestToken } = body;
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authorization } }
-    });
-    const { data: { user }, error: userError } = await userClient.auth.getUser();
-    if (userError || !user) return jsonResponse(request, { error: 'Sesión inválida' }, 401);
-
-    const { orderId } = await request.json();
-    const { data: order, error: orderError } = await userClient
-      .from('orders')
+    const adminClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    let user: { id: string; email?: string } | null = null;
+    let orderClient = adminClient;
+    const guest = guestToken !== undefined;
+    if (guest) {
+      const allowedId = await guestOrderId(adminClient, guestToken);
+      if (!allowedId || String(allowedId) !== String(orderId)) return jsonResponse(request, { error: 'Pedido no encontrado' }, 404);
+    } else {
+      const authorization = request.headers.get('Authorization');
+      if (!authorization) return jsonResponse(request, { error: 'Sesión requerida' }, 401);
+      orderClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: authorization } } });
+      const result = await orderClient.auth.getUser();
+      user = result.data.user;
+      if (result.error || !user) return jsonResponse(request, { error: 'Sesión inválida' }, 401);
+    }
+    const { data: order, error: orderError } = await orderClient.from('orders')
       .select('id, customer_id, restaurant_id, restaurant_name, items, total, delivery_fee, service_type, payment_method, payment_status, created_at, payment_expires_at, mercado_pago_preference_id')
-      .eq('id', orderId)
-      .single();
-    if (orderError || !order || order.customer_id !== user.id) {
+      .eq('id', orderId).single();
+    if (orderError || !order || (guest ? order.customer_id !== null || order.service_type !== 'pickup' : order.customer_id !== user?.id)) {
       return jsonResponse(request, { error: 'Pedido no encontrado' }, 404);
     }
     if (order.payment_method !== 'mercado_pago' || order.payment_status !== 'pending') {
       return jsonResponse(request, { error: 'El pedido no requiere pago en línea' }, 409);
     }
 
-    const adminClient = createClient(supabaseUrl, serviceKey);
     const paymentExpiresAt = new Date(order.payment_expires_at ?? new Date(order.created_at).getTime() + 20 * 60 * 1000);
     if (paymentExpiresAt.getTime() <= Date.now()) {
       await adminClient.from('orders').update({
@@ -63,16 +66,17 @@ Deno.serve(async (request) => {
       id: 'delivery-fee', title: 'Envío a domicilio', quantity: 1,
       unit_price: Number(order.delivery_fee), currency_id: 'MXN'
     });
-    const returnPage = order.service_type === 'delivery' ? 'delivery-tracking.html' : 'menu.html';
+    const returnPage = guest ? 'menu-publico.html' : order.service_type === 'delivery' ? 'delivery-tracking.html' : 'menu.html';
+    const returnId = guest ? order.restaurant_id : order.id;
     const preferenceBody: Record<string, unknown> = {
       items: checkoutItems,
-      payer: { email: user.email },
+      ...(user?.email ? { payer: { email: user.email } } : {}),
       external_reference: String(order.id),
       statement_descriptor: 'SERVEYOURSELF',
       back_urls: {
-        success: `${appUrl}/${returnPage}?payment=success&id=${encodeURIComponent(order.id)}&order_id=${encodeURIComponent(order.id)}`,
-        pending: `${appUrl}/${returnPage}?payment=pending&id=${encodeURIComponent(order.id)}&order_id=${encodeURIComponent(order.id)}`,
-        failure: `${appUrl}/${returnPage}?payment=failure&id=${encodeURIComponent(order.id)}&order_id=${encodeURIComponent(order.id)}`
+        success: `${appUrl}/${returnPage}?payment=success&id=${encodeURIComponent(returnId)}&order_id=${encodeURIComponent(order.id)}`,
+        pending: `${appUrl}/${returnPage}?payment=pending&id=${encodeURIComponent(returnId)}&order_id=${encodeURIComponent(order.id)}`,
+        failure: `${appUrl}/${returnPage}?payment=failure&id=${encodeURIComponent(returnId)}&order_id=${encodeURIComponent(order.id)}`
       },
       auto_return: 'approved',
       notification_url: `${supabaseUrl}/functions/v1/mercado-pago-webhook?order_id=${encodeURIComponent(order.id)}`,

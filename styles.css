@@ -1116,3 +1116,27 @@ button:focus-visible, a[href]:focus-visible { outline: 3px solid #c2410c; outlin
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+/* Public pickup checkout uses the same restrained surfaces and controls. */
+.sy-guest-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 1.25rem; padding: 1.25rem; margin: 1.25rem 0; }
+.sy-guest-panel[hidden], .sy-guest-panel [hidden] { display: none; }
+.sy-guest-panel h2 { font-size: 1.2rem; font-weight: 800; }
+.sy-guest-message { color: #334155; margin: 1rem 0; overflow-wrap: anywhere; }
+.sy-guest-help { color: #64748b; font-size: .85rem; margin-top: .75rem; }
+.sy-guest-product { display: flex; gap: 1rem; padding: 1rem; background: white; border: 1px solid #e2e8f0; border-radius: 1rem; }
+.sy-guest-product img { width: 5rem; height: 5rem; border-radius: .75rem; object-fit: cover; }
+.sy-guest-product > div { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.sy-guest-product h3, .sy-guest-state { font-weight: 800; }
+.sy-guest-product button, .sy-guest-panel button { min-height: 44px; padding: .6rem .9rem; border-radius: .75rem; font-weight: 700; background: #f1f5f9; color: #0f172a; }
+.sy-guest-product button { margin-top: .5rem; }
+#guest-pay, #resume-payment { background: #0f172a; color: #fff; }
+#guest-pay { width: 100%; }
+#guest-checkout label { display: block; font-weight: 700; margin-top: 1rem; }
+#guest-checkout input { width: 100%; padding: .75rem; border: 1px solid #cbd5e1; border-radius: .75rem; margin: .4rem 0; }
+#cart-total { font-weight: 800; margin: 1rem 0; }
+.sy-guest-cart-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; border-bottom: 1px solid #e2e8f0; padding: .75rem 0; }
+.sy-guest-cart-row > span { flex: 1 1 120px; overflow-wrap: anywhere; }
+.sy-guest-cart-row > div { display: flex; align-items: center; gap: .6rem; }
+.sy-guest-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+#receipt-details p, #receipt-details ul { margin: .75rem 0; overflow-wrap: anywhere; }
+#receipt-details li { display: flex; justify-content: space-between; gap: 1rem; }

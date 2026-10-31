@@ -211,7 +211,7 @@ window.serveYourself = {
     ensureGlobalBackButton() {
         if (!document.body || !document.querySelector) return;
         const page = (window.location.pathname || '/index.html').split('/').pop() || 'index.html';
-        const mainPages = ['index.html', 'menu.html', 'admin.html', 'pos.html', 'caja.html', 'cocina.html', 'delivery.html', 'repartidor.html'];
+        const mainPages = ['menu-publico.html', 'index.html', 'menu.html', 'admin.html', 'pos.html', 'caja.html', 'cocina.html', 'delivery.html', 'repartidor.html'];
         if (mainPages.includes(page) || page === 'funciones.html' || document.querySelector('[data-sy-back], .sy-global-back')) return;
         const button = document.createElement('button');
         button.type = 'button';
