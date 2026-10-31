@@ -41,3 +41,14 @@ test('returning to an older payment uses that receipt instead of the latest cart
  const ui=await screen({query:'&order_id=42',stored:{'sy-guest-checkout:rest':JSON.stringify({token,orderId:43}),'sy-guest-receipt:rest:42':JSON.stringify({token:older,orderId:42})}});
  assert.equal(ui.calls[0].body.token,older);
 });
+
+// Disconnecting Mercado Pago must not leave a checked, disabled option blocking all settings saves.
+test('guest setting reflects effective payment availability after disconnect',()=>{
+ const html=fs.readFileSync(new URL('../admin.html',import.meta.url),'utf8');
+ const method=html.slice(html.indexOf('        function cargarConfiguracion('),html.indexOf('        function usarUbicacionActual'));
+ for(const [connected,online,expected] of [[false,true,false],[true,false,false],[true,true,true]]){
+  const elements=new Map();const get=id=>{if(!elements.has(id))elements.set(id,{classList:{toggle(){}}});return elements.get(id);};
+  vm.runInNewContext(method+'cargarConfiguracion(profile)',{document:{getElementById:get},profile:{guest_pickup_enabled:true,mercado_pago_connected:connected,payment_online:online}});
+  assert.equal(get('cfg-guest-pickup').checked,expected);assert.equal(get('cfg-guest-pickup').disabled,!connected);
+ }
+});

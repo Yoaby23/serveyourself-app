@@ -23,7 +23,7 @@ El pago pendiente vence en 20 minutos. Desactivar la opción impide pedidos nuev
 
 ## Validación
 
-75 pruebas Node aprobadas: incluyen 12 pruebas del acceso/pago y 6 del menú invitado. Se ejecutan handlers reales con dependencias del proveedor simuladas; no son cobros reales.
+76 pruebas Node aprobadas: incluyen 12 pruebas del acceso/pago y 7 del menú invitado y configuración. Se ejecutan handlers reales con dependencias del proveedor simuladas; no son cobros reales.
 
 6 suites SQL con rollback aprobadas: permisos del catálogo/API, favoritos/cuenta compartida, cocina, fiabilidad de pagos y guest_pickup. Esta última comprueba opción apagada, falta de pago online, nombre vacío, cantidad cero, agotados, precio manipulado, idempotencia, aislamiento, límite de solicitudes y una sola comanda después de confirmación válida simulada.
 

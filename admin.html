@@ -272,7 +272,7 @@
             document.getElementById('cfg-cash').checked = profile.payment_cash ?? true;
             document.getElementById('cfg-transfer').checked = profile.payment_transfer ?? false;
             document.getElementById('cfg-online').checked = profile.payment_online ?? false;
-            document.getElementById('cfg-guest-pickup').checked = profile.guest_pickup_enabled ?? false;
+            document.getElementById('cfg-guest-pickup').checked = Boolean(profile.guest_pickup_enabled && profile.mercado_pago_connected && profile.payment_online);
             document.getElementById('cfg-guest-pickup').disabled = !profile.mercado_pago_connected;
             document.getElementById('cfg-online').disabled = !profile.mercado_pago_connected;
             document.getElementById('mp-status').innerText = profile.mercado_pago_connected
