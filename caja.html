@@ -16,6 +16,11 @@
         </div>
     </header>
     <main class="max-w-6xl mx-auto p-4 space-y-5">
+        <section id="ready-pickup" class="bg-white rounded-3xl border border-emerald-200 p-5">
+            <h2 class="font-black text-xl">Listos para entregar <span id="ready-pickup-count">0</span></h2>
+            <p id="ready-pickup-notice" role="status" aria-live="polite" class="text-sm text-slate-500">Consultando pedidos para llevar…</p>
+            <div id="ready-pickup-list" class="grid lg:grid-cols-2 gap-4 mt-5"></div>
+        </section>
         <section id="shift-card" class="bg-slate-900 text-white rounded-3xl p-6"></section>
         <section id="movement-card" class="hidden bg-white rounded-3xl border border-slate-200 p-5">
             <h2 class="font-black text-lg">Movimientos de caja</h2><p class="text-sm text-slate-500">Entradas, gastos y retiros del turno.</p>
@@ -36,12 +41,12 @@
         </section>
     </main>
     <section id="print-ticket" class="ticket-print" aria-hidden="true"></section>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script><script src="app-config.js"></script><script src="app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script><script src="app-config.js"></script><script src="app.js"></script><script src="cash-ready.js"></script>
     <script>
         const db=window.serveYourself.supabase,esc=window.serveYourself.escapeHtml;
         let access,shift=null,shiftSummary=null,accounts=[],onlineOrders=[],payments=[],movements=[],tables=[],waiters=[],creditCustomers=[];
         const labels={cash:'Efectivo',transfer:'Transferencia',card_terminal:'Terminal'},money=v=>`$${Number(v||0).toFixed(2)}`;
-        async function init(){access=await window.serveYourself.requireRestaurantPermission('can_close_accounts');if(!access)return;window.serveYourself.renderRestaurantNavigation(access,{showBack:false});await loadAll();db.channel(`cash-${access.restaurant_id}`).on('postgres_changes',{event:'*',schema:'public',table:'orders',filter:`restaurant_id=eq.${access.restaurant_id}`},loadAll).subscribe();setInterval(()=>{if(!document.hidden)loadAll()},30000)}
+        async function init(){access=await window.serveYourself.requireRestaurantPermission('can_close_accounts');if(!access)return;window.serveYourself.renderRestaurantNavigation(access,{showBack:false});window.serveYourself.initPushNotifications(access.user);window.startCashReady(access);await loadAll();db.channel(`cash-${access.restaurant_id}`).on('postgres_changes',{event:'*',schema:'public',table:'orders',filter:`restaurant_id=eq.${access.restaurant_id}`},loadAll).subscribe();setInterval(()=>{if(!document.hidden)loadAll()},30000)}
         async function loadAll(){await db.rpc('expire_unpaid_online_orders',{p_restaurant_id:access.restaurant_id});const since=new Date(Date.now()-86400000).toISOString();const[s,ss,o,q,p,m,t,w,c]=await Promise.all([db.from('cash_shifts').select('*').eq('restaurant_id',access.restaurant_id).order('opened_at',{ascending:false}).limit(1),db.rpc('get_open_cash_shift_summary',{p_restaurant_id:access.restaurant_id}),db.from('orders').select('*, restaurant_tables(name)').eq('restaurant_id',access.restaurant_id).or('order_source.eq.pos,and(order_source.eq.online,payment_before_kitchen.eq.true,payment_method.eq.cash)').eq('payment_status','pending').neq('status','cancelado').order('created_at'),db.from('orders').select('*').eq('restaurant_id',access.restaurant_id).eq('payment_method','mercado_pago').in('payment_status',['pending','expired']).neq('status','cancelado').gte('created_at',since).order('created_at',{ascending:false}),db.from('order_payments').select('*').eq('restaurant_id',access.restaurant_id).order('created_at'),db.from('cash_movements').select('*').eq('restaurant_id',access.restaurant_id).order('created_at',{ascending:false}).limit(30),db.from('restaurant_tables').select('*').eq('restaurant_id',access.restaurant_id).eq('is_active',true).order('name'),db.rpc('list_available_waiters',{p_restaurant_id:access.restaurant_id}),db.rpc('get_customer_credit_balances',{p_restaurant_id:access.restaurant_id})]);if([s,ss,o,q,p,m,t,w,c].some(x=>x.error))return alert('No se pudo sincronizar Caja. Verifica que las migraciones 017 y 018 estén aplicadas.');shift=s.data?.find(x=>x.status==='open')||null;shiftSummary=ss.data||null;accounts=o.data||[];onlineOrders=q.data||[];payments=p.data||[];movements=m.data||[];tables=t.data||[];waiters=w.data||[];creditCustomers=c.data||[];render()}
         function isGuestCashOrder(o){return o.order_source==='online'&&o.service_type==='pickup'&&o.payment_method==='cash'&&o.payment_before_kitchen;}
         function openPosAccounts(){return accounts.filter(o=>o.order_source==='pos'&&(o.service_type!=='pickup'||paid(o.id)>0));}

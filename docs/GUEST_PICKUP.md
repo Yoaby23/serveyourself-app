@@ -39,3 +39,13 @@ Si Mercado Pago confirma un pago después de que el corte canceló su pedido, la
 7 suites SQL con rollback aprobadas: catalog_security, api_security, favorites_single_table, kitchen_priority_inventory, qa_reliability, guest_pickup y guest_cash_and_cut. La última prueba permisos reales, caja cerrada, pago completo/cambio, no duplicación, corte con fuentes mixtas, conservación de abonos/pagados y rechazo de una aprobación tardía que intentaría reactivar un pedido.
 
 No se han realizado cobros reales, reembolsos reales ni una prueba física de entrega de efectivo. Falta la aceptación por rol/dispositivo y la integración completa con una cuenta de prueba de Mercado Pago. Los fixtures de SQL se revierten al finalizar.
+
+### Aviso y entrega en caja
+
+Al quedar lista una comanda para llevar, Caja muestra el número de pedido, nombre de quien recoge y artículos en «Listos para entregar». Consulta las comandas del restaurante con RLS, se actualiza por Realtime y recupera cambios al reconectar, volver a la pantalla o cada 15 segundos. La lista se conserva al fallar una consulta; no depende del permiso de notificaciones.
+
+El aviso push existente también se dirige al dueño y al personal activo con permiso de caja. Abre Caja en la sección de entrega. Requiere suscripción push y permiso del dispositivo; es un canal complementario, no una cola de entrega garantizada. No se notifica a caja mientras falten estaciones por terminar. No se cambió el flujo de reparto ni de mesas.
+
+«Confirmar entrega» pide verificar número y nombre y utiliza la misma operación del POS. La base de datos bloquea la comanda, exige permisos vigentes, rechaza pedidos cancelados y segundas entregas, y registra una sola entrega en la auditoría. La actualización se refleja en las demás cajas. Los pedidos web en efectivo siguen entrando a cocina únicamente después del cobro.
+
+Validación: pruebas automatizadas de restauración y errores de la lista, doble clic, reintentos, destinatarios push y permisos; prueba SQL con pedido invitado, cobro, cocina, caja y entrega repetida dentro de una transacción revertida. La recepción push en un dispositivo físico requiere una prueba operativa con notificaciones habilitadas.
