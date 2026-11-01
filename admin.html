@@ -42,6 +42,8 @@
             <h2 class="text-2xl font-black text-slate-900 tracking-tight">Gestión de Menú</h2>
             <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
                 <form id="add-product-form" class="space-y-4">
+                    <h3 id="product-form-title" class="font-bold">Nuevo producto</h3>
+                    <p id="product-edit-help" hidden class="text-sm text-slate-500">Si no seleccionas otra fotografía, se conserva la actual.</p>
                     <input type="text" id="prod-name" placeholder="Nombre" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold" required>
                     <input type="number" id="prod-price" placeholder="Precio" min="0.01" step="0.01" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold" required>
                     <label for="prod-station" class="block text-sm font-bold">Estación de cocina</label><select id="prod-station" disabled class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold"><option value="">Cargando estaciones…</option></select><button type="button" id="retry-stations" hidden onclick="cargarEstacionesProducto()" class="text-sm font-bold text-orange-500">Reintentar carga de estaciones</button>
@@ -50,6 +52,7 @@
                         <input type="file" id="prod-file" accept="image/jpeg,image/png,image/webp,image/avif" class="hidden">
                     </label>
                     <button type="submit" id="btn-save-prod" class="w-full bg-slate-900 text-white font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest hover:bg-orange-500 transition-colors">Agregar</button>
+                    <button type="button" id="cancel-product-edit" hidden onclick="cancelarEdicionProducto()" class="w-full py-3 text-sm font-bold">Cancelar edición</button>
                 </form>
             </div>
             <div id="lista-menu-admin" class="space-y-3"></div>
@@ -192,6 +195,8 @@
             cargarEstacionesProducto();
         }
 
+        let editingProductId = null, productSaving = false, adminProducts = [];
+
         async function cargarEstacionesProducto() {
             const select = document.getElementById("prod-station");
             select.disabled = true;
@@ -200,6 +205,8 @@
                 const { data, error } = await _supabase.from("kitchen_stations").select("id,name").eq("restaurant_id", currentRestaurantId).order("name");
                 if (error) throw error;
                 select.innerHTML = '<option value="">General</option>' + (data || []).map(station => `<option value="${escapeHtml(station.id)}">${escapeHtml(station.name)}</option>`).join('');
+                const editing = adminProducts.find(p => String(p.id) === editingProductId);
+                if (editing) select.value = editing.kitchen_station_id == null ? '' : String(editing.kitchen_station_id);
                 select.disabled = false;
             } catch {
                 select.innerHTML = '<option value="">No se pudieron cargar las estaciones</option>';
@@ -213,6 +220,7 @@
                 document.getElementById('lista-menu-admin').innerHTML = '<p class="text-center text-red-400">No se pudo cargar el menú.</p>';
                 return;
             }
+            adminProducts = prods;
             document.getElementById('lista-menu-admin').innerHTML = prods.map(p => `
                 <div class="bg-white p-4 rounded-3xl border border-slate-100 flex items-center justify-between ${!p.is_available ? 'opacity-50' : ''}">
                     <div class="flex items-center gap-4">
@@ -222,7 +230,8 @@
                             <p class="text-orange-500 font-black text-xs">$${p.price}</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <button type="button" onclick="editarProducto('${p.id}')" class="text-orange-500 font-bold text-sm">Editar</button>
                         <input type="checkbox" ${p.is_available ? 'checked' : ''} onchange="toggleDisponibilidad('${p.id}', ${p.is_available})" class="w-4 h-4 accent-green-500">
                         <button type="button" onclick="eliminarProducto('${p.id}')" class="text-slate-300">Eliminar</button>
                     </div>
@@ -237,43 +246,72 @@
             await cargarProductos();
         };
         window.eliminarProducto = async (id) => {
+            if (productSaving) return;
             if (!confirm('¿Eliminar este producto del menú?')) return;
             try { const { error } = await _supabase.from('products').delete().eq('id', id).select('id').single();
                 if (error) throw error;
+                if (editingProductId === String(id)) cancelarEdicionProducto();
                 await cargarProductos();
             } catch { alert('No se pudo eliminar el producto. Inténtalo de nuevo.'); }
         };
 
+        function cancelarEdicionProducto() {
+            if (productSaving) return;
+            editingProductId = null;
+            document.getElementById('add-product-form').reset();
+            document.getElementById('product-form-title').textContent = 'Nuevo producto';
+            document.getElementById('btn-save-prod').textContent = 'Agregar';
+            document.getElementById('cancel-product-edit').hidden = true;
+            document.getElementById('product-edit-help').hidden = true;
+        }
+        function editarProducto(id) {
+            if (productSaving) return;
+            const product = adminProducts.find(p => String(p.id) === String(id));
+            if (!product) return;
+            editingProductId = String(id);
+            document.getElementById('prod-name').value = product.name;
+            document.getElementById('prod-price').value = product.price;
+            document.getElementById('prod-station').value = product.kitchen_station_id == null ? '' : String(product.kitchen_station_id);
+            document.getElementById('prod-file').value = '';
+            document.getElementById('product-form-title').textContent = 'Editar producto';
+            document.getElementById('btn-save-prod').textContent = 'Guardar cambios';
+            document.getElementById('cancel-product-edit').hidden = false;
+            document.getElementById('product-edit-help').hidden = false;
+            document.getElementById('add-product-form').scrollIntoView({behavior:'smooth',block:'start'});
+            document.getElementById('prod-name').focus({preventScroll:true});
+        }
         document.getElementById('add-product-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (productSaving) return;
             const station = document.getElementById('prod-station');
             if (station.disabled) { alert('Espera a que se carguen las estaciones o reintenta la carga.'); return; }
-            const stationId = station.value ? Number(station.value) : null;
+            const payload = {name:document.getElementById('prod-name').value.trim(),price:Number(document.getElementById('prod-price').value),kitchen_station_id:station.value ? Number(station.value) : null};
+            if (!payload.name || !Number.isFinite(payload.price) || payload.price <= 0) { alert('Indica un nombre y un precio mayor a cero.'); return; }
             const file = document.getElementById('prod-file').files[0];
-            let imageUrl = null;
-            if (file) {
-                if (file.size > 5 * 1024 * 1024) { alert('La imagen no puede superar 5 MB.'); return; }
-                const extension = file.name.split('.').pop().toLowerCase();
-                const path = `${currentRestaurantId}/${crypto.randomUUID()}.${extension}`;
-                const { error: uploadError } = await _supabase.storage.from('product-images').upload(path, file, { upsert: false });
-                if (uploadError) { alert('No se pudo subir la imagen: ' + uploadError.message); return; }
-                imageUrl = _supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl;
-            }
-            const { error } = await _supabase.from('products').insert([{
-                restaurant_id: currentRestaurantId,
-                name: document.getElementById('prod-name').value,
-                price: document.getElementById('prod-price').value,
-                category: 'General',
-                kitchen_station_id: stationId,
-                image_url: imageUrl,
-                is_available: true
-            }]);
-            if (error) {
-                alert('No se pudo guardar el producto: ' + error.message);
-                return;
-            }
-            document.getElementById('add-product-form').reset();
-            cargarProductos();
+            const formats = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/avif':'avif'};
+            if (file && (!formats[file.type] || file.size > 5*1024*1024)) { alert('Usa JPG, PNG, WebP o AVIF de hasta 5 MB.'); return; }
+            const id = editingProductId, button = document.getElementById('btn-save-prod');
+            productSaving = true; button.disabled = true;
+            let uploadedPath = null, saved = false;
+            try {
+                if (file) {
+                    const path = `${currentRestaurantId}/${crypto.randomUUID()}.${formats[file.type]}`;
+                    const {error} = await _supabase.storage.from('product-images').upload(path,file,{upsert:false,contentType:file.type});
+                    if (error) throw error;
+                    uploadedPath = path;
+                    payload.image_url = _supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl;
+                }
+                const query = id
+                    ? _supabase.from('products').update(payload).eq('id',id).eq('restaurant_id',currentRestaurantId)
+                    : _supabase.from('products').insert({...payload,restaurant_id:currentRestaurantId,category:'General',is_available:true});
+                const {error} = await query.select('id').single();
+                if (error) throw error;
+                saved = true;
+            } catch (error) {
+                if (uploadedPath) { try { await _supabase.storage.from('product-images').remove([uploadedPath]); } catch {} }
+                alert('No se pudo guardar el producto: ' + (error.message || 'Inténtalo de nuevo.'));
+            } finally { productSaving = false; button.disabled = false; }
+            if (saved) { cancelarEdicionProducto(); await cargarProductos(); }
         });
 
         function cargarConfiguracion(profile) {
