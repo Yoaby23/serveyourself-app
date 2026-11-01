@@ -75,7 +75,6 @@
             <header>
                 <h2 id="explore-title" class="text-3xl font-black text-slate-900 tracking-tight">Inicio</h2>
                 <p id="explore-subtitle" class="text-slate-400 text-sm font-semibold">¿Qué se te antoja hoy?</p>
-                <div id="home-actions" class="sy-home-actions"></div>
             </header>
 
             <div class="relative group">
@@ -99,8 +98,7 @@
             </header>
 
             <div class="sy-account-identity"><b id="user-name-display">Tu cuenta</b><span id="user-role-display"></span></div>
-            <div id="menu-options" class="sy-account-actions"></div>
-            <div class="sy-account-actions"><button type="button" onclick="mostrarSeccion('pedidos')">Mis pedidos</button><button type="button" onclick="cerrarSesion()">Cerrar sesión</button></div>
+            <nav id="menu-options" class="sy-account-list" aria-label="Opciones de cuenta"></nav>
             <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-4">
                 <div class="grid grid-cols-1 gap-4 opacity-60">
                     <div>
@@ -196,7 +194,6 @@
             onlyFavorites = id === 'favoritos';
             document.getElementById('btn-back').classList.toggle('hidden',id !== 'pedidos');
             document.getElementById('nav-spacer').classList.toggle('hidden',id !== 'explorar');
-            document.getElementById('home-actions').classList.toggle('hidden',id !== 'explorar');
             document.getElementById('explore-title').textContent = onlyFavorites ? 'Favoritos' : 'Inicio';
             document.getElementById('explore-subtitle').textContent = onlyFavorites ? 'Tus restaurantes guardados, siempre a mano.' : '¿Qué se te antoja hoy?';
             document.querySelectorAll('[data-customer-tab]').forEach(button => {
@@ -268,18 +265,17 @@
 
         function renderMenuOptions(role, access) {
             const container = document.getElementById('menu-options');
-            const linkClass = "text-left px-7 py-3.5 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-all flex items-center gap-3";
-            let html = '';
+            const linkClass = "sy-account-option";
+            let html = `<button type="button" onclick="mostrarSeccion('pedidos')">Mis pedidos</button>`;
             if (role === 'negocio') html += `<button type="button" onclick="window.location.href='funciones.html'" class="${linkClass}">Mi Panel de Control</button>`;
-            else if (access) html += `<button type="button" onclick="window.location.href=window.serveYourself.restaurantHome(restaurantAccess)" class="${linkClass}"><span><svg class="sy-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v11h16V10M3 3h18l1 7H2ZM9 21v-7h6v7"/></svg></span> Volver al restaurante</button>`;
+            else if (access) html += `<button type="button" onclick="window.location.href=window.serveYourself.restaurantHome(restaurantAccess)" class="${linkClass}">Volver al restaurante</button>`;
             html += `<button type="button" onclick="window.location.href='repartidor.html'" class="${linkClass}">Modo repartidor</button>`;
             html += `<button type="button" onclick="window.serveYourself.installApp()" class="${linkClass}">Instalar aplicación</button>`;
             html += '<a id="customer-platform-link" href="platform-admin.html" hidden>Administración de plataforma</a>';
+            html += `<button type="button" class="sy-account-signout" onclick="cerrarSesion()">Cerrar sesión</button>`;
             container.innerHTML = html;
             _supabase.rpc('is_platform_admin').then(({data,error}) => { const link=document.getElementById('customer-platform-link');if(link)link.hidden=Boolean(error)||!data; }).catch(() => {});
-            document.getElementById('home-actions').innerHTML = `<button type="button" onclick="mostrarSeccion('pedidos')">Mis pedidos</button>`
-                + (role === 'negocio' ? '<a href="funciones.html">Mi restaurante</a>' : access ? '<a href="' + window.serveYourself.restaurantHome(access) + '">Ir al trabajo</a>' : '')
-                + '<a href="repartidor.html">Repartir</a>';
+
         }
 
         // LÓGICA DE BÚSQUEDA
