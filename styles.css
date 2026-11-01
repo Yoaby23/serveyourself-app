@@ -1049,8 +1049,13 @@ input[type='radio'] {
 .sy-customer-bottom-nav button > b { font-size: .75rem; }
 .sy-customer-bottom-nav button[aria-current="page"] { color: #c2410c; background: #fff1ed; }
 .sy-customer-bottom-nav button:focus-visible { outline: 3px solid #ea580c; outline-offset: -3px; }
-.sy-home-actions, .sy-account-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
-.sy-home-actions a, .sy-home-actions button, .sy-account-actions button { padding: .65rem .9rem; border-radius: .85rem; background: white; border: 1px solid #e2e8f0; color: #334155; font-size: .8rem; font-weight: 800; }
+.sy-account-list { display: flex; flex-direction: column; overflow: hidden; border: 1px solid #e2e8f0; border-radius: 1rem; background: #fff; }
+.sy-account-list > button, .sy-account-list > a { display: flex; align-items: center; gap: .75rem; width: 100%; min-height: 52px; padding: 1rem 1.25rem; border: 0; border-radius: 0; background: transparent; color: #334155; text-align: left; font-size: .9rem; font-weight: 600; text-decoration: none; }
+.sy-account-list > :not(:first-child) { border-top: 1px solid #f1f5f9; }
+.sy-account-list > :hover { background: #f8fafc; }
+.sy-account-list > :focus-visible { outline: 2px solid #f97316; outline-offset: -3px; }
+.sy-account-list > [hidden] { display: none; }
+.sy-account-list > .sy-account-signout { color: #b91c1c; }
 
 .sy-customer-bottom-nav svg { width: 1.5rem; height: 1.5rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
