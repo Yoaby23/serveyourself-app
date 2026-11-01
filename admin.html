@@ -44,7 +44,7 @@
                 <form id="add-product-form" class="space-y-4">
                     <input type="text" id="prod-name" placeholder="Nombre" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold" required>
                     <input type="number" id="prod-price" placeholder="Precio" min="0.01" step="0.01" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold" required>
-                    <input type="text" id="prod-category" placeholder="Categoría" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold" required>
+                    <label for="prod-station" class="block text-sm font-bold">Estación de cocina</label><select id="prod-station" disabled class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold"><option value="">Cargando estaciones…</option></select><button type="button" id="retry-stations" hidden onclick="cargarEstacionesProducto()" class="text-sm font-bold text-orange-500">Reintentar carga de estaciones</button>
                     <label class="block p-4 bg-orange-50 border border-orange-100 rounded-2xl text-sm font-bold text-orange-700 cursor-pointer">
                          Seleccionar fotografía
                         <input type="file" id="prod-file" accept="image/jpeg,image/png,image/webp,image/avif" class="hidden">
@@ -189,6 +189,22 @@
             window.serveYourself.initPushNotifications(user);
 
             cargarProductos();
+            cargarEstacionesProducto();
+        }
+
+        async function cargarEstacionesProducto() {
+            const select = document.getElementById("prod-station");
+            select.disabled = true;
+            document.getElementById("retry-stations").hidden = true;
+            try {
+                const { data, error } = await _supabase.from("kitchen_stations").select("id,name").eq("restaurant_id", currentRestaurantId).order("name");
+                if (error) throw error;
+                select.innerHTML = '<option value="">General</option>' + (data || []).map(station => `<option value="${escapeHtml(station.id)}">${escapeHtml(station.name)}</option>`).join('');
+                select.disabled = false;
+            } catch {
+                select.innerHTML = '<option value="">No se pudieron cargar las estaciones</option>';
+                document.getElementById("retry-stations").hidden = false;
+            }
         }
 
         async function cargarProductos() {
@@ -230,6 +246,9 @@
 
         document.getElementById('add-product-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const station = document.getElementById('prod-station');
+            if (station.disabled) { alert('Espera a que se carguen las estaciones o reintenta la carga.'); return; }
+            const stationId = station.value ? Number(station.value) : null;
             const file = document.getElementById('prod-file').files[0];
             let imageUrl = null;
             if (file) {
@@ -244,7 +263,8 @@
                 restaurant_id: currentRestaurantId,
                 name: document.getElementById('prod-name').value,
                 price: document.getElementById('prod-price').value,
-                category: document.getElementById('prod-category').value,
+                category: 'General',
+                kitchen_station_id: stationId,
                 image_url: imageUrl,
                 is_available: true
             }]);
