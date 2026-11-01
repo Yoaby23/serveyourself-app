@@ -42,7 +42,7 @@ assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
 assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v31/, 'La PWA debe renovar su caché al publicar cambios de producción');
+assert.match(read('sw.js'), /serveyourself-shell-v32/, 'La PWA debe renovar su caché al publicar cambios de producción');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
@@ -54,7 +54,7 @@ assert.match(migration, /p_payment_method not in \('cash', 'transfer', 'card_ter
 assert.match(migration, /v_order\.status = 'pendiente' and p_status <> 'preparando'/, 'Cocina debe respetar el avance de estados');
 assert.match(migration, /v_order\.status = 'preparando' and p_status <> 'listo'/, 'Cocina no debe saltar directamente a listo');
 assert.match(migration, /v_order\.status = 'listo' and p_status <> 'entregado'/, 'Cocina debe cerrar la entrega en orden');
-assert.match(pos, /requireRestaurantPermission\('can_create_orders'\)/, 'El POS debe exigir permiso para crear comandas');
+assert.match(pos, /requireRestaurantPermission\(cashierPickup\?'can_close_accounts':'can_create_orders'\)/, 'El POS debe exigir permiso para crear comandas');
 assert.doesNotMatch(pos, /pending-panel|register_pos_payment|PRECUENTA|COBRAR/, 'El POS de meseros no debe duplicar funciones de Caja');
 assert.doesNotMatch(pos, /db\.rpc\('create_pos_order'|db\.rpc\('append_pos_order_items'/, 'El POS no debe usar rutas antiguas que omiten comandas independientes');
 assert.doesNotMatch(pos, /id="modal-payment-method"|id="charge-button"/, 'La confirmación de cocina no debe mostrar cobro ni forma de pago');
