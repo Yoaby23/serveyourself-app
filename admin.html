@@ -46,6 +46,7 @@
                     <p id="product-edit-help" hidden class="text-sm text-slate-500">Si no seleccionas otra fotografía, se conserva la actual.</p>
                     <input type="text" id="prod-name" placeholder="Nombre" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold" required>
                     <input type="number" id="prod-price" placeholder="Precio" min="0.01" step="0.01" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold" required>
+                    <label for="prod-category" class="block text-sm font-bold">Categoría del menú</label><input id="prod-category" type="text" list="product-categories" maxlength="80" placeholder="Ej. Entradas, platillos, bebidas" required class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold"><datalist id="product-categories"></datalist><p class="text-xs text-slate-500">Agrupa los productos que ve el cliente. La estación indica dónde se preparan.</p>
                     <label for="prod-station" class="block text-sm font-bold">Estación de cocina</label><select id="prod-station" disabled class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold"><option value="">Cargando estaciones…</option></select><button type="button" id="retry-stations" hidden onclick="cargarEstacionesProducto()" class="text-sm font-bold text-orange-500">Reintentar carga de estaciones</button>
                     <label class="block p-4 bg-orange-50 border border-orange-100 rounded-2xl text-sm font-bold text-orange-700 cursor-pointer">
                          Seleccionar fotografía
@@ -221,12 +222,14 @@
                 return;
             }
             adminProducts = prods;
+            document.getElementById('product-categories').innerHTML = [...new Set(prods.map(p => (p.category || 'General').trim()))].map(category => `<option value="${escapeHtml(category)}"></option>`).join('');
             document.getElementById('lista-menu-admin').innerHTML = prods.map(p => `
                 <div class="bg-white p-4 rounded-3xl border border-slate-100 flex items-center justify-between ${!p.is_available ? 'opacity-50' : ''}">
                     <div class="flex items-center gap-4">
                         <img src="${escapeHtml(safeImageUrl(p.image_url) || 'logo.png')}" alt="" class="w-10 h-10 rounded-xl object-cover">
                         <div>
                             <h4 class="font-bold text-slate-900 text-sm">${escapeHtml(p.name)}</h4>
+                            <p class="text-xs text-slate-500">${escapeHtml(p.category || 'General')}</p>
                             <p class="text-orange-500 font-black text-xs">$${p.price}</p>
                         </div>
                     </div>
@@ -271,6 +274,7 @@
             editingProductId = String(id);
             document.getElementById('prod-name').value = product.name;
             document.getElementById('prod-price').value = product.price;
+            document.getElementById('prod-category').value = product.category || 'General';
             document.getElementById('prod-station').value = product.kitchen_station_id == null ? '' : String(product.kitchen_station_id);
             document.getElementById('prod-file').value = '';
             document.getElementById('product-form-title').textContent = 'Editar producto';
@@ -285,8 +289,8 @@
             if (productSaving) return;
             const station = document.getElementById('prod-station');
             if (station.disabled) { alert('Espera a que se carguen las estaciones o reintenta la carga.'); return; }
-            const payload = {name:document.getElementById('prod-name').value.trim(),price:Number(document.getElementById('prod-price').value),kitchen_station_id:station.value ? Number(station.value) : null};
-            if (!payload.name || !Number.isFinite(payload.price) || payload.price <= 0) { alert('Indica un nombre y un precio mayor a cero.'); return; }
+            const payload = {category:document.getElementById('prod-category').value.trim().replace(/\s+/g,' '),name:document.getElementById('prod-name').value.trim(),price:Number(document.getElementById('prod-price').value),kitchen_station_id:station.value ? Number(station.value) : null};
+            if (!payload.category || payload.category.length > 80 || !payload.name || !Number.isFinite(payload.price) || payload.price <= 0) { alert('Indica nombre, categoría y un precio mayor a cero.'); return; }
             const file = document.getElementById('prod-file').files[0];
             const formats = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/avif':'avif'};
             if (file && (!formats[file.type] || file.size > 5*1024*1024)) { alert('Usa JPG, PNG, WebP o AVIF de hasta 5 MB.'); return; }
@@ -303,7 +307,7 @@
                 }
                 const query = id
                     ? _supabase.from('products').update(payload).eq('id',id).eq('restaurant_id',currentRestaurantId)
-                    : _supabase.from('products').insert({...payload,restaurant_id:currentRestaurantId,category:'General',is_available:true});
+                    : _supabase.from('products').insert({...payload,restaurant_id:currentRestaurantId,is_available:true});
                 const {error} = await query.select('id').single();
                 if (error) throw error;
                 saved = true;
