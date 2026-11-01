@@ -122,6 +122,11 @@ window.serveYourself = {
         return 'menu.html';
     },
 
+    restaurantDeniedDestination(access) {
+        if (window.location.pathname.endsWith('/clientes.html') && access?.can_close_accounts) return 'caja.html#credit';
+        return this.restaurantHome(access);
+    },
+
     async requireRestaurantAccess(allowedRoles = ['owner', 'manager', 'waiter', 'kitchen', 'cashier', 'driver']) {
         const user = await this.requireUser();
         if (!user) return null;
@@ -129,7 +134,7 @@ window.serveYourself = {
             const access = await this.getRestaurantAccess();
             if (!access || !allowedRoles.includes(access.staff_role)) {
                 alert('Tu cuenta no tiene permiso para entrar a esta sección.');
-                window.location.replace('menu.html');
+                window.location.replace(this.restaurantDeniedDestination(access));
                 return null;
             }
             return { user, ...access };
@@ -148,7 +153,7 @@ window.serveYourself = {
             const allowed = access?.staff_role === 'owner' || Boolean(access?.[permission]);
             if (!allowed) {
                 alert('Tu cuenta no tiene permiso para entrar a esta sección.');
-                window.location.replace('menu.html');
+                window.location.replace(this.restaurantDeniedDestination(access));
                 return null;
             }
             return { user, ...access };
