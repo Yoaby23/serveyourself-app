@@ -48,7 +48,7 @@ test('guest setting reflects effective payment availability after disconnect',()
  const method=html.slice(html.indexOf('        function cargarConfiguracion('),html.indexOf('        function usarUbicacionActual'));
  for(const [connected,online,cash,expected] of [[false,true,false,false],[true,false,false,false],[true,true,false,true],[false,false,true,true]]){
   const elements=new Map();const get=id=>{if(!elements.has(id))elements.set(id,{classList:{toggle(){}}});return elements.get(id);};
-  vm.runInNewContext(method+'cargarConfiguracion(profile)',{document:{getElementById:get},profile:{guest_pickup_enabled:true,mercado_pago_connected:connected,payment_online:online,payment_cash:cash}});
+  vm.runInNewContext(method+'cargarConfiguracion(profile)',{BusinessSettings:{load(){}},document:{getElementById:get},profile:{guest_pickup_enabled:true,mercado_pago_connected:connected,payment_online:online,payment_cash:cash}});
   assert.equal(get('cfg-guest-pickup').checked,expected);assert.equal(get('cfg-guest-pickup').disabled,false);
  }
 });

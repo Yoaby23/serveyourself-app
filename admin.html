@@ -73,10 +73,11 @@
         <section id="view-config" class="hidden space-y-6">
             <div><h2 class="text-2xl font-black text-slate-900">Configuración de restaurante</h2><p class="text-sm text-slate-400 font-semibold">Pedidos, ubicación y cobros.</p></div>
             <form id="business-config-form" class="bg-white p-6 rounded-[2.5rem] border border-slate-100 space-y-5">
+                <div class="space-y-3"><label class="block text-sm font-bold">Nombre del negocio<input type="text" id="cfg-business-name" maxlength="120" required class="w-full p-3 border rounded-xl"></label><label class="block text-sm font-bold">Teléfono del negocio (WhatsApp)<input id="cfg-business-phone" type="tel" maxlength="25" placeholder="10 dígitos o código de país" class="w-full p-3 border rounded-xl"></label><p class="text-xs text-slate-500">Aquí recibirás los comprobantes de transferencia.</p><img id="cfg-business-preview" src="logo.png" alt="Imagen actual del negocio" class="w-20 h-20 rounded-2xl object-cover"><label class="block text-sm font-bold">Cambiar imagen<input id="cfg-business-image" type="file" accept="image/jpeg,image/png,image/webp,image/avif" class="block w-full mt-2"></label><button type="button" id="cfg-save-image" onclick="BusinessSettings.upload(_supabase,currentRestaurantId,url=>{currentProfile.avatar_url=url})" class="px-4 py-3 bg-slate-900 text-white rounded-xl font-bold">Guardar imagen</button></div>
                 <label class="flex items-center justify-between font-bold text-sm"><span>Aceptar pedidos</span><input id="cfg-accepting" type="checkbox" class="w-5 h-5 accent-orange-500"></label>
                 <div class="border-t border-slate-100 pt-4 space-y-3">
-                    <p class="text-[10px] font-black text-slate-400 uppercase">Horario de servicio</p>
-                    <div class="grid grid-cols-2 gap-3">
+                    <p class="text-[10px] font-black text-slate-400 uppercase">Horario de servicio</p><select id="cfg-hours-mode" onchange="BusinessSettings.mode()" class="w-full p-3 border rounded-xl"><option value="common">Todos los días con el mismo horario</option><option value="daily">Elegir días y horarios</option></select><div id="cfg-weekdays" hidden></div>
+                    <div id="cfg-common-hours" class="grid grid-cols-2 gap-3">
                         <label class="text-xs font-bold text-slate-600">Apertura<input id="cfg-open-time" type="time" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl text-sm font-bold"></label>
                         <label class="text-xs font-bold text-slate-600">Cierre<input id="cfg-close-time" type="time" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl text-sm font-bold"></label>
                     </div>
@@ -129,7 +130,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
     <script src="app-config.js"></script>
-    <script src="app.js"></script>
+    <script src="runtime.js"></script><script src="app.js"></script><script src="business-settings.js"></script>
     <script>
         const _supabase = window.serveYourself.supabase;
         const escapeHtml = window.serveYourself.escapeHtml;
@@ -171,7 +172,8 @@
                 .single();
             if (error || !profile || profile.role !== 'negocio') {
                 alert('Esta sección es exclusiva para cuentas de negocio.');
-                window.location.replace('menu.html');
+                const access=await window.serveYourself.getRestaurantAccess();
+                window.location.replace(window.serveYourself.restaurantHome(access));
                 return;
             }
             currentRestaurantId = user.id;
@@ -283,6 +285,7 @@
             document.getElementById('cfg-bank').value = profile.bank_name ?? '';
             document.getElementById('cfg-holder').value = profile.bank_account_holder ?? '';
             document.getElementById('cfg-clabe').value = profile.bank_clabe ?? '';
+            BusinessSettings.load(profile);
         }
 
         function usarUbicacionActual() {
@@ -309,13 +312,15 @@
         document.getElementById('business-config-form').addEventListener('submit', async event => {
             event.preventDefault();
             const clabe = document.getElementById('cfg-clabe').value.trim();
-            const openTime = document.getElementById('cfg-open-time').value;
-            const closeTime = document.getElementById('cfg-close-time').value;
+            let businessSettings;try{businessSettings=BusinessSettings.values();}catch(error){alert(error.message);return;}
+            const openTime = businessSettings.open_time;
+            const closeTime = businessSettings.close_time;
             if (clabe && !/^\d{18}$/.test(clabe)) { alert('La CLABE debe tener 18 dígitos.'); return; }
             if ((openTime && !closeTime) || (!openTime && closeTime)) {
                 alert('Indica tanto la hora de apertura como la hora de cierre, o deja ambas vacías.'); return;
             }
             const updates = {
+                ...businessSettings,
                 accepting_orders: document.getElementById('cfg-accepting').checked,
                 open_time: openTime || null,
                 close_time: closeTime || null,

@@ -29,12 +29,16 @@ begin
  blocked:=false;
  begin perform public.create_customer_order_once(gen_random_uuid(),jsonb_build_object('service_type','pickup','restaurant_id',owner_id,'items',items,'payment_method','cash'));exception when others then blocked:=true;end;
  assert blocked,'Customer accepted an out of stock product';
+ perform public.register_pos_payment_v2((first_round->>'id')::bigint,'cash',100,0,100);
+ first_round:=first_round||jsonb_build_object('kitchen_ticket_id',(select id from public.kitchen_tickets where order_id=(first_round->>'id')::bigint));
  -- Accepted tickets still progress when a product is subsequently marked unavailable.
  perform public.update_kitchen_ticket_status((first_round->>'kitchen_ticket_id')::bigint,'preparando');
  perform public.update_kitchen_ticket_status((first_round->>'kitchen_ticket_id')::bigint,'listo');
  perform public.set_product_availability(product_id,true);
  assert exists(select 1 from public.public_qr_products where id=product_id),'Reactivated product absent from public menu';
  next_round:=public.create_pos_table_order(owner_id,items,null,'pickup',null,'cash',null,'QA Cliente');
+ perform public.register_pos_payment_v2((next_round->>'id')::bigint,'cash',100,0,100);
+ next_round:=next_round||jsonb_build_object('kitchen_ticket_id',(select id from public.kitchen_tickets where order_id=(next_round->>'id')::bigint));
  perform public.set_kitchen_ticket_priority((next_round->>'kitchen_ticket_id')::bigint,2,'QA');
  queue:=public.list_kitchen_priority_queue(owner_id);
  assert queue->0->>'pickup_name'='QA Cliente','Kitchen missing pickup name';

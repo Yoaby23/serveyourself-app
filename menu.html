@@ -127,16 +127,7 @@
                         <label class="text-[9px] font-black text-orange-500 uppercase ml-2">Nombre Comercial</label>
                         <input type="text" id="edit-biz-name" readonly disabled class="w-full p-4 bg-orange-50/30 rounded-2xl border border-orange-100 text-orange-700 font-bold text-sm cursor-not-allowed">
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Abre</label>
-                            <input type="time" id="edit-open" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 font-bold text-sm">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Cierra</label>
-                            <input type="time" id="edit-close" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 font-bold text-sm">
-                        </div>
-                    </div>
+                    <a href="admin.html?section=config" class="block p-4 bg-slate-50 rounded-2xl text-sm font-bold">Editar imagen y horarios en Configuración del negocio</a>
                 </div>
 
                 <hr class="border-slate-50 my-2">
@@ -262,8 +253,6 @@
                 if (profile.role === 'negocio') {
                     document.getElementById('campos-negocio').classList.remove('hidden');
                     document.getElementById('edit-biz-name').value = profile.business_name || '';
-                    document.getElementById('edit-open').value = profile.open_time || '';
-                    document.getElementById('edit-close').value = profile.close_time || '';
                 }
                 renderMenuOptions(profile.role, restaurantAccess);
             }
@@ -388,12 +377,7 @@
             const horaActual = ahora.getHours().toString().padStart(2, '0') + ":" + ahora.getMinutes().toString().padStart(2, '0');
 
             contenedor.innerHTML = lista.map(res => {
-                let abierto = true;
-                if (res.open_time && res.close_time) {
-                    const open = res.open_time.slice(0, 5);
-                    const close = res.close_time.slice(0, 5);
-                    abierto = open <= close ? (horaActual >= open && horaActual <= close) : (horaActual >= open || horaActual <= close);
-                }
+                const abierto = SYRuntime.isBusinessOpen(res);
 
                 const imageUrl = safeImageUrl(res.avatar_url);
                 const restaurantId = escapeHtml(res.id);
@@ -419,7 +403,7 @@
                             <p class="text-slate-400 text-[11px] font-bold uppercase tracking-tight mt-1 truncate"> ${escapeHtml(res.address || 'Ubicación Central')}</p>
                             <div class="flex gap-2 mt-3 text-[9px] font-black uppercase tracking-widest">
                                 <span class="${disponible ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100'} px-3 py-1 rounded-full">${disponible ? 'Disponible' : 'No disponible'}</span>
-                                <span class="bg-slate-100 text-slate-400 px-3 py-1 rounded-full">${res.open_time?.slice(0,5)} - ${res.close_time?.slice(0,5)}</span>
+                                <span class="bg-slate-100 text-slate-400 px-3 py-1 rounded-full">${res.business_hours?'Horario por día':(res.open_time?.slice(0,5)||'')+' - '+(res.close_time?.slice(0,5)||'')}</span>
                                 ${distance ? `<span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full">${distance}</span>` : ''}
                             </div>
                         </div>
@@ -484,10 +468,6 @@
         async function actualizarPerfil() {
             const btn = document.getElementById('btn-update');
             const updates = { phone: document.getElementById('edit-phone').value, address: document.getElementById('edit-address').value };
-            if(userRole === 'negocio') {
-                updates.open_time = document.getElementById('edit-open').value;
-                updates.close_time = document.getElementById('edit-close').value;
-            }
             btn.disabled = true;
             try {
                 const { data: savedProfile, error: profileError } = await _supabase.from('profiles').update(updates).eq('id', currentUser.id).select('id').single();
@@ -499,6 +479,14 @@
             } catch (err) { alert(err.message); } finally { btn.disabled = false; }
         }
 
+        async function enviarComprobante(id){
+            const {data:order,error}=await _supabase.from('orders').select('id,restaurant_id,pickup_name,total,payment_method,payment_status').eq('id',id).eq('customer_id',currentUser.id).single();
+            if(error||!order||order.payment_method!=='transfer'||order.payment_status!=='pending')return alert('Este pedido ya no espera comprobante. Actualiza el historial.');
+            const {data:business}=await _supabase.from('public_restaurants').select('phone').eq('id',order.restaurant_id).single();
+            const url=SYRuntime.transferReceiptUrl(business?.phone,order);
+            if(!url)return alert('El negocio no tiene un número válido. Contacta a caja.');
+            if(confirm('Se abrirá WhatsApp del negocio. Adjunta tu comprobante y pulsa Enviar; caja deberá validar el pago.'))window.location.href=url;
+        }
         async function cargarHistorialPedidos() {
             const container = document.getElementById('lista-mis-pedidos');
             container.innerHTML = '<p class="text-center py-10 animate-pulse text-xs font-black text-slate-400 uppercase">Consultando...</p>';
@@ -512,7 +500,8 @@
             if (!pedidos || pedidos.length === 0) { container.innerHTML = '<div class="p-10 text-center text-slate-300 italic text-sm">Sin actividad reciente.</div>'; return; }
             const ratingsByOrder = new Map((ratings || []).map(item => [item.order_id, item.rating]));
             container.innerHTML = pedidos.map(p => {
-                const pagoPendiente = p.payment_method === 'mercado_pago' && p.payment_status === 'pending';
+                const pagoPendiente = p.status !== 'cancelado' && p.payment_method === 'mercado_pago' && p.payment_status === 'pending';
+                const pagoEnCaja = p.status !== 'cancelado' && p.service_type === 'pickup' && p.payment_status === 'pending' && ['cash','transfer'].includes(p.payment_method);
                 const pagoVencido = p.payment_method === 'mercado_pago' && p.payment_status === 'expired';
                 const pagoProcesando = pagoPendiente && Boolean(p.mercado_pago_payment_id);
                 return `
@@ -528,12 +517,13 @@
                         <span class="text-lg font-black text-slate-900">$${p.total}</span>
                         <span class="text-[9px] font-black uppercase px-3 py-1 rounded-full ${p.status === 'pendiente' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}">${escapeHtml(p.status)}</span>
                     </div>
-                    <p class="text-[10px] font-black uppercase ${pagoVencido ? 'text-red-500' : 'text-slate-400'} mt-3">${pagoVencido ? 'Pago vencido · haz un pedido nuevo' : pagoProcesando ? 'Mercado Pago está procesando el cobro' : `Pago: ${escapeHtml(p.payment_method || 'cash')} · ${escapeHtml(p.payment_status || 'not_required')}${pagoPendiente ? ` · quedan ${tiempoRestantePago(p)}` : ''}`}</p>
+                    <p class="text-[10px] font-black uppercase ${pagoVencido ? 'text-red-500' : 'text-slate-400'} mt-3">${pagoEnCaja ? (p.payment_method==='transfer'?'Pendiente de confirmar transferencia en caja':'Paga en caja para iniciar la preparación') : pagoVencido ? 'Pago vencido · haz un pedido nuevo' : pagoProcesando ? 'Mercado Pago está procesando el cobro' : `Pago: ${escapeHtml(p.payment_method || 'cash')} · ${escapeHtml(p.payment_status || 'not_required')}${pagoPendiente ? ` · quedan ${tiempoRestantePago(p)}` : ''}`}</p>
                     ${p.service_type === 'delivery' && !['cancelled'].includes(p.delivery_status) ? `<a href="delivery-tracking.html?id=${escapeHtml(p.id)}" class="block text-center w-full mt-3 py-3 bg-orange-500 text-white rounded-2xl text-xs font-black"> SEGUIR ENTREGA</a>` : ''}
+                    ${pagoEnCaja&&p.payment_method==='transfer'?`<button type="button" onclick="enviarComprobante(${Number(p.id)})" class="w-full mt-3 py-3 rounded-2xl bg-blue-50 text-blue-700 font-bold">ENVIAR COMPROBANTE</button>`:''}
                     ${pagoPendiente ? `<button type="button" onclick="verificarPago('${escapeHtml(p.id)}', this)" class="w-full mt-3 py-3 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-2xl text-[10px] font-black uppercase transition-colors">Verificar pago</button>` : ''}
                     ${p.status === 'cancelado' && p.cancellation_reason ? `<p class="text-xs text-red-500 mt-2">Motivo: ${escapeHtml(p.cancellation_reason)}</p>` : ''}
                     ${p.status === 'pendiente' ? `<button type="button" onclick="cancelarMiPedido('${escapeHtml(p.id)}')" class="w-full mt-4 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black">CANCELAR PEDIDO</button>` : ''}
-                    ${p.status === 'entregado' && !ratingsByOrder.has(p.id) ? `<button type="button" onclick="calificarPedido('${escapeHtml(p.id)}')" class="w-full mt-4 py-3 bg-amber-50 text-amber-600 rounded-2xl text-xs font-black">⭐ CALIFICAR PEDIDO</button>` : ''}
+                    ${p.status === 'entregado' && !ratingsByOrder.has(p.id) ? `<button type="button" onclick="calificarPedido('${escapeHtml(p.id)}')" class="w-full mt-4 py-3 bg-amber-50 text-amber-600 rounded-2xl text-xs font-black">CALIFICAR PEDIDO</button>` : ''}
                     ${ratingsByOrder.has(p.id) ? `<p class="mt-3 text-center text-amber-500 font-black">${'★'.repeat(ratingsByOrder.get(p.id))}${'☆'.repeat(5 - ratingsByOrder.get(p.id))}</p>` : ''}
                 </div>
             `;}).join('');
