@@ -151,6 +151,10 @@ Deno.serve(async (request) => {
     }
     const { data: reconciliation, error: updateError } = await admin.rpc('reconcile_order_payment', { p_order_id: order.id, p_payment: payment });
     if (updateError) throw updateError;
+    if (reconciliation?.refund_required) {
+      await refundOrder(admin, order, String(paymentId), 'Pago de pedido cancelado en el corte de caja; reembolso automático');
+      return new Response('closed-shift payment refunded', { status: 200, headers: corsHeaders(request) });
+    }
     const paymentStatus = reconciliation?.payment_status || order.payment_status;
 
     console.log('Mercado Pago order reconciled', { orderId, paymentId, paymentStatus });

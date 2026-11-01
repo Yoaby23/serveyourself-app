@@ -20,7 +20,7 @@ Deno.serve(async (request) => {
       const client = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
       const { data, error } = await admin.rpc('create_guest_pickup_order', {
         p_token_hash: await sha256(body.token), p_client_hash: await sha256(client),
-        p_restaurant_id: body.restaurantId, p_items: body.items, p_name: body.name
+        p_restaurant_id: body.restaurantId, p_items: body.items, p_name: body.name, p_payment_method: body.paymentMethod ?? 'mercado_pago'
       });
       if (error) return respond({ error: error.code === 'P0001' ? error.message : 'No se pudo crear el pedido. Revisa los productos e inténtalo de nuevo.' }, 400);
       orderId = data.id;
@@ -29,7 +29,7 @@ Deno.serve(async (request) => {
     } else return respond({ error: 'Acción inválida' }, 400);
     if (!orderId) return respond({ error: 'Pedido no encontrado o acceso vencido' }, 404);
     const { data: order, error } = await admin.from('orders')
-      .select('id,restaurant_id,pickup_name,items,total,status,payment_status,payment_expires_at,created_at')
+      .select('id,restaurant_id,pickup_name,items,total,status,payment_method,payment_status,payment_expires_at,created_at')
       .eq('id', orderId).single();
     if (error || !order) return respond({ error: 'No se pudo consultar el pedido' }, 500);
     // An expiry is display-only here. Payment state is changed only by reconciliation.

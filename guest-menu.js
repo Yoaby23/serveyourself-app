@@ -26,8 +26,19 @@
         const categories = [...new Set(products.map(p => p.category))];
         $('menu-content').innerHTML = categories.map(category => `<section><h2 class="text-xl font-black mb-3">${esc(category || 'Menú')}</h2><div class="grid sm:grid-cols-2 gap-3">${products.filter(p => p.category === category).map(p => `<article class="sy-guest-product"><img src="${esc(safe(p.image_url) || 'logo.png')}" alt="${esc(p.name)}"><div><h3>${esc(p.name)}</h3><p>${money(p.price)}</p>${canOrder ? `<button type="button" data-add="${p.id}" aria-label="Agregar ${esc(p.name)}">Agregar</button>` : ''}</div></article>`).join('')}</div></section>`).join('') || '<p>No hay productos disponibles por ahora.</p>';
         $('guest-cart').hidden = !canOrder;
+        const methods = [];
+        if (restaurant.payment_online) methods.push(['mercado_pago','Mercado Pago']);
+        if (restaurant.payment_cash) methods.push(['cash','Efectivo en caja']);
+        const selected = $('guest-payment-method').value;
+        $('guest-payment-method').innerHTML = methods.map(([value,label]) => `<option value="${value}">${label}</option>`).join('');
+        $('guest-payment-method').value = methods.some(([value]) => value === selected) ? selected : (methods[0]?.[0] || '');
+        updatePaymentLabel();
         renderCart();
     }
+    function updatePaymentLabel() {
+        $('guest-pay').textContent = $('guest-payment-method').value === 'cash' ? 'Solicitar pedido y pagar en caja' : 'Continuar a Mercado Pago';
+    }
+    $('guest-payment-method').addEventListener('change', updatePaymentLabel);
     function renderCart() {
         let total = 0;
         $('cart-items').innerHTML = [...cart].map(([id, qty]) => {
@@ -40,13 +51,15 @@
     function receipt(data) {
         const o = data.order;
         if (o.restaurant_id !== restaurantId) throw new Error('Este acceso corresponde a otro restaurante. Abre el enlace privado original.');
-        const pending = o.payment_status === 'pending' && !data.expired;
+        const pending = o.payment_status === 'pending' && o.status !== 'cancelado' && !data.expired;
+        const cash = o.payment_method === 'cash';
         const names = { pendiente: 'Pago confirmado. Pedido recibido', preparando: 'En preparación', listo: 'Listo para recoger', entregado: 'Entregado', cancelado: 'Cancelado' };
-        const label = o.payment_status === 'approved' ? names[o.status] || o.status : ({ pending: data.expired ? 'Tiempo de pago agotado' : 'Esperando confirmación de pago', rejected: 'Pago rechazado', refunded: 'Pago reembolsado', expired: 'Tiempo de pago agotado' }[o.payment_status] || 'Pago pendiente');
+        const label = o.status === 'cancelado' ? 'Pedido cancelado' : o.payment_status === 'approved' ? names[o.status] || o.status : ({ pending: data.expired ? 'Tiempo de pago agotado' : cash ? 'Pendiente de pago en caja' : 'Esperando confirmación de pago', rejected: 'Pago rechazado', refunded: 'Pago reembolsado', expired: 'Tiempo de pago agotado' }[o.payment_status] || 'Pago pendiente');
         $('guest-receipt').hidden = false;
         $('guest-cart').hidden = true;
-        $('receipt-details').innerHTML = `<p class="sy-guest-state">${esc(label)}</p><p>Pedido <b>#${o.id}</b> · ${esc(o.pickup_name)}</p><ul>${o.items.map(i => `<li>${i.qty} × ${esc(i.nombre)} <strong>${money(i.price * i.qty)}</strong></li>`).join('')}</ul><p><b>Total: ${money(o.total)}</b></p>${pending ? '<p class="sy-guest-help">Si ya pagaste, espera la confirmación. No vuelvas a pagar.</p>' : ''}`;
-        $('resume-payment').hidden = !pending;
+        $('receipt-details').innerHTML = `<p class="sy-guest-state">${esc(label)}</p><p>Pedido <b>#${o.id}</b> · ${esc(o.pickup_name)}</p><ul>${o.items.map(i => `<li>${i.qty} × ${esc(i.nombre)} <strong>${money(i.price * i.qty)}</strong></li>`).join('')}</ul><p><b>Total: ${money(o.total)}</b></p>${pending ? `<p class="sy-guest-help">${cash ? 'Pasa a caja e indica tu nombre o número de pedido. Se preparará después de registrar el pago completo.' : 'Si ya pagaste, espera la confirmación. No vuelvas a pagar.'}</p>` : ''}`;
+        $('resume-payment').hidden = !pending || cash;
+        $('resume-payment').textContent = 'Continuar pago';
         clearTimeout(poll);
         if (pending || (o.payment_status === 'approved' && !['entregado', 'cancelado'].includes(o.status))) poll = setTimeout(() => refresh(false), 15000);
     }
@@ -61,24 +74,27 @@
         try {
             if (!saved) {
                 const name = $('pickup-name').value.trim();
+                const paymentMethod = $('guest-payment-method').value;
+                if (!['cash','mercado_pago'].includes(paymentMethod)) throw new Error('Selecciona una forma de pago disponible.');
                 if (!name || name.length > 80 || !cart.size) throw new Error('Agrega productos e indica el nombre para recoger.');
                 const token = [...crypto.getRandomValues(new Uint8Array(32))].map(b => b.toString(16).padStart(2, '0')).join('');
                 // Persist before the first request so an ambiguous response can be retried safely.
-                save({ token, payload: { restaurantId, name, items: [...cart].map(([id, qty]) => ({ id, qty })) } });
+                save({ token, payload: { restaurantId, name, paymentMethod, items: [...cart].map(([id, qty]) => ({ id, qty })) } });
             }
             let data;
             if (saved.payload) data = await invoke('guest-pickup', { action: 'create', token: saved.token, ...saved.payload });
             else data = await invoke('guest-pickup', { action: 'status', token: saved.token });
             save({ ...saved, orderId: data.order.id });
             render(); receipt(data);
-            if (data.order.payment_status !== 'pending' || data.expired) { message('Consulta el estado de este pedido antes de crear otro.'); return; }
+            if (data.order.payment_status !== 'pending' || data.order.status === 'cancelado' || data.expired) { message('Consulta el estado de este pedido antes de crear otro.'); return; }
+            if (data.order.payment_method === 'cash') { message('Pedido guardado. Pasa a caja para pagarlo; cocina lo recibirá después del cobro.'); return; }
             const result = await invoke('create-mercado-pago-preference', { orderId: data.order.id, guestToken: saved.token });
             const checkout = new URL(result.checkoutUrl);
             if (checkout.protocol !== 'https:' || !/(^|\.)mercadopago\.(com|com\.mx)$/.test(checkout.hostname)) throw new Error('No se recibió un enlace de pago válido.');
             location.assign(checkout.href);
         } catch (error) {
             message(error.message);
-            if (saved) { $('guest-receipt').hidden = false; $('resume-payment').hidden = false; render(); }
+            if (saved) { $('guest-receipt').hidden = false; $('resume-payment').hidden = false; $('resume-payment').textContent = saved.payload?.paymentMethod === 'cash' ? 'Reintentar solicitud' : 'Continuar pago'; render(); }
         } finally { busy = false; $('resume-payment').disabled = false; renderCart(); }
     }
     $('menu-content').addEventListener('click', e => {
