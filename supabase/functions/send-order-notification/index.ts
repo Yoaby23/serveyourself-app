@@ -43,7 +43,7 @@ Deno.serve(async (request) => {
     }
     const targetOrderId = ticket?.order_id ?? orderId;
     const { data: order } = await client.from('orders')
-      .select('id, customer_id, restaurant_id, restaurant_name, status, order_source, service_type, delivery_status, assigned_driver_id, created_by, driver_earning')
+      .select('id, customer_id, restaurant_id, restaurant_name, status, order_source, service_type, delivery_status, assigned_driver_id, created_by, driver_earning, pickup_name')
       .eq('id', targetOrderId)
       .single();
     if (!order) {
@@ -96,6 +96,21 @@ Deno.serve(async (request) => {
           : `La comanda #${ticket?.id ?? order.id} fue cancelada.`,
         url: `${appUrl}/pos.html`
       });
+    }
+    if (order.service_type === 'pickup' && notificationStatus === 'listo') {
+      const { data: cashiers, error } = await serviceClient.from('restaurant_staff')
+        .select('user_id').eq('restaurant_id', order.restaurant_id)
+        .eq('is_active', true).eq('can_close_accounts', true);
+      if (error) throw error;
+      const recipients = new Set<string>([order.restaurant_id, ...(cashiers ?? []).map(row => row.user_id)]);
+      for (const recipient of recipients) {
+        // A cashier who also created the POS ticket gets one handoff notification.
+        const existing = notifications.findIndex(n => n.recipient === recipient);
+        if (existing >= 0) notifications.splice(existing, 1);
+        notifications.push({ recipient,
+          message: `Pedido #${order.id} listo para entregar a ${order.pickup_name || 'la persona que recoge'}.`,
+          url: `${appUrl}/caja.html#ready-pickup` });
+      }
     }
     if (!notifications.length) return jsonResponse(request, { skipped: true, reason: 'Sin destinatarios' });
 

@@ -68,6 +68,24 @@ begin
  assert blocked,'Duplicate payment accepted';
  assert (select count(*)=1 from public.order_payments where order_id=(a->>'id')::bigint),'Duplicate cash ledger entry';
  assert (select count(*)=1 from public.kitchen_tickets where order_id=(a->>'id')::bigint),'Paid guest missing kitchen ticket';
+ perform set_config('request.jwt.claim.sub',owner_id::text,true);
+ perform public.update_kitchen_ticket_status((select id from public.kitchen_tickets where order_id=(a->>'id')::bigint),'preparando');
+ result:=public.update_kitchen_ticket_status((select id from public.kitchen_tickets where order_id=(a->>'id')::bigint),'listo');
+ perform set_config('request.jwt.claim.sub',stranger_id::text,true);
+ blocked:=false;
+ begin perform public.mark_kitchen_ticket_delivered((result->>'id')::bigint);exception when raise_exception then blocked:=true;end;
+ assert blocked,'Stranger handed off guest pickup';
+ perform set_config('request.jwt.claim.sub',cashier_id::text,true);
+ assert (select count(*)=1 from public.kitchen_tickets where order_id=(a->>'id')::bigint and status='listo'),'Cashier cannot see ready guest pickup';
+ result:=public.mark_kitchen_ticket_delivered((select id from public.kitchen_tickets where order_id=(a->>'id')::bigint));
+ assert result->>'status'='entregado','Cashier cannot deliver pickup';
+ blocked:=false;
+ begin perform public.mark_kitchen_ticket_delivered((result->>'id')::bigint);exception when raise_exception then blocked:=true;end;
+ assert blocked,'Duplicate handoff accepted';
+ execute 'reset role';
+ assert (select count(*)=1 from public.order_audit_logs where order_id=(a->>'id')::bigint and action='kitchen_ticket_delivered'),'Duplicate delivery audit';
+ execute 'set local role authenticated';
+
  assert (select count(*)=0 from public.kitchen_tickets where order_id in ((b->>'id')::bigint,(c->>'id')::bigint));
  result:=public.get_open_cash_shift_summary(owner_id);
  assert (result->>'cash_sales')::numeric=50 and (result->>'expected_cash')::numeric=60,'Guest cash not included in shift';
