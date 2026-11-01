@@ -23,8 +23,8 @@
     }
     function render() {
         const canOrder = restaurant.guest_pickup_enabled && restaurant.accepting_orders && !saved;
-        const categories = [...new Set(products.map(p => p.category))];
-        $('menu-content').innerHTML = categories.map(category => `<section><h2 class="text-xl font-black mb-3">${esc(category || 'Menú')}</h2><div class="grid sm:grid-cols-2 gap-3">${products.filter(p => p.category === category).map(p => `<article class="sy-guest-product"><img src="${esc(safe(p.image_url) || 'logo.png')}" alt="${esc(p.name)}"><div><h3>${esc(p.name)}</h3><p>${money(p.price)}</p>${canOrder ? `<button type="button" data-add="${p.id}" aria-label="Agregar ${esc(p.name)}">Agregar</button>` : ''}</div></article>`).join('')}</div></section>`).join('') || '<p>No hay productos disponibles por ahora.</p>';
+        const categories = [...new Set(products.map(p => (p.category || 'General').trim() || 'General'))];
+        $('menu-content').innerHTML = categories.map(category => `<section><h2 class="text-xl font-black mb-3">${esc(category)}</h2><div class="grid sm:grid-cols-2 gap-3">${products.filter(p => ((p.category || 'General').trim() || 'General') === category).map(p => `<article class="sy-guest-product"><img src="${esc(safe(p.image_url) || 'logo.png')}" alt="${esc(p.name)}"><div><h3>${esc(p.name)}</h3><p>${money(p.price)}</p>${canOrder ? `<button type="button" data-add="${p.id}" aria-label="Agregar ${esc(p.name)}">Agregar</button>` : ''}</div></article>`).join('')}</div></section>`).join('') || '<p>No hay productos disponibles por ahora.</p>';
         $('guest-cart').hidden = !canOrder;
         const methods = [];
         if (restaurant.payment_online) methods.push(['mercado_pago','Mercado Pago']);

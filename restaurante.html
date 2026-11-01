@@ -288,20 +288,21 @@
                 contenedor.innerHTML = `<p class="text-center py-20 text-slate-400 font-bold italic">Menú no disponible.</p>`;
                 return;
             }
-            const categorias = {};
+            const categorias = new Map();
             productosPorId.clear();
             productos.forEach(p => {
                 productosPorId.set(String(p.id), p);
-                if (!categorias[p.category]) categorias[p.category] = [];
-                categorias[p.category].push(p);
+                const category = (p.category || 'General').trim() || 'General';
+                if (!categorias.has(category)) categorias.set(category, []);
+                categorias.get(category).push(p);
             });
             contenedor.innerHTML = '';
-            for (const cat in categorias) {
+            for (const [cat, items] of categorias) {
                 const section = document.createElement('div');
                 section.innerHTML = `
                     <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-5 ml-2">${escapeHtml(cat)}</h3>
                     <div class="grid gap-4">
-                        ${categorias[cat].map(prod => {
+                        ${items.map(prod => {
                             const agotado = !prod.is_available;
                             const imageUrl = safeImageUrl(prod.image_url);
                             const productId = escapeHtml(prod.id);
