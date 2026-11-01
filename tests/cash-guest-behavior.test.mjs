@@ -45,3 +45,9 @@ test('failed post-cut refund returns a retryable failure instead of acknowledgin
 test('normal payment approval does not trigger a cut refund',async()=>{
  const result=await webhook({required:false});assert.equal(result.refunds,0);assert.equal(result.response.status,200);
 });
+
+test('POS pickup card offers payment before kitchen without credit or table transfer',()=>{
+ const context={payments:[],tables:[],waiters:[],creditCustomers:[],shift:{id:'shift'},esc:x=>String(x??''),money:String,guest:{...guest,order_source:'pos'}};
+ vm.createContext(context);vm.runInContext(helper+card+'result=accountCard(guest)',context);
+ assert.match(context.result,/COBRAR Y ENVIAR A COCINA/);assert.doesNotMatch(context.result,/CERRAR A CRÉDITO|DIVIDIR|MOVER/);
+});

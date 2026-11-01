@@ -104,7 +104,7 @@ begin
  assert (cut->>'cancelled_pickup_count')::integer=3,'Cut did not cancel all unpaid pickup sources';
  assert (cut->>'cash_sales')::numeric=150 and (cut->>'expected_cash')::numeric=160,'Cut cash total mismatch';
  assert (select count(*)=3 from public.orders where id in ((b->>'id')::bigint,(c->>'id')::bigint,(d->>'id')::bigint) and status='cancelado');
- assert (select status='cancelado' from public.kitchen_tickets where order_id=(d->>'id')::bigint),'Cancelled POS ticket remains in kitchen';
+ assert not exists(select 1 from public.kitchen_tickets where order_id=(d->>'id')::bigint and status<>'cancelado'),'Cancelled POS ticket remains in kitchen';
  assert (select count(*)=3 from public.orders where id in ((a->>'id')::bigint,(e->>'id')::bigint,(f->>'id')::bigint) and payment_status='approved' and status<>'cancelado'),'Paid orders were removed';
  execute 'reset role';
  assert (select count(*)=3 from public.order_audit_logs where restaurant_id=owner_id and action='cancelled_at_cash_close'),'Cut cancellation audit missing';
