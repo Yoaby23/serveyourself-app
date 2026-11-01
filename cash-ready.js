@@ -8,6 +8,8 @@ window.startCashReady = function startCashReady(access) {
     let tickets = [], running = false, dirty = false, known = new Set();
     function render() {
         count.textContent = String(tickets.length);
+        const indicator = document.getElementById('cash-ready-indicator');
+        if (indicator) { indicator.hidden = !tickets.length; indicator.textContent = `${tickets.length} pedido${tickets.length === 1 ? '' : 's'} listo${tickets.length === 1 ? '' : 's'} para entregar · Ver pedidos`; }
         list.innerHTML = tickets.map(ticket => `<article class="cash-account-card">
             <b class="text-lg">Pedido #${Number(ticket.order_id)}</b>
             <p class="font-black">${esc(ticket.orders?.pickup_name || 'Sin nombre registrado')}</p>

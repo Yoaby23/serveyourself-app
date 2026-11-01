@@ -49,3 +49,13 @@ El aviso push existente también se dirige al dueño y al personal activo con pe
 «Confirmar entrega» pide verificar número y nombre y utiliza la misma operación del POS. La base de datos bloquea la comanda, exige permisos vigentes, rechaza pedidos cancelados y segundas entregas, y registra una sola entrega en la auditoría. La actualización se refleja en las demás cajas. Los pedidos web en efectivo siguen entrando a cocina únicamente después del cobro.
 
 Validación: pruebas automatizadas de restauración y errores de la lista, doble clic, reintentos, destinatarios push y permisos; prueba SQL con pedido invitado, cobro, cocina, caja y entrega repetida dentro de una transacción revertida. La recepción push en un dispositivo físico requiere una prueba operativa con notificaciones habilitadas.
+
+### Organización de Caja y pedidos de mostrador
+
+Caja separa Para llevar, Cuentas de mesa, Pagos en línea, Crédito y Turno y movimientos. Para llevar contiene las cuentas por cobrar, pedidos pagados en cocina y comandas listas con confirmación de entrega. El aviso de pedidos listos permanece accesible desde cualquier sección. Las acciones secundarias de cada cuenta están agrupadas bajo Administrar cuenta.
+
+Nuevo pedido para llevar abre el catálogo existente del POS en modo Caja, solicita el nombre y vuelve a Caja al terminar. Se reutilizan las operaciones de pedidos y entrega: no hay un segundo catálogo ni una segunda implementación del carrito. El permiso de caja autoriza únicamente pedidos pickup; no concede acceso de creación de cuentas de mesa. Se mantiene el requisito de turno abierto, productos disponibles y precios calculados en servidor. Los pedidos de mostrador conservan el flujo POS (se envían a cocina y quedan pendientes de cobro); los pedidos web en efectivo siguen esperando el pago antes de entrar a cocina.
+
+Pruebas: clasificación sin duplicar cuentas, navegación por sección y enlace de aviso, regreso desde POS, permisos de caja, turno cerrado, nombre obligatorio, cobro, entrega, rechazo de entrega repetida y personal desactivado.
+
+Validación visual adicional: Chromium con datos simulados, escritorio 1440 px y móvil 390 px; se comprobó cambio de secciones, enlace a listos, confirmación de entrega, ausencia de desbordamiento horizontal y registro desde caja con regreso a la sección Para llevar. Las operaciones reales se verificaron por separado con pruebas SQL revertidas.
