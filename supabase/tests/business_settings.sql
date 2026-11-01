@@ -1,0 +1,38 @@
+do $$
+declare h jsonb:='[{"closed":false,"open":"18:00","close":"02:00"},{"closed":true},{"closed":true},{"closed":true},{"closed":true},{"closed":true},{"closed":true}]';
+ owner_id uuid:=gen_random_uuid();product_id uuid;items jsonb;o jsonb;repeat_order jsonb;blocked boolean;
+begin
+ assert public.valid_business_hours(h);
+ assert not public.valid_business_hours('[{"closed":false}]');
+ assert not public.valid_business_hours(jsonb_set(h,'{0,open}','"99:00"'));
+ assert public.business_open_at(h,'2026-11-02 19:00');
+ assert public.business_open_at(h,'2026-11-03 01:59');
+ assert not public.business_open_at(h,'2026-11-03 02:00');
+ assert not public.business_open_at(h,'2026-11-03 19:00');
+ insert into auth.users(id,email,raw_user_meta_data) values(owner_id,'qa-'||owner_id||'@example.invalid','{"role":"negocio","business_name":"Weekly QA"}');
+ update public.profiles set guest_pickup_enabled=true,payment_cash=true,open_time=null,close_time=null,business_hours=(select jsonb_agg(jsonb_build_object('closed',true)) from generate_series(1,7)) where id=owner_id;
+ insert into public.products(restaurant_id,name,price) values(owner_id,'Meal',50) returning id into product_id;
+ items:=jsonb_build_array(jsonb_build_object('id',product_id,'qty',1));
+ execute 'set local role service_role';
+ blocked:=false;
+ begin perform public.create_guest_pickup_order(md5(owner_id::text)||md5(owner_id::text||'token'),md5(owner_id::text)||md5(owner_id::text||'client'),owner_id,items,'Ana','cash','Sin cebolla');exception when raise_exception then blocked:=true;end;
+ assert blocked,'Closed weekday accepted checkout';
+ execute 'reset role';
+ update public.profiles set business_hours=(select jsonb_agg(jsonb_build_object('closed',false,'allDay',true)) from generate_series(1,7)) where id=owner_id;
+ execute 'set local role service_role';
+ o:=public.create_guest_pickup_order(md5(owner_id::text)||md5(owner_id::text||'token'),md5(owner_id::text)||md5(owner_id::text||'client'),owner_id,items,'Ana','cash','Sin cebolla');
+ assert o->>'notes'='Sin cebolla','Guest notes lost';
+ repeat_order:=public.create_guest_pickup_order(md5(owner_id::text)||md5(owner_id::text||'token'),md5(owner_id::text)||md5(owner_id::text||'client'),owner_id,items,'Ana','cash','Sin cebolla');
+ assert repeat_order->>'id'=o->>'id';
+ blocked:=false;
+ begin perform public.create_guest_pickup_order(md5(owner_id::text)||md5(owner_id::text||'token'),md5(owner_id::text)||md5(owner_id::text||'client'),owner_id,items,'Ana','cash','Otras notas');exception when raise_exception then blocked:=true;end;
+ assert blocked,'Changed notes bypassed idempotency';
+ execute 'reset role';
+ perform set_config('request.jwt.claim.sub',owner_id::text,true);
+ execute 'set local role authenticated';
+ perform public.open_cash_shift(owner_id,0);
+ perform public.register_pos_payment_v2((o->>'id')::bigint,'cash',50,0,50);
+ assert (select notes='Sin cebolla' from public.kitchen_tickets where order_id=(o->>'id')::bigint),'Kitchen lost notes';
+ assert (select business_hours is not null from public.public_qr_restaurants where id=owner_id),'Public hours missing';
+ execute 'reset role';
+end;$$;

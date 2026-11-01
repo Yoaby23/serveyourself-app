@@ -6,7 +6,7 @@ import { stripTypeScriptTypes } from 'node:module';
 import { corsHeaders } from '../supabase/functions/_shared/cors.ts';
 const cash=fs.readFileSync(new URL('../caja.html',import.meta.url),'utf8');
 const guest={id:42,order_source:'online',service_type:'pickup',payment_before_kitchen:true,payment_method:'cash',total:50,items:[{nombre:'Comida',price:25,qty:2}],pickup_name:'Ana'};
-const helper=cash.slice(cash.indexOf('        function isGuestCashOrder('),cash.indexOf('        function shiftTotals('));
+const helper=cash.slice(cash.indexOf('        function isOnlinePickupOrder('),cash.indexOf('        function shiftTotals('));
 const card=cash.slice(cash.indexOf('        function accountCard('),cash.indexOf('        function renderAccounts('));
 test('guest cashier card uses the existing full cash payment form without table/credit controls',()=>{
  const context={payments:[],tables:[],waiters:[],creditCustomers:[],shift:{id:'shift'},esc:x=>String(x??''),money:x=>String(x),guest};

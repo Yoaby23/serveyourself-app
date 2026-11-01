@@ -79,7 +79,7 @@
                 if (!name || name.length > 80 || !cart.size) throw new Error('Agrega productos e indica el nombre para recoger.');
                 const token = [...crypto.getRandomValues(new Uint8Array(32))].map(b => b.toString(16).padStart(2, '0')).join('');
                 // Persist before the first request so an ambiguous response can be retried safely.
-                save({ token, payload: { restaurantId, name, paymentMethod, items: [...cart].map(([id, qty]) => ({ id, qty })) } });
+                save({ token, payload: { restaurantId, name, paymentMethod, notes: $('guest-notes').value.trim(), items: [...cart].map(([id, qty]) => ({ id, qty })) } });
             }
             let data;
             if (saved.payload) data = await invoke('guest-pickup', { action: 'create', token: saved.token, ...saved.payload });
@@ -142,7 +142,7 @@
             document.title = `Menú de ${restaurant.business_name}`;
             $('restaurant-name').textContent = restaurant.business_name;
             $('restaurant-logo').src = safe(restaurant.avatar_url) || 'logo.png';
-            $('restaurant-info').textContent = [restaurant.address, restaurant.open_time && restaurant.close_time ? `Horario ${restaurant.open_time.slice(0, 5)}–${restaurant.close_time.slice(0, 5)}` : ''].filter(Boolean).join(' · ');
+            $('restaurant-info').textContent = [restaurant.address, restaurant.business_hours ? (SYRuntime.isBusinessOpen(restaurant)?'Abierto ahora':'Cerrado ahora') : restaurant.open_time && restaurant.close_time ? `Horario ${restaurant.open_time.slice(0, 5)}–${restaurant.close_time.slice(0, 5)}` : ''].filter(Boolean).join(' · ');
             render();
             if (saved) { $('guest-receipt').hidden = false; $('resume-payment').hidden = !saved.payload; await refresh(); }
             else if (restaurant.guest_pickup_enabled && !new URLSearchParams(location.search).has('order_id')) message(restaurant.accepting_orders ? 'Pide para llevar sin crear una cuenta.' : 'El restaurante no está aceptando pedidos ahora.');

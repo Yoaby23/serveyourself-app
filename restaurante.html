@@ -67,12 +67,12 @@
                 <h2 class="text-2xl font-black text-slate-900">Tu Pedido</h2>
                 <button type="button" onclick="cerrarCarrito()" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold">✕</button>
             </div>
-            <div id="lista-carrito" class="space-y-6 mb-8"></div>
+            <div id="transfer-receipt" class="hidden mb-4 p-4 bg-blue-50 rounded-2xl"><p class="text-sm">Adjunta y envía el comprobante en WhatsApp. Caja validará el depósito antes de liberar tu pedido.</p><a id="transfer-receipt-link" target="_blank" rel="noopener" class="block mt-3 font-bold text-blue-700">Enviar comprobante al negocio</a></div><div id="lista-carrito" class="space-y-6 mb-8"></div>
             <div id="service-options" class="grid grid-cols-2 gap-2 mb-6">
                 <button type="button" data-service="pickup" onclick="setService('pickup')" class="service-btn py-3 rounded-2xl bg-slate-900 text-white font-black text-xs">RECOGER</button>
                 <button type="button" data-service="delivery" onclick="setService('delivery')" class="service-btn py-3 rounded-2xl bg-slate-100 text-slate-600 font-black text-xs hidden">DELIVERY</button>
             </div>
-            <div id="pickup-fields" class="mb-6 space-y-3">
+            <div id="pickup-fields" class="mb-6 space-y-3"><label for="pickup-name" class="block text-sm font-bold">Nombre de quien recoge</label><input id="pickup-name" type="text" maxlength="80" autocomplete="name" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold" placeholder="Nombre del cliente">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2 block">¿Cuándo recoges?</label>
                 <select id="pickup-timing" onchange="togglePickupSchedule()" class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold"><option value="asap">Lo antes posible</option><option value="scheduled">Programar hora</option></select>
                 <input id="pickup-scheduled-for" type="datetime-local" class="hidden w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold">
@@ -91,7 +91,7 @@
             </div>
             <div class="mb-8">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Notas adicionales</label>
-                <textarea id="order-notes" placeholder="Ej: Sin cebolla, salsas extra..." class="w-full bg-slate-50 border border-slate-100 rounded-[1.5rem] p-4 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all resize-none" rows="3"></textarea>
+                <textarea id="order-notes" maxlength="500" placeholder="Ej: Sin cebolla, salsas extra..." class="w-full bg-slate-50 border border-slate-100 rounded-[1.5rem] p-4 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all resize-none" rows="3"></textarea>
             </div>
             <div class="mb-8">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Método de pago</label>
@@ -193,7 +193,7 @@
         }
         function renderPaymentMethods(res) {
             const options = [];
-            if (res.payment_cash) options.push(`<option value="cash">${serviceType === 'delivery' ? 'Efectivo al entregar' : 'Efectivo al recoger'}</option>`);
+            if (res.payment_cash) options.push(`<option value="cash">${serviceType === 'delivery' ? 'Efectivo al entregar' : 'Efectivo en caja antes de preparar'}</option>`);
             if (serviceType !== 'delivery' && res.payment_transfer) options.push('<option value="transfer">Transferencia bancaria</option>');
             if (res.payment_online && res.mercado_pago_connected) options.push('<option value="mercado_pago">Mercado Pago</option>');
             document.getElementById('payment-method').innerHTML = options.join('');
@@ -278,7 +278,7 @@
             const isTransfer = document.getElementById('payment-method').value === 'transfer';
             details.classList.toggle('hidden', !isTransfer);
             if (isTransfer && restaurant) {
-                details.innerHTML = `<strong>${escapeHtml(restaurant.bank_name || 'Banco')}</strong><br>${escapeHtml(restaurant.bank_account_holder || '')}<br>CLABE: ${escapeHtml(restaurant.bank_clabe || 'Solicítala al negocio')}`;
+                details.innerHTML = `<strong>${escapeHtml(restaurant.bank_name || 'Banco')}</strong><br>${escapeHtml(restaurant.bank_account_holder || '')}<br>CLABE: ${escapeHtml(restaurant.bank_clabe || 'Solicítala al negocio')}<br>Después de registrar tu pedido, envía el comprobante al WhatsApp del negocio: ${escapeHtml(restaurant.phone||'Consulta el número en caja')}. Caja debe confirmar el depósito.`;
             }
         }
 
@@ -420,6 +420,8 @@
                     const scheduled = document.getElementById('pickup-timing').value === 'scheduled';
                     const value = document.getElementById('pickup-scheduled-for').value;
                     if (scheduled && !value) throw new Error('Selecciona la fecha y hora de recogida.');
+                    payload.pickup_name = document.getElementById('pickup-name').value.trim();
+                    if (!payload.pickup_name || payload.pickup_name.length > 80) throw new Error('Indica el nombre de quien recoge (1 a 80 caracteres).');
                     payload.scheduled_for = scheduled ? new Date(value).toISOString() : null;
                 }
                 const order = await SYRuntime.createOrderOnce(_supabase, sessionStorage, storageKey, payload);
@@ -446,13 +448,14 @@
                 }
 
                 sessionStorage.removeItem(storageKey);
+                if(paymentMethod==='transfer'){const receiptUrl=SYRuntime.transferReceiptUrl(restaurant.phone,order);if(receiptUrl){document.getElementById('transfer-receipt-link').href=receiptUrl;document.getElementById('transfer-receipt').classList.remove('hidden');}}
                 if (serviceType === 'delivery') { window.location.href = `delivery-tracking.html?id=${order.id}`; return; }
-                alert(paymentMethod === 'transfer' ? 'Pedido enviado. Realiza la transferencia con los datos indicados.' : '¡Pedido enviado con éxito!');
+                alert(paymentMethod === 'transfer' ? 'Pedido registrado. Realiza la transferencia y solicita su confirmación en caja. Se preparará al confirmar el pago.' : 'Pedido registrado. Paga en caja para que comience la preparación.');
                 carrito = [];
                 // Resetear UI de cantidades en el menú
                 document.querySelectorAll('[id^="qty-"]').forEach(el => el.innerText = '0');
                 actualizarInterfazCarrito();
-                cerrarCarrito();
+                if(paymentMethod==='transfer'){document.getElementById('modal-carrito').classList.remove('hidden');}else cerrarCarrito();
 
             } catch (err) {
                 alert("Error: " + err.message);
