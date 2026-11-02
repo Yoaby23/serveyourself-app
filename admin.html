@@ -46,7 +46,8 @@
                     <p id="product-edit-help" hidden class="text-sm text-slate-500">Si no seleccionas otra fotografía, se conserva la actual.</p>
                     <input type="text" id="prod-name" placeholder="Nombre" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold" required>
                     <input type="number" id="prod-price" placeholder="Precio" min="0.01" step="0.01" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold" required>
-                    <label for="prod-category" class="block text-sm font-bold">Categoría del menú</label><input id="prod-category" type="text" list="product-categories" maxlength="80" placeholder="Ej. Entradas, platillos, bebidas" required class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold"><datalist id="product-categories"></datalist><p class="text-xs text-slate-500">Agrupa los productos que ve el cliente. La estación indica dónde se preparan.</p>
+                    <label for="prod-category" class="block text-sm font-bold">Categoría del menú</label><select id="prod-category" disabled required class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold"><option value="">Cargando categorías…</option></select><button type="button" id="retry-categories" hidden onclick="cargarCategoriasProducto()" class="text-sm font-bold text-orange-500">Reintentar carga de categorías</button><a href="inventario.html" class="block text-xs font-bold text-orange-600">Crear categorías en Estaciones</a>
+                    <p id="product-save-status" role="status" aria-live="polite" class="text-sm text-slate-600"></p>
                     <label for="prod-station" class="block text-sm font-bold">Estación de cocina</label><select id="prod-station" disabled class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold"><option value="">Cargando estaciones…</option></select><button type="button" id="retry-stations" hidden onclick="cargarEstacionesProducto()" class="text-sm font-bold text-orange-500">Reintentar carga de estaciones</button>
                     <label class="block p-4 bg-orange-50 border border-orange-100 rounded-2xl text-sm font-bold text-orange-700 cursor-pointer">
                          Seleccionar fotografía
@@ -194,9 +195,31 @@
 
             cargarProductos();
             cargarEstacionesProducto();
+            cargarCategoriasProducto();
         }
 
-        let editingProductId = null, productSaving = false, adminProducts = [];
+        let editingProductId = null, productSaving = false, adminProducts = [], menuCategories = [];
+
+        async function cargarCategoriasProducto() {
+            const select = document.getElementById('prod-category');
+            const previous = select.value;
+            select.disabled = true;
+            document.getElementById('retry-categories').hidden = true;
+            try {
+                const {data,error} = await _supabase.from('menu_categories').select('name').eq('restaurant_id',currentRestaurantId).order('name');
+                if (error) throw error;
+                menuCategories = data || [];
+                select.innerHTML = '<option value="">Selecciona una categoría</option>' + menuCategories.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join('');
+                const editing = adminProducts.find(p => String(p.id) === editingProductId);
+                const chosen = editing ? editing.category : previous;
+                select.value = menuCategories.find(c => c.name.toLowerCase() === String(chosen || '').toLowerCase())?.name || '';
+                select.disabled = false;
+                if (!menuCategories.length) document.getElementById('product-save-status').textContent = 'Crea primero una categoría en Estaciones.';
+            } catch {
+                select.innerHTML = '<option value="">No se pudieron cargar las categorías</option>';
+                document.getElementById('retry-categories').hidden = false;
+            }
+        }
 
         async function cargarEstacionesProducto() {
             const select = document.getElementById("prod-station");
@@ -222,7 +245,7 @@
                 return;
             }
             adminProducts = prods;
-            document.getElementById('product-categories').innerHTML = [...new Set(prods.map(p => (p.category || 'General').trim()))].map(category => `<option value="${escapeHtml(category)}"></option>`).join('');
+
             document.getElementById('lista-menu-admin').innerHTML = prods.map(p => `
                 <div class="bg-white p-4 rounded-3xl border border-slate-100 flex items-center justify-between ${!p.is_available ? 'opacity-50' : ''}">
                     <div class="flex items-center gap-4">
@@ -274,7 +297,8 @@
             editingProductId = String(id);
             document.getElementById('prod-name').value = product.name;
             document.getElementById('prod-price').value = product.price;
-            document.getElementById('prod-category').value = product.category || 'General';
+            document.getElementById('prod-category').value = menuCategories.find(c => c.name.toLowerCase() === String(product.category || '').toLowerCase())?.name || '';
+            document.getElementById('product-save-status').textContent = '';
             document.getElementById('prod-station').value = product.kitchen_station_id == null ? '' : String(product.kitchen_station_id);
             document.getElementById('prod-file').value = '';
             document.getElementById('product-form-title').textContent = 'Editar producto';
@@ -288,9 +312,10 @@
             e.preventDefault();
             if (productSaving) return;
             const station = document.getElementById('prod-station');
+            if (document.getElementById('prod-category').disabled) { alert('Espera a que se carguen las categorías o reintenta la carga.'); return; }
             if (station.disabled) { alert('Espera a que se carguen las estaciones o reintenta la carga.'); return; }
             const payload = {category:document.getElementById('prod-category').value.trim().replace(/\s+/g,' '),name:document.getElementById('prod-name').value.trim(),price:Number(document.getElementById('prod-price').value),kitchen_station_id:station.value ? Number(station.value) : null};
-            if (!payload.category || payload.category.length > 80 || !payload.name || !Number.isFinite(payload.price) || payload.price <= 0) { alert('Indica nombre, categoría y un precio mayor a cero.'); return; }
+            if (!menuCategories.some(c => c.name === payload.category) || payload.category.length > 80 || !payload.name || !Number.isFinite(payload.price) || payload.price <= 0) { alert('Indica nombre, categoría y un precio mayor a cero.'); return; }
             const file = document.getElementById('prod-file').files[0];
             const formats = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/avif':'avif'};
             if (file && (!formats[file.type] || file.size > 5*1024*1024)) { alert('Usa JPG, PNG, WebP o AVIF de hasta 5 MB.'); return; }
@@ -313,9 +338,11 @@
                 saved = true;
             } catch (error) {
                 if (uploadedPath) { try { await _supabase.storage.from('product-images').remove([uploadedPath]); } catch {} }
-                alert('No se pudo guardar el producto: ' + (error.message || 'Inténtalo de nuevo.'));
+                const message = 'No se pudo guardar el producto: ' + (error.message || 'Inténtalo de nuevo.');
+                document.getElementById('product-save-status').textContent = message;
+                alert(message);
             } finally { productSaving = false; button.disabled = false; }
-            if (saved) { cancelarEdicionProducto(); await cargarProductos(); }
+            if (saved) { cancelarEdicionProducto(); document.getElementById('product-save-status').textContent = id ? 'Cambios guardados.' : 'Producto agregado.'; await cargarProductos(); }
         });
 
         function cargarConfiguracion(profile) {
