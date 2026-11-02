@@ -216,7 +216,7 @@ window.serveYourself = {
     ensureGlobalBackButton() {
         if (!document.body || !document.querySelector) return;
         const page = (window.location.pathname || '/index.html').split('/').pop() || 'index.html';
-        const mainPages = ['menu-publico.html', 'index.html', 'menu.html', 'admin.html', 'pos.html', 'caja.html', 'cocina.html', 'delivery.html', 'repartidor.html'];
+        const mainPages = ['menu-publico.html', 'index.html', 'menu.html', 'admin.html', 'pos.html', 'caja.html', 'cocina.html', 'delivery.html', 'repartidor.html', 'cuenta.html', 'platform-admin.html'];
         if (mainPages.includes(page) || page === 'funciones.html' || document.querySelector('[data-sy-back], .sy-global-back')) return;
         const button = document.createElement('button');
         button.type = 'button';
@@ -284,6 +284,13 @@ window.serveYourself = {
         const page = (window.location.pathname || '/index.html').split('/').pop();
         nav.innerHTML = items.map(item => `<a href="${this.escapeHtml(item.href)}" ${item.href.split('?')[0] === page ? 'aria-current="page"' : ''}>${this.navigationIcon(item.icon)}<span>${this.escapeHtml(item.label)}</span></a>`).join('');
         document.body.classList.add('sy-has-bottom-nav');
+        if (window.ResizeObserver && document.body.style) {
+            this._bottomNavObserver?.disconnect();
+            const measure = () => document.body.style.setProperty('--sy-bottom-nav-height', `${nav.getBoundingClientRect().height}px`);
+            this._bottomNavObserver = new window.ResizeObserver(measure);
+            this._bottomNavObserver.observe(nav);
+            measure();
+        }
         this.ensureGlobalBackButton();
     },
 
