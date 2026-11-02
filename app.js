@@ -51,6 +51,7 @@ window.serveYourself = {
         }
         const page = (window.location.pathname || '').split('/').pop();
         if (['restaurante.html','delivery-tracking.html','eliminar-cuenta.html','unirse.html','repartidor-registro.html'].includes(page)) this.renderPersonalNavigation();
+        this.initPushNotifications(user);
         return user;
     },
 
@@ -346,41 +347,60 @@ window.serveYourself = {
     async initPushNotifications(user) {
         const appId = window.APP_CONFIG?.oneSignalAppId;
         if (!appId || !user) return false;
-        window.OneSignalDeferred = window.OneSignalDeferred || [];
-        if (!document.querySelector('script[data-onesignal]')) {
-            const script = document.createElement('script');
-            script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
-            script.defer = true;
-            script.dataset.onesignal = 'true';
-            document.head.appendChild(script);
+        if (!this._pushReady) {
+            this._pushReady = new Promise((resolve, reject) => {
+                let finished = false;
+                const fail = error => { if (finished) return; finished = true; clearTimeout(timer); reject(error); };
+                const timer = setTimeout(() => fail(new Error('No se pudo conectar con las notificaciones. Revisa tu conexión o bloqueador y recarga la app.')), 15000);
+                window.OneSignalDeferred = window.OneSignalDeferred || [];
+                window.OneSignalDeferred.push(async OneSignal => {
+                    if (finished) return;
+                    try {
+                        await OneSignal.init({ appId, serviceWorkerPath: 'sw.js' });
+                        await OneSignal.login(user.id);
+                        if (finished) return;
+                        finished = true; clearTimeout(timer); this._pushSDK = OneSignal; resolve(OneSignal);
+                    } catch (error) { fail(new Error('No se pudieron preparar las notificaciones: ' + (error.message || 'Recarga la app.'))); }
+                });
+                if (!document.querySelector('script[data-onesignal]')) {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+                    script.defer = true; script.dataset.onesignal = 'true';
+                    script.onerror = () => fail(new Error('El navegador no pudo cargar las notificaciones. Revisa tu conexión o bloqueador y recarga la app.'));
+                    document.head.appendChild(script);
+                }
+            });
         }
-        window.OneSignalDeferred.push(async OneSignal => {
-            await OneSignal.init({ appId, serviceWorkerPath: 'sw.js' });
-            await OneSignal.login(user.id);
-        });
-        return true;
+        try { await this._pushReady; return true; } catch { return false; }
     },
 
     async requestPushPermission() {
         if (!window.APP_CONFIG?.oneSignalAppId) throw new Error('Las notificaciones no están configuradas');
-        return new Promise((resolve, reject) => {
-            window.OneSignalDeferred = window.OneSignalDeferred || [];
-            window.OneSignalDeferred.push(async OneSignal => {
-                try {
-                    await OneSignal.Notifications.requestPermission();
-                    resolve(Boolean(OneSignal.Notifications.permission));
-                } catch (error) {
-                    reject(error);
-                }
-            });
-        });
+        if (window.Notification?.permission === 'denied') throw new Error('Las notificaciones están bloqueadas. En los permisos de este sitio cambia Notificaciones a Permitir y recarga la app.');
+        const ios = /iphone|ipad|ipod/i.test(window.navigator.userAgent || '') || (/Macintosh/.test(window.navigator.userAgent || '') && window.navigator.maxTouchPoints > 1);
+        if (ios && !window.matchMedia?.('(display-mode: standalone)').matches && !window.navigator.standalone) throw new Error('En iPhone o iPad agrega la app a la pantalla de inicio desde Safari, ábrela desde su icono y vuelve a activar las notificaciones.');
+        if (!this._pushSDK) {
+            if (!this._pushReady) {
+                const {data:{user}} = await this.supabase.auth.getUser();
+                if (!user) throw new Error('Inicia sesión para activar las notificaciones.');
+                await this.initPushNotifications(user);
+            }
+            await this._pushReady;
+            throw new Error('Las notificaciones están listas. Pulsa Activar notificaciones nuevamente para solicitar el permiso.');
+        }
+        const sdk = this._pushSDK;
+        if (!sdk.Notifications.isPushSupported()) throw new Error('Este navegador no admite notificaciones. Abre la app en un navegador compatible.');
+        await sdk.Notifications.requestPermission();
+        if (!sdk.Notifications.permission) return false;
+        await sdk.User.PushSubscription.optIn();
+        if (!sdk.User.PushSubscription.optedIn) throw new Error('El permiso está concedido, pero no se pudo activar la suscripción. Recarga y vuelve a intentarlo.');
+        return true;
     },
 
     async logoutPushNotifications() {
-        if (!window.APP_CONFIG?.oneSignalAppId) return;
-        window.OneSignalDeferred = window.OneSignalDeferred || [];
-        window.OneSignalDeferred.push(async OneSignal => OneSignal.logout());
+        if (this._pushSDK) await this._pushSDK.logout();
     }
+
 };
 
 if (!document.querySelector('link[rel="manifest"]')) {
