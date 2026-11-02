@@ -23,6 +23,10 @@ begin
  perform set_config('request.jwt.claim.sub',cashier_id::text,true);
  assert (select count(*)=1 from public.orders where id=(o->>'id')::bigint),'Cashier cannot see transfer order';
  assert (select count(*)=0 from public.kitchen_tickets where order_id=(o->>'id')::bigint),'Unpaid transfer entered kitchen';
+ execute 'reset role';
+ assert (select count(*)=1 from public.order_notification_events where order_id=(o->>'id')::bigint and kind='cashier');
+ assert not exists(select 1 from public.order_notification_events where order_id=(o->>'id')::bigint and kind='ticket');
+ execute 'set local role authenticated';
  perform public.open_cash_shift(owner_id,0);
  blocked:=false;
  begin perform public.register_pos_payment_v2((o->>'id')::bigint,'cash',50,0,50);exception when raise_exception then blocked:=true;end;
@@ -33,4 +37,7 @@ begin
  again:=public.create_customer_order_once(gen_random_uuid(),payload-'pickup_name');
  assert again->>'pickup_name'='Nombre del perfil','Cached clients lost profile-name fallback';
  execute 'reset role';
+ assert (select count(*)=1 from public.order_notification_events where order_id=(o->>'id')::bigint and kind='ticket' and state='pendiente');
+ assert (select count(*)=1 from public.order_notification_events where order_id=(o->>'id')::bigint and kind='payment' and state='approved');
+ assert not has_table_privilege('authenticated','public.order_notification_events','SELECT');
 end;$$;

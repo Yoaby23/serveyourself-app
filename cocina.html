@@ -113,8 +113,7 @@
             const { error } = activeStation === 'all' ? await db.rpc('update_kitchen_ticket_status', { p_ticket_id: id, p_status: status }) : await db.rpc('update_kitchen_ticket_station_status',{p_ticket_id:id,p_station_key:activeStation,p_status:status});
             if (error) return alert(error.message);
             await loadOrders();
-            const { error: notificationError } = await db.functions.invoke('send-order-notification', { body: { ticketId: id } });
-            if (notificationError) console.warn('No se pudo enviar la notificación push:', notificationError.message);
+
         }
         document.getElementById('sound-button').addEventListener('click', () => { soundEnabled = !soundEnabled; document.getElementById('sound-button').textContent = soundEnabled ? ' Sonido activo' : ' Activar sonido'; if (soundEnabled) SYRuntime.previewSound(document.getElementById('new-order-sound')).catch(() => {}); });
         document.getElementById('station-filter').addEventListener('change',e=>{activeStation=e.target.value;render();});

@@ -6,7 +6,8 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-order-notification]
-verify_jwt = true
+# Only random, server-created event IDs can claim a delivery.
+verify_jwt = false
 
 [functions.mercado-pago-connect-url]
 verify_jwt = true
