@@ -26,7 +26,7 @@
         }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen pb-32">
+<body class="bg-slate-50 min-h-screen sy-restaurant-menu">
 
     <nav class="p-4 sticky top-0 bg-white/80 backdrop-blur-md z-50 border-b border-slate-100">
         <div class="max-w-md mx-auto flex items-center gap-4">
@@ -46,7 +46,7 @@
         <div id="contenedor-menu" class="space-y-10"></div>
     </main>
 
-    <div id="cart-bar" onclick="abrirCarrito()" class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-slate-900 text-white p-5 rounded-[2.5rem] shadow-2xl flex justify-between items-center hidden z-50 cart-pop cursor-pointer">
+    <button type="button" id="cart-bar" onclick="abrirCarrito()" aria-label="Ver mi pedido y total" class="fixed left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-slate-900 text-white p-5 rounded-[2.5rem] shadow-2xl flex justify-between items-center hidden z-50 cart-pop cursor-pointer">
         <div class="flex items-center gap-4">
             <div class="relative">
                 <span class="bg-orange-500 w-7 h-7 rounded-full flex items-center justify-center font-black text-[11px]" id="cart-count">0</span>
@@ -59,13 +59,13 @@
         <div class="text-right">
             <span id="cart-total" class="font-black text-xl text-orange-400">$0.00</span>
         </div>
-    </div>
+    </button>
 
-    <div id="modal-carrito" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] hidden flex items-end">
+    <div id="modal-carrito" role="dialog" aria-modal="true" aria-label="Tu pedido" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] hidden flex items-end">
         <div class="modal-content bg-white w-full max-w-md mx-auto rounded-t-[3rem] p-8 pb-10 shadow-2xl overflow-y-auto max-h-[90vh]">
             <div class="flex justify-between items-center mb-8">
                 <h2 class="text-2xl font-black text-slate-900">Tu Pedido</h2>
-                <button type="button" onclick="cerrarCarrito()" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold">✕</button>
+                <button type="button" onclick="cerrarCarrito()" aria-label="Cerrar pedido" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold">✕</button>
             </div>
             <div id="transfer-receipt" class="hidden mb-4 p-4 bg-blue-50 rounded-2xl"><p class="text-sm">Adjunta y envía el comprobante en WhatsApp. Caja validará el depósito antes de liberar tu pedido.</p><a id="transfer-receipt-link" target="_blank" rel="noopener" class="block mt-3 font-bold text-blue-700">Enviar comprobante al negocio</a></div><div id="lista-carrito" class="space-y-6 mb-8"></div>
             <div id="service-options" class="grid grid-cols-2 gap-2 mb-6">
@@ -354,6 +354,7 @@
             const totalItems = carrito.reduce((acc, i) => acc + i.qty, 0);
             const precioTotal = carrito.reduce((acc, i) => acc + (i.qty * i.price), 0);
             const cartBar = document.getElementById('cart-bar');
+            document.body.classList.toggle('sy-has-cart', totalItems > 0);
             if (totalItems > 0) {
                 cartBar.classList.remove('hidden');
                 document.getElementById('cart-count').innerText = totalItems;
@@ -363,6 +364,10 @@
 
         function abrirCarrito() { actualizarModalCarrito(); document.getElementById('modal-carrito').classList.remove('hidden'); }
         function cerrarCarrito() { document.getElementById('modal-carrito').classList.add('hidden'); }
+        window.addEventListener('sy:back-request', event => {
+            if (!document.getElementById('modal-carrito').classList.contains('hidden')) { event.preventDefault(); cerrarCarrito(); }
+        });
+        document.addEventListener('keydown', event => { if (event.key === 'Escape') cerrarCarrito(); });
 
         function actualizarModalCarrito() {
             const lista = document.getElementById('lista-carrito');

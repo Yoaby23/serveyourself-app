@@ -42,3 +42,13 @@ test('no role retains a navigation dropdown and account actions have full-page d
  assert.match(read('styles.css'),/body\.sy-has-bottom-nav[^}]*safe-area-inset-bottom/);
  assert.match(read('styles.css'),/@media print[^}]*sy-role-bottom-nav/);
 });
+test('main account and platform screens do not add redundant back controls',()=>{
+ for(const page of ['cuenta.html','platform-admin.html','funciones.html']){
+  const {app,nodes}=appFor(page);app.ensureGlobalBackButton();
+  assert.ok(![...nodes.values()].some(node=>String(node.className||'').includes('sy-global-back')));
+ }
+});
+test('nested management screens retain a way back',()=>{
+ const {app,nodes}=appFor('inventario.html');app.ensureGlobalBackButton();
+ assert.ok([...nodes.values()].some(node=>String(node.className||'').includes('sy-global-back')));
+});
