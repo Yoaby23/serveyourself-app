@@ -28,14 +28,11 @@ test('closed-all-week configuration is not silently converted to open every day'
  vm.runInNewContext(fs.readFileSync(new URL('../business-settings.js',import.meta.url),'utf8'),{window,document:{getElementById:get}});
  window.BusinessSettings.load({business_hours:Array.from({length:7},()=>({closed:true}))});assert.equal(get('cfg-hours-mode').value,'daily');
 });
-test('business image upload saves the owner profile only after successful storage upload',async()=>{
- const elements={'cfg-business-image':{files:[{type:'image/png',size:100}],value:'file'},'cfg-save-image':{},'cfg-business-preview':{}};
- let uploaded,updated,saved;
- const db={
-  storage:{from:()=>({upload:async(path)=>{uploaded=path;return{}},getPublicUrl:path=>({data:{publicUrl:'https://images.test/'+path}})})},
-  from:()=>({update(data){updated=data;return {eq:(key,id)=>({select:()=>({single:async()=>({data:{id}})})})};}})
- };
- const window={};vm.runInNewContext(fs.readFileSync(new URL('../business-settings.js',import.meta.url),'utf8'),{window,document:{getElementById:id=>elements[id]},crypto:{randomUUID:()=> 'image-id'},createImageBitmap:async()=>({close(){}}),alert(){}});
- await window.BusinessSettings.upload(db,'owner',url=>saved=url);
- assert.equal(uploaded,'owner/business/image-id.png');assert.equal(updated.avatar_url,saved);assert.equal(elements['cfg-business-preview'].src,saved);assert.equal(elements['cfg-save-image'].disabled,false);
+test('business image is staged for the single settings save, without a separate profile update',async()=>{
+ const elements={'cfg-business-image':{files:[{type:'image/png',size:100}],value:'file'}};
+ let uploaded;const db={storage:{from:()=>({upload:async(path)=>{uploaded=path;return{};},getPublicUrl:path=>({data:{publicUrl:'https://images.test/'+path}})})},from:()=>{throw Error('A separate profile write must not occur');}};
+ const window={};vm.runInNewContext(fs.readFileSync(new URL('../business-settings.js',import.meta.url),'utf8'),{window,document:{getElementById:id=>elements[id]},crypto:{randomUUID:()=> 'image-id'},createImageBitmap:async()=>({close(){}})});
+ const image=await window.BusinessSettings.uploadImage(db,'owner');
+ assert.equal(uploaded,'owner/business/image-id.png');assert.equal(image.path,uploaded);assert.equal(image.url,'https://images.test/'+uploaded);
+ assert.equal(elements['cfg-business-image'].value,'file','The file remains available until the settings update succeeds');
 });

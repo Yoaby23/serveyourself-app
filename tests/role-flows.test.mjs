@@ -42,7 +42,7 @@ assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
 assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v49/, 'La PWA debe renovar su caché al publicar cambios de producción');
+assert.match(read('sw.js'), /serveyourself-shell-v50/, 'La PWA debe renovar su caché al publicar cambios de producción');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
@@ -127,7 +127,8 @@ assert.match(index, /sy:back-request/, 'El acceso debe responder al gesto de reg
 assert.match(read('inventario.html'), /inventory-page/, 'Inventario debe activar sus correcciones móviles');
 assert.doesNotMatch(read('inventario.html'), /Ingredientes|Recetas/, 'Las estaciones no deben gestionar ingredientes');
 assert.match(read('reportes.html'), /EXPORTAR CSV/, 'Los reportes deben poder exportarse');
-assert.match(read('clientes.html'), /Clientes frecuentes/, 'Debe existir el programa de lealtad');
+assert.match(read('clientes.html'), /Clientes y crédito/, 'Debe conservarse el registro de clientes y crédito');
+assert.doesNotMatch(read('clientes.html'), /addPoints|c\.points|c\.visits/, 'Los puntos y visitas manuales no deben aparecer');
 assert.match(pos, /get_pos_shift_status/, 'El POS debe comprobar que Caja tenga un turno abierto');
 assert.match(pos, /La caja está cerrada/, 'El mesero debe ver por qué no puede enviar comandas');
 assert.match(realCash, /require_open_cash_shift_for_pos/, 'La base de datos debe bloquear comandas sin turno abierto');

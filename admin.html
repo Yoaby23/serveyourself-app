@@ -76,62 +76,13 @@
         </section>
 
         <section id="view-config" class="hidden space-y-6">
-            <div><h2 class="text-2xl font-black text-slate-900">Configuración de restaurante</h2><p class="text-sm text-slate-400 font-semibold">Pedidos, ubicación y cobros.</p></div>
-            <form id="business-config-form" class="bg-white p-6 rounded-[2.5rem] border border-slate-100 space-y-5">
-                <div class="space-y-3"><label class="block text-sm font-bold">Nombre del negocio<input type="text" id="cfg-business-name" maxlength="120" required class="w-full p-3 border rounded-xl"></label><label class="block text-sm font-bold">Teléfono del negocio (WhatsApp)<input id="cfg-business-phone" type="tel" maxlength="25" placeholder="10 dígitos o código de país" class="w-full p-3 border rounded-xl"></label><p class="text-xs text-slate-500">Aquí recibirás los comprobantes de transferencia.</p><img id="cfg-business-preview" src="logo.png" alt="Imagen actual del negocio" class="w-20 h-20 rounded-2xl object-cover"><label class="block text-sm font-bold">Cambiar imagen<input id="cfg-business-image" type="file" accept="image/jpeg,image/png,image/webp,image/avif" class="block w-full mt-2"></label><button type="button" id="cfg-save-image" onclick="BusinessSettings.upload(_supabase,currentRestaurantId,url=>{currentProfile.avatar_url=url})" class="px-4 py-3 bg-slate-900 text-white rounded-xl font-bold">Guardar imagen</button></div>
-                <label class="sy-setting-option" for="cfg-accepting"><span>Aceptar pedidos</span><input id="cfg-accepting" type="checkbox"></label>
-                <div class="border-t border-slate-100 pt-4 space-y-3">
-                    <p class="text-[10px] font-black text-slate-400 uppercase">Horario de servicio</p><select id="cfg-hours-mode" onchange="BusinessSettings.mode()" class="w-full p-3 border rounded-xl"><option value="common">Todos los días con el mismo horario</option><option value="daily">Elegir días y horarios</option></select><div id="cfg-weekdays" hidden></div>
-                    <div id="cfg-common-hours" class="grid grid-cols-2 gap-3">
-                        <label class="text-xs font-bold text-slate-600">Apertura<input id="cfg-open-time" type="time" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl text-sm font-bold"></label>
-                        <label class="text-xs font-bold text-slate-600">Cierre<input id="cfg-close-time" type="time" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl text-sm font-bold"></label>
-                    </div>
-                    <p class="text-xs text-slate-400">Se aceptan horarios que terminan al día siguiente, por ejemplo 18:00 a 02:00. Deja ambos campos vacíos para operar sin restricción horaria.</p>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <input id="cfg-lat" type="number" step="any" placeholder="Latitud" class="p-4 bg-slate-50 rounded-2xl text-sm font-bold">
-                    <input id="cfg-lng" type="number" step="any" placeholder="Longitud" class="p-4 bg-slate-50 rounded-2xl text-sm font-bold">
-                </div>
-                <button type="button" onclick="usarUbicacionActual()" class="w-full py-3 bg-blue-50 text-blue-600 rounded-2xl font-black text-xs"> USAR MI UBICACIÓN ACTUAL</button>
-                <div class="border-t border-slate-100 pt-4 space-y-3">
-                    <div><p class="text-[10px] font-black text-slate-400 uppercase">Tiempos iniciales de cocina</p><p class="text-xs text-slate-400 mt-1">El modelo inteligente usará estos valores mientras aprende de las primeras 5 comandas de cada servicio.</p></div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <label class="text-xs font-bold text-slate-600">Para recoger (min)<input id="cfg-pickup-prep" type="number" min="5" max="240" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
-                        <label class="text-xs font-bold text-slate-600">Servicio en mesa (min)<input id="cfg-dine-in-prep" type="number" min="5" max="240" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
-                    </div>
-                </div>
-                <div class="border-t border-slate-100 pt-4 space-y-3">
-                    <label class="sy-setting-option" for="cfg-delivery-enabled"><span>Ofrecer delivery</span><input id="cfg-delivery-enabled" type="checkbox"></label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <label class="text-xs font-bold text-slate-600">Radio máximo (km)<input id="cfg-delivery-radius" type="number" min="0.5" max="50" step="0.1" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
-                        <label class="text-xs font-bold text-slate-600">Pedido mínimo<input id="cfg-delivery-minimum" type="number" min="0" step="0.01" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
-                        <label class="text-xs font-bold text-slate-600">Tarifa base<input id="cfg-delivery-base" type="number" min="0" step="0.01" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
-                        <label class="text-xs font-bold text-slate-600">Costo por km<input id="cfg-delivery-km" type="number" min="0" step="0.01" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
-                        <label class="text-xs font-bold text-slate-600">Envío gratis desde<input id="cfg-delivery-free" type="number" min="0" step="0.01" placeholder="Opcional" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
-                        <label class="text-xs font-bold text-slate-600">Preparación (min)<input id="cfg-delivery-prep" type="number" min="5" max="240" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
-                    </div>
-                    <p class="text-xs text-slate-400">Los clientes verán únicamente Efectivo al entregar y Mercado Pago. Configura la ubicación exacta para calcular la cobertura.</p>
-                </div>
-                <div class="border-t border-slate-100 pt-4 space-y-3">
-                    <p class="text-[10px] font-black text-slate-400 uppercase">Métodos de pago</p>
-                    <div class="sy-setting-options">
-                        <label class="sy-setting-option" for="cfg-cash"><span>Efectivo</span><input id="cfg-cash" type="checkbox"></label>
-                        <label class="sy-setting-option" for="cfg-transfer"><span>Transferencia</span><input id="cfg-transfer" type="checkbox"></label>
-                        <label class="sy-setting-option" for="cfg-online"><span>Mercado Pago</span><input id="cfg-online" type="checkbox"></label>
-                        <label class="sy-setting-option" for="cfg-guest-pickup"><span>Pedidos para llevar sin cuenta</span><input id="cfg-guest-pickup" type="checkbox"></label>
-                    </div>
-                    <p class="text-xs text-slate-500">Permite pedir desde el menú público con nombre y pago en efectivo en caja o Mercado Pago. Cocina recibe el pedido cuando se confirma el pago.</p>
-                    <div id="mp-status-card" class="p-4 rounded-2xl border border-slate-100 bg-slate-50">
+            <div><h2 class="text-2xl font-black text-slate-900">Configuración de restaurante</h2><p class="text-sm text-slate-400 font-semibold">Datos del negocio, operación y cobros en un solo lugar.</p></div>
+<form id="business-config-form" class="sy-config-form"><fieldset class="sy-config-section"><legend>Datos del negocio</legend><p class="sy-config-help">La información que ven tus clientes.</p><div class="sy-config-grid"><label class="sy-config-field" for="cfg-business-name">Nombre del negocio<input id="cfg-business-name" type="text" maxlength="120" required></label><label class="sy-config-field" for="cfg-business-phone">WhatsApp del negocio<input id="cfg-business-phone" type="tel" maxlength="25" placeholder="10 dígitos o código de país"></label></div><p class="sy-config-help">Los comprobantes de transferencia se envían a este WhatsApp.</p><div class="sy-business-image"><img id="cfg-business-preview" src="logo.png" alt="Imagen actual del negocio"><label class="sy-config-field" for="cfg-business-image">Imagen del negocio<input id="cfg-business-image" type="file" accept="image/jpeg,image/png,image/webp,image/avif"><span class="sy-config-help">JPG, PNG, WebP o AVIF, hasta 5 MB. Se aplica al guardar.</span></label></div></fieldset><fieldset class="sy-config-section"><legend>Atención y horarios</legend><p class="sy-config-help">Días y horas en que recibes pedidos.</p><label class="sy-setting-option" for="cfg-accepting"><span>Aceptar pedidos</span><input id="cfg-accepting" type="checkbox"></label><label class="sy-config-field" for="cfg-hours-mode">Horario de atención<select id="cfg-hours-mode" onchange="BusinessSettings.mode()"><option value="common">Mismo horario todos los días</option><option value="daily">Elegir días y horarios</option></select></label><div id="cfg-weekdays" hidden></div><div id="cfg-common-hours" class="sy-config-grid"><label class="sy-config-field" for="cfg-open-time">Apertura<input id="cfg-open-time" type="time" ></label><label class="sy-config-field" for="cfg-close-time">Cierre<input id="cfg-close-time" type="time" ></label></div><p class="sy-config-help">Puede terminar al día siguiente, por ejemplo de 18:00 a 02:00. Deja ambos campos vacíos para abrir 24 horas.</p></fieldset><fieldset class="sy-config-section"><legend>Ubicación</legend><p class="sy-config-help">Punto de origen para calcular la cobertura y las entregas.</p><div class="sy-config-grid"><label class="sy-config-field" for="cfg-lat">Latitud<input id="cfg-lat" type="number" min="-90" max="90" step="any"></label><label class="sy-config-field" for="cfg-lng">Longitud<input id="cfg-lng" type="number" min="-180" max="180" step="any"></label></div><button type="button" onclick="usarUbicacionActual()" class="sy-config-secondary">Usar mi ubicación actual</button></fieldset><fieldset class="sy-config-section"><legend>Pedidos y cocina</legend><p class="sy-config-help">Cómo recibes los pedidos y sus tiempos iniciales.</p><label class="sy-setting-option" for="cfg-guest-pickup"><span>Pedidos para llevar sin cuenta</span><input id="cfg-guest-pickup" type="checkbox"></label><p class="sy-config-help">Desde el menú público, el cliente indica su nombre y paga en caja o con Mercado Pago. El pago confirmado libera el pedido a cocina.</p><h3>Tiempos iniciales de preparación</h3><p class="sy-config-help">Se usan mientras cocina aprende los tiempos de cada servicio.</p><div class="sy-config-grid"><label class="sy-config-field" for="cfg-pickup-prep">Para recoger (min)<input id="cfg-pickup-prep" type="number" min="5" max="240" required></label><label class="sy-config-field" for="cfg-dine-in-prep">En mesa (min)<input id="cfg-dine-in-prep" type="number" min="5" max="240" required></label><label class="sy-config-field" for="cfg-delivery-prep">Delivery (min)<input id="cfg-delivery-prep" type="number" min="5" max="240" required></label></div></fieldset><fieldset class="sy-config-section"><legend>Delivery</legend><p class="sy-config-help">Cobertura y tarifas del servicio a domicilio.</p><label class="sy-setting-option" for="cfg-delivery-enabled"><span>Ofrecer delivery</span><input id="cfg-delivery-enabled" type="checkbox"></label><div class="sy-config-grid"><label class="sy-config-field" for="cfg-delivery-radius">Cobertura máxima (km)<input id="cfg-delivery-radius" type="number" min="0.5" max="50" step="0.1" required></label><label class="sy-config-field" for="cfg-delivery-minimum">Pedido mínimo ($)<input id="cfg-delivery-minimum" type="number" min="0" step="0.01" required></label><label class="sy-config-field" for="cfg-delivery-base">Tarifa base ($)<input id="cfg-delivery-base" type="number" min="0" step="0.01" required></label><label class="sy-config-field" for="cfg-delivery-km">Costo por km ($)<input id="cfg-delivery-km" type="number" min="0" step="0.01" required></label><label class="sy-config-field" for="cfg-delivery-free">Envío gratis desde ($)<input id="cfg-delivery-free" type="number" min="0" step="0.01" placeholder="Opcional"></label></div><p class="sy-config-help">Requiere ubicación y cobro en efectivo o Mercado Pago. Caja asigna cada entrega al personal del restaurante.</p></fieldset><fieldset class="sy-config-section"><legend>Cobros</legend><p class="sy-config-help">Métodos de pago y cuenta receptora.</p><div class="sy-setting-options"><label class="sy-setting-option" for="cfg-cash"><span>Efectivo</span><input id="cfg-cash" type="checkbox"></label><label class="sy-setting-option" for="cfg-transfer"><span>Transferencia</span><input id="cfg-transfer" type="checkbox"></label><label class="sy-setting-option" for="cfg-online"><span>Mercado Pago</span><input id="cfg-online" type="checkbox"></label></div>                    <div id="mp-status-card" class="p-4 rounded-2xl border border-slate-100 bg-slate-50">
                         <p id="mp-status" class="text-xs font-black text-slate-600">Consultando Mercado Pago...</p>
-                        <button id="mp-connect" type="button" onclick="conectarMercadoPago()" class="w-full mt-3 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase">Conectar Mercado Pago</button>
+                        <button id="mp-connect" type="button" onclick="conectarMercadoPago()" class="w-full mt-3 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase">Conectar Mercado Pago</button>
                         <button id="mp-disconnect" type="button" onclick="desconectarMercadoPago()" class="hidden w-full mt-3 py-3 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase">Desconectar cuenta</button>
                     </div>
-                    <input type="text" id="cfg-bank" placeholder="Banco" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold">
-                    <input type="text" id="cfg-holder" placeholder="Titular de la cuenta" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold">
-                    <input type="text" id="cfg-clabe" maxlength="18" placeholder="CLABE (18 dígitos)" class="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold">
-                </div>
-                <button type="submit" class="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs">GUARDAR CONFIGURACIÓN</button>
-            </form>
+<h3>Datos para transferencias</h3><div class="sy-config-grid"><label class="sy-config-field" for="cfg-bank">Banco<input id="cfg-bank" type="text" ></label><label class="sy-config-field" for="cfg-holder">Titular de la cuenta<input id="cfg-holder" type="text" ></label><label class="sy-config-field" for="cfg-clabe">CLABE<input id="cfg-clabe" type="text" maxlength="18" inputmode="numeric"></label></div></fieldset><div class="sy-config-save"><p id="config-save-status" role="status" aria-live="polite"></p><button type="submit" id="cfg-save" class="sy-config-primary">Guardar cambios</button></div></form>
         </section>
     </main>
 
@@ -153,7 +104,7 @@
             ['productos', 'dashboard', 'config'].forEach(id => {
                 document.getElementById(`view-${id}`).classList.toggle('hidden', id !== seccion);
             });
-            document.getElementById('admin-back').classList.toggle('hidden', seccion === 'home');
+            document.getElementById('admin-back').classList.toggle('hidden', seccion === 'home' || seccion === 'config');
             if (seccion === 'dashboard') cargarDashboard();
         }
 
@@ -404,19 +355,12 @@
             event.preventDefault();
             const clabe = document.getElementById('cfg-clabe').value.trim();
             let businessSettings;try{businessSettings=BusinessSettings.values();}catch(error){alert(error.message);return;}
-            const openTime = businessSettings.open_time;
-            const closeTime = businessSettings.close_time;
             if (clabe && !/^\d{18}$/.test(clabe)) { alert('La CLABE debe tener 18 dígitos.'); return; }
-            if ((openTime && !closeTime) || (!openTime && closeTime)) {
-                alert('Indica tanto la hora de apertura como la hora de cierre, o deja ambas vacías.'); return;
-            }
             const updates = {
                 ...businessSettings,
                 accepting_orders: document.getElementById('cfg-accepting').checked,
-                open_time: openTime || null,
-                close_time: closeTime || null,
-                latitude: Number(document.getElementById('cfg-lat').value) || null,
-                longitude: Number(document.getElementById('cfg-lng').value) || null,
+                latitude: document.getElementById('cfg-lat').value === '' ? null : Number(document.getElementById('cfg-lat').value),
+                longitude: document.getElementById('cfg-lng').value === '' ? null : Number(document.getElementById('cfg-lng').value),
                 delivery_enabled: document.getElementById('cfg-delivery-enabled').checked,
                 delivery_radius_km: Number(document.getElementById('cfg-delivery-radius').value) || 5,
                 delivery_minimum: Number(document.getElementById('cfg-delivery-minimum').value) || 0,
@@ -441,16 +385,29 @@
             if (updates.payment_online && !currentProfile.mercado_pago_connected) {
                 alert('Primero conecta tu cuenta de Mercado Pago.'); return;
             }
-            if (updates.delivery_enabled && (!updates.latitude || !updates.longitude)) {
+            if (updates.delivery_enabled && (updates.latitude === null || updates.longitude === null)) {
                 alert('Para activar delivery debes guardar la ubicación exacta del restaurante.'); return;
             }
             if (updates.delivery_enabled && !updates.payment_cash && !updates.payment_online) {
                 alert('Delivery necesita Efectivo o Mercado Pago como método de cobro.'); return;
             }
-            const { error } = await _supabase.from('profiles').update(updates).eq('id', currentRestaurantId).select('id').single();
-            if (error) { alert(error.message); return; }
-            currentProfile = { ...currentProfile, ...updates };
-            alert('Configuración actualizada.');
+            const button=document.getElementById('cfg-save'),status=document.getElementById('config-save-status');
+            if(button.disabled)return;
+            button.disabled=true;status.textContent='Guardando cambios…';let image=null;
+            try {
+                image=await BusinessSettings.uploadImage(_supabase,currentRestaurantId);
+                if(image)updates.avatar_url=image.url;
+                const {error}=await _supabase.from('profiles').update(updates).eq('id',currentRestaurantId).select('id').single();
+                if(error)throw error;
+                currentProfile={...currentProfile,...updates};
+                document.getElementById('biz-name-display').textContent=updates.business_name;
+                if(image){document.getElementById('cfg-business-preview').src=image.url;document.getElementById('cfg-business-image').value='';}
+                status.textContent='Cambios guardados.';
+            } catch(error) {
+                if(image)await _supabase.storage.from('product-images').remove([image.path]).catch(()=>{});
+                status.textContent=error.message||'No se pudieron guardar los cambios. Vuelve a intentarlo.';
+            } finally {button.disabled=false;}
+
         });
 
         async function cargarDashboard() {
@@ -474,7 +431,7 @@
 
         const mercadoPagoResult = new URLSearchParams(window.location.search).get('mercado_pago');
         if (mercadoPagoResult) {
-            history.replaceState({}, '', 'admin.html');
+            history.replaceState({}, '', 'admin.html?section=config');
             alert(mercadoPagoResult === 'connected' ? 'Mercado Pago conectado correctamente.' : 'No se pudo conectar Mercado Pago. Inténtalo nuevamente.');
         }
 

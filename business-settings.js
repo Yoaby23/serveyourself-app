@@ -12,8 +12,10 @@ window.BusinessSettings = (() => {
         $('cfg-hours-mode').value=!week[0].closed&&week.every(d=>JSON.stringify(d)===JSON.stringify(week[0]))?'common':'daily';
         if(profile.business_hours){$('cfg-open-time').value=week[0].allDay?'':week[0].open||'';$('cfg-close-time').value=week[0].allDay?'':week[0].close||'';}
         $('cfg-weekdays').innerHTML=week.map((d,i)=>`<div class="business-day"><label><input id="day-${i}-enabled" type="checkbox" ${d.closed?'':'checked'}> ${days[i]}</label><label><input id="day-${i}-all" type="checkbox" ${d.allDay?'checked':''}> 24 horas</label><label>Apertura<input id="day-${i}-open" type="time" value="${safeTime(d.open,'09:00')}"></label><label>Cierre<input id="day-${i}-close" type="time" value="${safeTime(d.close,'18:00')}"></label></div>`).join('');
-        mode();
+        $('cfg-weekdays').onchange=syncDays;
+        syncDays();mode();
     }
+    function syncDays(){for(let i=0;i<7;i++){const closed=!$(`day-${i}-enabled`).checked,allDay=$(`day-${i}-all`).checked;$(`day-${i}-all`).disabled=closed;$(`day-${i}-open`).disabled=closed||allDay;$(`day-${i}-close`).disabled=closed||allDay;}}
     function mode(){const daily=$('cfg-hours-mode').value==='daily';$('cfg-weekdays').hidden=!daily;$('cfg-common-hours').hidden=daily;}
     function values(){
         const daily=$('cfg-hours-mode').value==='daily',open=$('cfg-open-time').value,close=$('cfg-close-time').value;
@@ -25,22 +27,16 @@ window.BusinessSettings = (() => {
         if($('cfg-transfer').checked&&!window.SYRuntime.transferReceiptUrl(phone,{id:0,total:0}))throw Error('Registra un teléfono válido del negocio para recibir comprobantes. Incluye el código de país si no es de México.');
         return {business_name:name,phone,business_hours:hours,open_time:daily?null:open||null,close_time:daily?null:close||null};
     }
-    async function upload(db,id,onSaved){
-        const file=$('cfg-business-image').files[0],button=$('cfg-save-image');
-        if(!file)return alert('Selecciona una imagen del dispositivo.');
+    async function uploadImage(db,id){
+        const file=$('cfg-business-image').files[0];
+        if(!file)return null;
         const formats={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/avif':'avif'};
-        if(!formats[file.type]||file.size>5*1024*1024)return alert('Usa JPG, PNG, WebP o AVIF de hasta 5 MB.');
-        button.disabled=true;
-        try{
-            const bitmap=await createImageBitmap(file);bitmap.close();
-            const path=`${id}/business/${crypto.randomUUID()}.${formats[file.type]}`;
-            const {error}=await db.storage.from('product-images').upload(path,file,{upsert:false,contentType:file.type});
-            if(error)throw error;
-            const url=db.storage.from('product-images').getPublicUrl(path).data.publicUrl;
-            const saved=await db.from('profiles').update({avatar_url:url}).eq('id',id).select('id').single();
-            if(saved.error){await db.storage.from('product-images').remove([path]);throw saved.error;}
-            $('cfg-business-preview').src=url;$('cfg-business-image').value='';onSaved(url);alert('Imagen del negocio actualizada.');
-        }catch(error){alert(error.message||'No se pudo guardar la imagen.');}finally{button.disabled=false;}
+        if(!formats[file.type]||file.size>5*1024*1024)throw Error('Usa JPG, PNG, WebP o AVIF de hasta 5 MB.');
+        const bitmap=await createImageBitmap(file);bitmap.close();
+        const path=`${id}/business/${crypto.randomUUID()}.${formats[file.type]}`;
+        const {error}=await db.storage.from('product-images').upload(path,file,{upsert:false,contentType:file.type});
+        if(error)throw error;
+        return {path,url:db.storage.from('product-images').getPublicUrl(path).data.publicUrl};
     }
-    return {load,mode,values,upload};
+    return {load,mode,values,uploadImage};
 })();
