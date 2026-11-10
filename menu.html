@@ -120,14 +120,6 @@
                     <input type="text" id="edit-address" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 font-bold text-sm outline-none focus:border-orange-500">
                 </div>
 
-                <div id="campos-negocio" class="hidden space-y-4 pt-4 border-t border-slate-50">
-                    <div class="opacity-60">
-                        <label class="text-[9px] font-black text-orange-500 uppercase ml-2">Nombre Comercial</label>
-                        <input type="text" id="edit-biz-name" readonly disabled class="w-full p-4 bg-orange-50/30 rounded-2xl border border-orange-100 text-orange-700 font-bold text-sm cursor-not-allowed">
-                    </div>
-                    <a href="admin.html?section=config" class="block p-4 bg-slate-50 rounded-2xl text-sm font-bold">Editar imagen y horarios en Configuración del negocio</a>
-                </div>
-
                 <hr class="border-slate-50 my-2">
                 <div class="bg-orange-50 p-4 rounded-2xl border border-orange-100">
                     <p class="text-xs font-black text-slate-800">Avisos de pedidos</p>
@@ -244,10 +236,7 @@
                 document.getElementById('edit-name').value = profile.full_name || '';
                 document.getElementById('edit-phone').value = profile.phone || '';
                 document.getElementById('edit-address').value = profile.address || '';
-                if (profile.role === 'negocio') {
-                    document.getElementById('campos-negocio').classList.remove('hidden');
-                    document.getElementById('edit-biz-name').value = profile.business_name || '';
-                }
+
                 renderMenuOptions(profile.role, restaurantAccess);
             }
             await cargarFavoritos();

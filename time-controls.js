@@ -27,7 +27,7 @@
             const rect=trigger.getBoundingClientRect(),width=Math.min(300,innerWidth-24),below=innerHeight-rect.bottom-12,above=rect.top-12,up=below<220&&above>below;
             panel.style.width=width+'px';panel.style.left=Math.max(12,Math.min(rect.left,innerWidth-width-12))+'px';panel.style.top=up?'auto':rect.bottom+6+'px';panel.style.bottom=up?innerHeight-rect.top+6+'px':'auto';panel.style.maxHeight=Math.max(100,up?above:below)+'px';panel.showPopover();active=control;trigger.setAttribute('aria-expanded','true');footer.lastElementChild.focus();
         });
-        panel.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();trigger.focus();}});
+        panel.addEventListener('keydown',event=>{if(event.defaultPrevented)return;if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();trigger.focus();}});
         panel.addEventListener('toggle',()=>{if(!panel.matches(':popover-open')){trigger.setAttribute('aria-expanded','false');if(active===control)active=null;}});
         input.addEventListener('change',sync);input.addEventListener('focus',()=>trigger.focus());input.addEventListener('invalid',event=>{event.preventDefault();error.hidden=false;error.textContent=input.validationMessage;trigger.setAttribute('aria-invalid','true');trigger.focus();});input.form?.addEventListener('reset',()=>setTimeout(sync,0));
         for(const prop of ['value','valueAsDate','valueAsNumber']){const d=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,prop);Object.defineProperty(input,prop,{configurable:true,get(){return d.get.call(this);},set(value){d.set.call(this,value);sync();}});}

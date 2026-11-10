@@ -1364,3 +1364,5 @@ html:has(#modal-carrito:not(.hidden)), body:has(#modal-carrito:not(.hidden)) { o
 
 /* Contain Leaflet panes and controls below the app navigation. */
 .leaflet-container { isolation: isolate; z-index: 0; }
+
+.business-day .sy-time { display: block; width: 100%; margin-top: 6px; }

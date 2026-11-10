@@ -106,7 +106,7 @@
             panel.style.top=up?'auto':rect.bottom+6+'px';panel.style.bottom=up?innerHeight-rect.top+6+'px':'auto';
             panel.showPopover();active=control;trigger.setAttribute('aria-expanded','true');panel.querySelector('[data-date][tabindex="0"]')?.focus();
         });
-        panel.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();close();trigger.focus();}});
+        panel.addEventListener('keydown',event=>{if(event.defaultPrevented)return;if(event.key==='Escape'){event.preventDefault();close();trigger.focus();}});
         panel.addEventListener('toggle',()=>{if(!panel.matches(':popover-open')){trigger.setAttribute('aria-expanded','false');if(active===control)active=null;}});
         input.addEventListener('change',sync);input.addEventListener('focus',()=>trigger.focus());
         input.addEventListener('invalid',event=>{event.preventDefault();error.hidden=false;error.textContent=input.validationMessage;trigger.setAttribute('aria-invalid','true');trigger.focus();});
