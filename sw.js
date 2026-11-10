@@ -1,7 +1,7 @@
 // Push failure must not prevent the app's own offline support from installing.
 try { importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js'); }
 catch (error) { console.warn('Push no disponible; soporte sin conexión activo.', error); }
-const CACHE = 'serveyourself-shell-v52';
+const CACHE = 'serveyourself-shell-v53';
 const SHELL = ['/index.html','/registro.html','/recuperar.html','/privacidad.html','/terminos.html','/eliminar-cuenta.html','/menu.html','/admin.html','/pos.html','/caja.html','/cocina.html','/delivery.html','/repartidor.html','/repartidor-registro.html','/delivery-tracking.html','/platform-admin.html','/funciones.html','/cuenta.html','/perfil.html','/profile-editor.js','/password-change.js','/notification-controls.js','/cambiar-contrasena.html','/cashier-checkout.js','/select-controls.js','/date-controls.js','/time-controls.js','/cash-dispatch.js','/tailwind.generated.css','/styles.css','/runtime.js','/guest-menu.js','/cash-ready.js','/cash-layout.js','/business-settings.js','/address-location.js','/app.js','/app-config.js','/manifest.webmanifest','/app-icon.svg','/app-icon-192.png','/app-icon-512.png','/logo.png'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('serveyourself-shell-') && key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())));
@@ -22,7 +22,7 @@ self.addEventListener('fetch', event => {
         const cached = await caches.match(request);
         if (cached) return cached;
         if (request.mode === 'navigate') {
-            return new Response('<!doctype html><html lang="es"><meta name="viewport" content="width=device-width"><title>Sin conexión</title><h1>Sin conexión</h1><p>No se puede abrir esta pantalla. Recupera la conexión y vuelve a intentarlo.</p><button type="button" onclick="location.reload()">Reintentar</button></html>', { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+            return new Response('<!doctype html><html lang="es"><meta name="viewport" content="width=device-width"><title>Serveyouself</title><link rel="icon" href="/logo.png" type="image/png"><h1>Sin conexión</h1><p>No se puede abrir esta pantalla. Recupera la conexión y vuelve a intentarlo.</p><button type="button" onclick="location.reload()">Reintentar</button></html>', { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
         }
         return new Response('Recurso no disponible sin conexión', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     }));
