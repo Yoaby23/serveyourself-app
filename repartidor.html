@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
+<head><script src="theme.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#111827">
@@ -8,7 +8,7 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="styles.css">
-</head>
+<link rel="stylesheet" href="theme.css"></head>
 <body class="driver-app">
     <div id="driver-toast" class="driver-toast" role="status" aria-live="polite"></div>
 
@@ -78,7 +78,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
-    <script src="app-config.js"></script><script src="app.js"></script>
+    <script src="app-config.js"></script><script src="business-image.js"></script><script src="app.js"></script>
     <script>
 const db=window.serveYourself.supabase,esc=window.serveYourself.escapeHtml,money=n=>`$${Number(n||0).toFixed(2)}`;
 const labels={accepted:'Aceptado por el restaurante',preparing:'Preparando tu pedido',ready_for_dispatch:'Listo para recoger',picked_up:'Pedido recogido',on_the_way:'En camino al cliente',arrived:'Llegaste al domicilio',delivered:'Entregado'};

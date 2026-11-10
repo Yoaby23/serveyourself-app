@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
+<head><script src="theme.js"></script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -22,7 +22,7 @@
             100% { border-color: #f97316; shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
         }
     </style>
-</head>
+<link rel="stylesheet" href="theme.css"></head>
 <body class="bg-slate-50 min-h-screen pb-20">
 
     <nav class="bg-white/90 backdrop-blur-md p-4 sticky top-0 z-50 border-b border-slate-100">
@@ -83,7 +83,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
     <script src="app-config.js"></script>
-    <script src="runtime.js"></script><script src="app.js"></script><script src="address-location.js"></script><script src="business-settings.js"></script>
+    <script src="runtime.js"></script><script src="business-image.js"></script><script src="app.js"></script><script src="address-location.js"></script><script src="business-settings.js"></script>
     <script>
         const _supabase = window.serveYourself.supabase;
         const escapeHtml = window.serveYourself.escapeHtml;
@@ -91,6 +91,7 @@
         let currentRestaurantId = null;
         let currentProfile = null;
         let currentAdminSection = 'home';
+        window.addEventListener('sy:business-image-updated',event=>{if(event.detail.userId===currentRestaurantId){document.getElementById('cfg-business-preview').src=event.detail.url;if(currentProfile)currentProfile.avatar_url=event.detail.url;}});
         const businessAddressLocation=new AddressLocation({
             input:document.getElementById('cfg-address'),button:document.getElementById('cfg-address-search'),results:document.getElementById('cfg-address-results'),status:document.getElementById('cfg-address-status'),
             onSelect:point=>{document.getElementById('cfg-lat').value=point.latitude;document.getElementById('cfg-lng').value=point.longitude;},

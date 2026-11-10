@@ -43,6 +43,10 @@ window.serveYourself = {
         });
     },
 
+    isSignedOutError(error) {
+        return error?.name==='AuthSessionMissingError'||error?.status===401||['refresh_token_not_found','refresh_token_already_used','session_not_found','bad_jwt','user_not_found'].includes(error?.code);
+    },
+
     async requireUser() {
         const { data: { user }, error } = await this.supabase.auth.getUser();
         if (error || !user) {
@@ -52,6 +56,7 @@ window.serveYourself = {
         const page = (window.location.pathname || '').split('/').pop();
         if (['restaurante.html','delivery-tracking.html','eliminar-cuenta.html','unirse.html','repartidor-registro.html'].includes(page)) this.renderPersonalNavigation();
         this.initPushNotifications(user);
+        window.BusinessImages?.applyPending(this.supabase,user).then(url=>{if(url)window.dispatchEvent?.(new CustomEvent('sy:business-image-updated',{detail:{userId:user.id,url}}));}).catch(()=>{});
         return user;
     },
 
