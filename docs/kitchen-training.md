@@ -15,3 +15,11 @@ Se usa el permiso existente de operar cocina. Las operaciones verifican usuario 
 Antes de publicar el frontend debe aplicarse `supabase/migrations/20261110181450_manual_kitchen_training.sql`. La migración amplía las muestras con su contenido y admite mediciones manuales sin comanda. Conserva las observaciones existentes.
 
 Validación automática de interfaz: `node --test tests/*.test.mjs`. La prueba de base de datos `supabase/tests/manual_kitchen_training.sql` debe ejecutarse dentro de `BEGIN; ... ROLLBACK;`: crea datos aislados, verifica aprendizaje y aplicación a la cola real, aislamiento de negocios, idempotencia, validación y aprendizaje automático. No se deben conservar los datos sintéticos.
+
+## Aprendizaje automático y preparación conjunta
+
+No hace falta abrir el panel ni pulsar Reentrenar: cada transición de Comenzar a Listo registra una medición y recalcula el modelo del servicio. Esto también ocurre al trabajar por estaciones, cuando la última estación queda lista. Los pedidos sin un inicio medido, cancelados o con duración fuera de 1–240 minutos no se utilizan. Nunca se sustituye el inicio por la fecha de creación: eso confundiría espera con preparación.
+
+La cola agrupa automáticamente de dos a cinco comandas consecutivas que comparten al menos un producto en la misma estación, el mismo estado y la misma prioridad. Sus horas previstas de inicio y entrega deben caber en una ventana de cinco minutos; no se adelantan recogidas cuyo inicio aún queda lejos. No cruza otras comandas de la cola, no agrupa trabajo pospuesto ni preparaciones con notas o modificaciones especiales.
+
+Cada grupo muestra el total del producto compartido y las cantidades por comanda. Comenzar juntas inicia todas las comandas del grupo en una sola transacción; el servidor vuelve a comprobar que la cola y las condiciones sigan siendo compatibles. Los números de cuenta, pagos, cantidades, entrega y notificaciones de cada pedido siguen separados. Cada comanda se marca Lista individualmente. Agrupar no aplica una reducción ficticia al tiempo estimado: el modelo seguirá aprendiendo de las duraciones realmente observadas.
