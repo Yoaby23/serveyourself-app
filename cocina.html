@@ -8,12 +8,12 @@
 <body class="bg-slate-950 text-white min-h-screen kitchen-screen">
     <header class="kitchen-header sticky top-0 z-30 bg-slate-950/95 border-b border-slate-800 px-4 py-3">
         <div class="kitchen-identity"><p class="text-xs font-black text-orange-400 uppercase tracking-widest">Pantalla de cocina</p><h1 id="restaurant-name" class="text-xl font-black">ServeYourself</h1></div>
-        <div class="kitchen-toolbar"><select id="station-filter" class="px-3 py-3 rounded-xl bg-slate-800 text-white font-black text-sm"><option value="all">Todas las estaciones</option><option value="general">General</option></select><button type="button" onclick="toggleAvailability()" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">Disponibilidad</button><button type="button" id="sound-button" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm"> Activar sonido</button></div>
+        <div class="kitchen-toolbar"><select id="station-filter" class="px-3 py-3 rounded-xl bg-slate-800 text-white font-black text-sm"><option value="all">Todas las estaciones</option><option value="general">General</option></select><button type="button" onclick="toggleAvailability()" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">Disponibilidad</button><button type="button" id="sound-button" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm"> Activar sonido</button><button type="button" id="kitchen-mode-toggle" class="kitchen-mode-toggle" role="switch" aria-checked="false" aria-label="Entrenamiento"><span class="kitchen-mode-copy"><b>Entrenamiento</b><small data-mode-state>Comprobar</small></span><span class="kitchen-mode-track" aria-hidden="true"><span></span></span></button></div>
         <div id="restaurant-nav" class="sy-restaurant-nav kitchen-navigation"></div>
     </header>
     <section class="kitchen-intelligence kitchen-mode-bar">
         <div><b id="kitchen-mode-title">Cocina automática</b><small id="ml-status" role="status" aria-live="polite">Comprobando configuración de cocina…</small></div>
-        <button type="button" id="kitchen-mode-toggle" class="kitchen-mode-toggle" role="switch" aria-checked="false" aria-label="Entrenamiento"><span class="kitchen-mode-copy"><b>Entrenamiento</b><small data-mode-state>Comprobar</small></span><span class="kitchen-mode-track" aria-hidden="true"><span></span></span></button>
+
     </section>
     <p id="sync-status" role="status" aria-live="polite" class="sy-sync-status">Conectando con cocina…</p>
     <main class="p-3 grid lg:grid-cols-2 gap-3 min-h-[calc(100vh-76px)]">
