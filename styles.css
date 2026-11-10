@@ -1379,7 +1379,6 @@ html:has(#modal-carrito:not(.hidden)), body:has(#modal-carrito:not(.hidden)) { o
 .sy-product-grid { display: grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr); gap: 16px; }
 .sy-product-grid .sy-select { width: 100%; }
 .sy-product-photo { border-top: 1px solid #f1f5f9; padding-top: 12px; }
-.sy-product-photo summary { cursor: pointer; font-size: 14px; font-weight: 700; color: #475569; min-height: 40px; }
 .sy-product-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .sy-product-actions > button { flex: 1; }
 .sy-product-actions [hidden] { display: none; }
