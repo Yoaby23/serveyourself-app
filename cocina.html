@@ -13,16 +13,29 @@
     </header>
     <section class="kitchen-intelligence" aria-live="polite">
         <div><span class="kitchen-ml-dot"></span><b>Orden recomendado de cocina</b><small id="ml-status">Calibrando con los tiempos reales de tu cocina</small></div>
-        <p>Prioridad manual y hora de entrega. Marca los productos fuera de stock desde Disponibilidad.</p>
+        <button type="button" id="kitchen-training-open" class="sy-training-secondary">Entrenar tiempos</button><p>Prioridad manual y hora de entrega. Marca los productos fuera de stock desde Disponibilidad.</p>
     </section>
     <p id="sync-status" role="status" aria-live="polite" class="sy-sync-status">Conectando con cocina…</p>
     <main class="p-3 grid lg:grid-cols-2 gap-3 min-h-[calc(100vh-76px)]">
         <section class="kitchen-column"><div class="kitchen-heading bg-orange-500"><span>Nuevos</span><b id="count-pendiente">0</b></div><div id="orders-pendiente" class="kitchen-list"></div></section>
         <section class="kitchen-column"><div class="kitchen-heading bg-blue-600"><span>Preparando</span><b id="count-preparando">0</b></div><div id="orders-preparando" class="kitchen-list"></div></section>
     </main>
+    <dialog id="kitchen-training-dialog" class="sy-training-dialog" aria-labelledby="training-title">
+        <div class="sy-training-heading"><div><h2 id="training-title">Entrenamiento de cocina</h2><p>Registra preparaciones medidas, desde comenzar hasta estar listas. No incluyas el tiempo de espera.</p></div><button type="button" id="kitchen-training-close" class="sy-training-secondary" aria-label="Cerrar entrenamiento">Cerrar</button></div>
+        <div id="training-models" class="sy-training-models"></div>
+        <form id="kitchen-training-form">
+            <div class="sy-training-fields"><label>Servicio<select id="training-service"><option value="pickup">Para llevar / pickup</option><option value="dine_in">En mesa</option><option value="delivery">Delivery</option></select></label><label>Tiempo real (min)<input id="training-minutes" type="number" min="1" max="240" step="0.01" required placeholder="Ej. 12"></label></div>
+            <label class="sy-training-peak"><input id="training-peak" type="checkbox"> Preparación en hora pico</label><p class="sy-training-help">Hora pico del negocio: 13:00–16:59 y 19:00–22:59. Registra cantidades variadas y al menos 10 mediciones por servicio; el modelo requiere 3 del horario que se va a estimar.</p>
+            <div id="training-items"></div><button type="button" id="training-add-item" class="sy-training-secondary">Agregar producto</button>
+            <div class="sy-training-actions"><button type="submit" class="sy-config-primary">Guardar y entrenar</button><button type="button" id="training-estimate" class="sy-training-secondary">Probar estimación</button><button type="button" id="training-retrain" class="sy-training-secondary">Reentrenar servicio</button></div>
+        </form>
+        <p id="training-message" role="status" aria-live="polite"></p><p id="training-preview" class="sy-training-preview" aria-live="polite"></p>
+        <h3>Últimas mediciones</h3><p class="sy-training-help">Las comandas reales también alimentan el modelo automáticamente. Puedes eliminar mediciones manuales incorrectas.</p><ul id="training-history" class="sy-training-history"></ul>
+    </dialog>
     <audio id="new-order-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
     <aside id="availability-panel" class="hidden fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-white text-slate-950 shadow-2xl p-5 overflow-y-auto"><div class="flex justify-between"><div><p class="text-xs font-black uppercase text-orange-500">Menú del turno</p><h2 class="text-xl font-black">Disponibilidad</h2></div><button type="button" onclick="toggleAvailability()" class="w-10 h-10 rounded-xl bg-slate-100 font-black">×</button></div><div id="availability-list" class="mt-5 space-y-2"></div></aside>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script><script src="app-config.js"></script><script src="runtime.js"></script><script src="business-image.js"></script><script src="app.js"></script>
+    <script src="kitchen-training.js"></script>
     <script>
         const db = window.serveYourself.supabase, esc = window.serveYourself.escapeHtml;
         let access, orders = [], stations = [], products = [], tables = [], activeStation = 'all', soundEnabled = false, timer, syncTimer, refreshTimer, loadingOrders = false, refreshQueued = false;
@@ -34,6 +47,7 @@
             window.serveYourself.initPushNotifications(access.user);
             const [{ data: stationData }, { data: productData }, { data: tableData }] = await Promise.all([db.from('kitchen_stations').select('*').eq('restaurant_id',access.restaurant_id).eq('is_active',true).order('name'),db.from('products').select('id,name,kitchen_station_id,is_available').eq('restaurant_id',access.restaurant_id).order('name'),db.from('restaurant_tables').select('id,name').eq('restaurant_id',access.restaurant_id)]);
             stations=stationData||[];products=productData||[];tables=tableData||[];document.getElementById('station-filter').innerHTML += stations.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');renderAvailability();
+            window.SYKitchenTraining.create({db,access,products,onTrained:loadOrders});
             await loadOrders();
             db.channel(`kitchen-${access.restaurant_id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'kitchen_tickets', filter: `restaurant_id=eq.${access.restaurant_id}` }, payload => {
                 if (soundEnabled && payload.eventType === 'INSERT') document.getElementById('new-order-sound').play().catch(() => {});
