@@ -8,7 +8,7 @@ function screen(name,{rpcError=false}={}){
  let release;const gate=new Promise(resolve=>release=resolve);let calls=0;const alerts=[];
  const elements={'success-message':{},'pickup-name':{value:name,focus(){}},'submit-order':{disabled:false,textContent:''}};
  const cart=new Map([['product',1]]);
- const context=vm.createContext({$:id=>elements[id],cart,alert:m=>alerts.push(m),checkShiftStatus:()=>gate,db:{rpc:async()=>{calls++;return rpcError?{error:new Error('Offline')}:{data:{id:1,total:100,pickup_name:name}};}},access:{restaurant_id:'r'},serviceType:'pickup',selectedTable:null,selectedAccount:null,orderNotes:{value:''},successTitle:{},successOrder:{},successModal:{classList:{add(){},remove(){}}},renderCart(){},clearTimeout(){},setTimeout(){return 1;},successTimer:null,showTables(){},refreshAccounts:async()=>{},money:n=>String(n)});
+ const context=vm.createContext({$:id=>elements[id],cart,alert:m=>alerts.push(m),checkShiftStatus:()=>gate,db:{rpc:async()=>{calls++;return rpcError?{error:new Error('Offline')}:{data:{id:1,total:100,pickup_name:name}};}},access:{restaurant_id:'r'},cashierPickup:false,serviceType:'pickup',selectedTable:null,selectedAccount:null,orderNotes:{value:''},successTitle:{},successOrder:{},successModal:{classList:{add(){},remove(){}}},renderCart(){},clearTimeout(){},setTimeout(){return 1;},successTimer:null,showTables(){},refreshAccounts:async()=>{},money:n=>String(n)});
  vm.runInContext(code,context);
  return {context,release,cart,elements,alerts,get calls(){return calls;},submit:()=>vm.runInContext('submitOrder()',context)};
 }
