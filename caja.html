@@ -22,6 +22,7 @@
             <a href="#pickup" data-cash-tab="pickup">Para llevar <span id="pickup-account-count">0</span></a>
             <a href="#tables" data-cash-tab="tables">Cuentas de mesa <span id="table-account-count">0</span></a>
             <a href="#online" data-cash-tab="online">Pagos en línea <span id="online-account-count">0</span></a>
+            <a href="#dispatch" data-cash-tab="dispatch">Reparto</a>
             <a href="#credit" data-cash-tab="credit">Crédito</a>
             <a href="#shift" data-cash-tab="shift">Turno y movimientos</a>
         </nav>
@@ -41,6 +42,7 @@
             <div class="flex flex-wrap justify-between items-center gap-3"><div><h2 class="font-black text-xl">Pagos en línea por confirmar</h2><p class="text-sm text-slate-500">No llegan a cocina hasta que Mercado Pago confirme el cobro.</p></div><span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-black">LÍMITE: 20 MIN</span></div>
             <div id="online-orders" class="grid lg:grid-cols-2 gap-4 mt-5"></div>
         </section></section>
+        <section data-cash-panel="dispatch" hidden aria-label="Asignar repartidores"><section class="cash-surface"><h2>Reparto del restaurante</h2><p class="cash-muted">Confirma el pedido y asigna un repartidor disponible de tu equipo.</p><p id="dispatch-status" role="status" aria-live="polite"></p><div id="dispatch-orders" class="cash-card-list mt-4"></div></section></section>
         <section data-cash-panel="credit" hidden><section class="bg-white rounded-3xl border border-violet-200 p-5">
             <div class="flex flex-wrap justify-between items-center gap-3"><div><h2 class="font-black text-xl">Crédito de clientes</h2><p class="text-sm text-slate-500">Consulta la cartera y registra abonos sin mezclar el crédito pendiente con el efectivo de caja.</p></div><a id="configure-credit" hidden href="clientes.html" class="px-4 py-2 rounded-xl bg-violet-50 text-violet-700 text-sm font-black">CONFIGURAR CLIENTES</a></div>
             <div id="credit-accounts" class="grid xl:grid-cols-2 gap-4 mt-5"></div>
@@ -52,12 +54,12 @@
         </section></section>
     </main>
     <section id="print-ticket" class="ticket-print" aria-hidden="true"></section>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script><script src="app-config.js"></script><script src="app.js"></script><script src="runtime.js"></script><script src="cashier-checkout.js"></script><script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script><script src="cash-ready.js"></script><script src="cash-layout.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script><script src="app-config.js"></script><script src="app.js"></script><script src="runtime.js"></script><script src="cashier-checkout.js"></script><script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script><script src="cash-ready.js"></script><script src="cash-layout.js"></script><script src="cash-dispatch.js"></script>
     <script>
         const db=window.serveYourself.supabase,esc=window.serveYourself.escapeHtml;
         let access,shift=null,shiftSummary=null,accounts=[],onlineOrders=[],payments=[],movements=[],tables=[],waiters=[],creditCustomers=[],preparingPickups=[];
         const labels={cash:'Efectivo',transfer:'Transferencia',card_terminal:'Terminal'},money=v=>`$${Number(v||0).toFixed(2)}`;
-        async function init(){access=await window.serveYourself.requireRestaurantPermission('can_close_accounts');if(!access)return;document.getElementById('configure-credit').hidden=access.staff_role!=='owner';window.serveYourself.renderRestaurantNavigation(access,{showBack:false});window.serveYourself.initPushNotifications(access.user);window.startCashReady(access);await loadAll();db.channel(`cash-${access.restaurant_id}`).on('postgres_changes',{event:'*',schema:'public',table:'orders',filter:`restaurant_id=eq.${access.restaurant_id}`},loadAll).subscribe();setInterval(()=>{if(!document.hidden)loadAll()},30000)}
+        async function init(){access=await window.serveYourself.requireRestaurantPermission('can_close_accounts');if(!access)return;document.getElementById('configure-credit').hidden=access.staff_role!=='owner';window.serveYourself.renderRestaurantNavigation(access,{showBack:false});window.serveYourself.initPushNotifications(access.user);window.startCashReady(access);window.startCashDispatch(access);await loadAll();db.channel(`cash-${access.restaurant_id}`).on('postgres_changes',{event:'*',schema:'public',table:'orders',filter:`restaurant_id=eq.${access.restaurant_id}`},loadAll).subscribe();setInterval(()=>{if(!document.hidden)loadAll()},30000)}
         const loadAll=SYRuntime.serialRefresh(async()=>{
             try { await refreshCashData(); }
             catch(error){ console.warn('No se pudo actualizar Caja',error);document.getElementById('cash-shift-summary').textContent='No se pudo actualizar. Se conservan los últimos datos; reintentaremos al recuperar la conexión.'; }

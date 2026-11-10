@@ -23,12 +23,15 @@ begin
   perform public.accept_staff_invite(invite);
   assert public.register_delivery_driver('QA Driver','1234567890','walking')->>'status'='active';
   perform public.set_marketplace_driver_availability(true);
-  assert exists(select from public.list_delivery_offers() where order_id=own_order);
+  assert not exists(select from public.list_delivery_offers());
   assert not exists(select from public.list_delivery_offers() where order_id=other_order);
   blocked := false;
   begin perform public.claim_delivery_order(other_order); exception when raise_exception then blocked := true; end;
   assert blocked,'Claimed another restaurant order';
-  assert public.claim_delivery_order(own_order)->>'assigned_driver_id'=driver::text;
+  blocked:=false;begin perform public.claim_delivery_order(own_order);exception when raise_exception then blocked:=true;end;assert blocked,'Driver self-assigned an order';
+  perform set_config('request.jwt.claim.sub',a::text,true);
+  assert public.assign_delivery_driver(own_order,driver)->>'assigned_driver_id'=driver::text;
+  perform set_config('request.jwt.claim.sub',driver::text,true);
   execute 'reset role';
   assert exists(select from public.team_drivers_for_push(a) where user_id=driver);
   assert not exists(select from public.team_drivers_for_push(b) where user_id=driver);
