@@ -83,11 +83,12 @@
                 <input type="text" id="delivery-name" maxlength="120" placeholder="Nombre de quien recibe" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
                 <input type="text" id="delivery-phone" maxlength="30" inputmode="tel" placeholder="Teléfono" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
                 <input type="text" id="delivery-address" maxlength="300" placeholder="Calle, número, colonia y ciudad" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
+                <button type="button" id="delivery-address-search" class="sy-config-secondary">Buscar dirección</button><p id="delivery-address-status" role="status" aria-live="polite"></p><div id="delivery-address-results" class="sy-address-results"></div><small class="sy-config-help">Datos de OpenStreetMap · búsqueda con Photon</small>
                 <input type="text" id="delivery-reference" maxlength="300" placeholder="Referencias (color, entre calles, timbre)" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
                 <button type="button" onclick="useMyLocation()" class="w-full py-3 rounded-2xl bg-blue-50 text-blue-700 text-xs font-black"> USAR MI UBICACIÓN</button>
                 <div id="delivery-map" class="h-52 rounded-2xl overflow-hidden border"></div>
                 <label class="flex items-center gap-2 text-xs font-bold text-slate-500"><input id="save-address" type="checkbox"> Guardar esta dirección</label>
-                <div id="delivery-quote" class="p-4 bg-orange-50 text-orange-700 rounded-2xl text-sm font-bold">Selecciona el punto exacto en el mapa.</div>
+                <div id="delivery-quote" class="p-4 bg-orange-50 text-orange-700 rounded-2xl text-sm font-bold">Busca tu dirección y selecciona la coincidencia correcta. Puedes ajustar el punto en el mapa.</div>
             </div>
             <div class="mb-8">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Notas adicionales</label>
@@ -113,7 +114,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app-config.js"></script>
-    <script src="runtime.js"></script><script src="app.js"></script>
+    <script src="runtime.js"></script><script src="app.js"></script><script src="address-location.js"></script>
     <script>
         const _supabase = window.serveYourself.supabase;
         const escapeHtml = window.serveYourself.escapeHtml;
@@ -125,6 +126,13 @@
         const productosPorId = new Map();
         let restaurant = null;
         let serviceType = 'pickup', deliveryQuote = null, deliveryMap = null, deliveryMarker = null, savedAddresses = [];
+        let deliveryQuoteRequest=0;
+        const deliveryAddressLocation=new AddressLocation({
+            input:document.getElementById('delivery-address'),button:document.getElementById('delivery-address-search'),results:document.getElementById('delivery-address-results'),status:document.getElementById('delivery-address-status'),
+            onSelect:point=>setDeliveryPoint(point.latitude,point.longitude),
+            onInvalidate:()=>{deliveryQuoteRequest++;deliveryQuote=null;if(deliveryMarker&&deliveryMap)deliveryMap.removeLayer(deliveryMarker);deliveryMarker=null;document.getElementById('delivery-quote').textContent='Busca y confirma la nueva dirección para calcular el envío.';actualizarModalCarrito();}
+        });
+
 
         async function cargarPagina() {
             const user = await window.serveYourself.requireUser();
@@ -244,6 +252,7 @@
         }
 
         function setDeliveryPoint(lat, lng) {
+            deliveryAddressLocation.setResolved(document.getElementById('delivery-address').value,lat,lng);
             if (!deliveryMap) initDeliveryMap();
             if (!deliveryMarker) deliveryMarker = L.marker([lat, lng], { draggable: true }).addTo(deliveryMap);
             else deliveryMarker.setLatLng([lat, lng]);
@@ -264,10 +273,12 @@
         }
 
         async function calculateQuote() {
-            if (serviceType !== 'delivery' || !deliveryMarker || !carrito.length) return;
+            if (serviceType !== 'delivery' || !deliveryMarker || !carrito.length || !deliveryAddressLocation.point()) return;
+            const request=++deliveryQuoteRequest;
             const point = deliveryMarker.getLatLng(), subtotal = carrito.reduce((sum, item) => sum + item.price * item.qty, 0);
             document.getElementById('delivery-quote').textContent = 'Calculando cobertura...';
             const { data, error } = await _supabase.rpc('calculate_delivery_quote', { p_restaurant_id: resId, p_latitude: point.lat, p_longitude: point.lng, p_subtotal: subtotal });
+            if(request!==deliveryQuoteRequest || serviceType!=='delivery' || !deliveryAddressLocation.point())return;
             if (error) { deliveryQuote = null; document.getElementById('delivery-quote').textContent = error.message; actualizarModalCarrito(); return; }
             deliveryQuote = data; document.getElementById('delivery-quote').textContent = `${data.distance_km} km · Envío $${Number(data.delivery_fee).toFixed(2)} · Aproximadamente ${data.eta_minutes} min`;
             actualizarModalCarrito();
@@ -404,7 +415,7 @@
             const notas = document.getElementById('order-notes').value;
             const paymentMethod = document.getElementById('payment-method').value;
             if (serviceType === 'delivery' && !['cash', 'mercado_pago'].includes(paymentMethod)) return alert('Delivery solo acepta efectivo o Mercado Pago.');
-            if (serviceType === 'delivery' && !deliveryQuote) return alert('Selecciona una dirección dentro de la zona de entrega.');
+            if (serviceType === 'delivery' && (!deliveryQuote || !deliveryAddressLocation.point())) return alert('Selecciona una dirección dentro de la zona de entrega.');
             btn.disabled = true;
             btn.innerText = "ENVIANDO...";
 

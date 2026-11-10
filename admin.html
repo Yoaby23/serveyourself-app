@@ -27,7 +27,6 @@
 
     <nav class="bg-white/90 backdrop-blur-md p-4 sticky top-0 z-50 border-b border-slate-100">
         <div class="flex justify-between items-center relative max-w-5xl mx-auto">
-            <button type="button" id="admin-back" data-sy-back onclick="adminBack()" class="hidden w-10 h-10 rounded-xl bg-orange-50 text-orange-600 font-black" title="Volver" aria-label="Volver a la vista anterior">←</button>
             <div class="flex items-center gap-2 min-w-0">
                 <h1 class="text-lg font-black tracking-tighter text-slate-900">serve<span class="text-orange-500">yourself</span></h1>
             </div>
@@ -40,23 +39,19 @@
 
         <section id="view-productos" class="hidden space-y-8">
             <h2 class="text-2xl font-black text-slate-900 tracking-tight">Gestión de Menú</h2>
-            <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
-                <form id="add-product-form" class="space-y-4">
-                    <h3 id="product-form-title" class="font-bold">Nuevo producto</h3>
-                    <p id="product-edit-help" hidden class="text-sm text-slate-500">Si no seleccionas otra fotografía, se conserva la actual.</p>
-                    <input type="text" id="prod-name" placeholder="Nombre" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold" required>
-                    <input type="number" id="prod-price" placeholder="Precio" min="0.01" step="0.01" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold" required>
-                    <label for="prod-category" class="block text-sm font-bold">Categoría del menú</label><select id="prod-category" disabled required class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold"><option value="">Cargando categorías…</option></select><button type="button" id="retry-categories" hidden onclick="cargarCategoriasProducto()" class="text-sm font-bold text-orange-500">Reintentar carga de categorías</button><a href="inventario.html" class="block text-xs font-bold text-orange-600">Crear categorías en Estaciones</a>
-                    <p id="product-save-status" role="status" aria-live="polite" class="text-sm text-slate-600"></p>
-                    <label for="prod-station" class="block text-sm font-bold">Estación de cocina</label><select id="prod-station" disabled class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none text-sm font-bold"><option value="">Cargando estaciones…</option></select><button type="button" id="retry-stations" hidden onclick="cargarEstacionesProducto()" class="text-sm font-bold text-orange-500">Reintentar carga de estaciones</button>
-                    <label class="block p-4 bg-orange-50 border border-orange-100 rounded-2xl text-sm font-bold text-orange-700 cursor-pointer">
-                         Seleccionar fotografía
-                        <input type="file" id="prod-file" accept="image/jpeg,image/png,image/webp,image/avif" class="hidden">
-                    </label>
-                    <button type="submit" id="btn-save-prod" class="w-full bg-slate-900 text-white font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest hover:bg-orange-500 transition-colors">Agregar</button>
-                    <button type="button" id="cancel-product-edit" hidden onclick="cancelarEdicionProducto()" class="w-full py-3 text-sm font-bold">Cancelar edición</button>
-                </form>
-            </div>
+            <form id="add-product-form" class="sy-product-form">
+                <div class="sy-product-heading"><h3 id="product-form-title">Nuevo producto</h3><a href="inventario.html">Categorías y estaciones</a></div>
+                <div class="sy-product-grid">
+                    <label class="sy-config-field" for="prod-name">Nombre<input type="text" id="prod-name" maxlength="120" placeholder="Ej. Café americano" autocomplete="off" required></label>
+                    <label class="sy-config-field" for="prod-price">Precio ($)<input type="number" id="prod-price" placeholder="0.00" min="0.01" step="0.01" inputmode="decimal" required></label>
+                    <div class="sy-config-field"><label for="prod-category">Categoría del menú</label><select id="prod-category" disabled required><option value="">Cargando categorías…</option></select><button type="button" id="retry-categories" hidden onclick="cargarCategoriasProducto()">Reintentar categorías</button></div>
+                    <div class="sy-config-field"><label for="prod-station">Estación de cocina</label><select id="prod-station" disabled><option value="">Cargando estaciones…</option></select><button type="button" id="retry-stations" hidden onclick="cargarEstacionesProducto()">Reintentar estaciones</button></div>
+                </div>
+                <details class="sy-product-photo"><summary>Fotografía (opcional)</summary><label class="sy-config-field" for="prod-file">Imagen del producto<input type="file" id="prod-file" accept="image/jpeg,image/png,image/webp,image/avif"></label><p id="product-edit-help" hidden class="sy-config-help">Si no seleccionas otra fotografía, se conserva la actual.</p></details>
+                <p id="product-save-status" role="status" aria-live="polite" class="sy-config-help"></p>
+                <div class="sy-product-actions"><button type="submit" id="btn-save-prod" class="sy-config-primary">Agregar producto</button><button type="button" id="cancel-product-edit" hidden onclick="cancelarEdicionProducto()" class="sy-config-secondary">Cancelar edición</button></div>
+            </form>
+            <label class="sy-config-field" for="product-search">Productos registrados<input id="product-search" type="search" placeholder="Buscar por nombre o categoría" oninput="renderProductos()"></label>
             <div id="lista-menu-admin" class="space-y-3"></div>
         </section>
 
@@ -77,7 +72,7 @@
 
         <section id="view-config" class="hidden space-y-6">
             <div><h2 class="text-2xl font-black text-slate-900">Configuración de restaurante</h2><p class="text-sm text-slate-400 font-semibold">Datos del negocio, operación y cobros en un solo lugar.</p></div>
-<form id="business-config-form" class="sy-config-form"><fieldset class="sy-config-section"><legend>Datos del negocio</legend><p class="sy-config-help">La información que ven tus clientes.</p><div class="sy-config-grid"><label class="sy-config-field" for="cfg-business-name">Nombre del negocio<input id="cfg-business-name" type="text" maxlength="120" required></label><label class="sy-config-field" for="cfg-business-phone">WhatsApp del negocio<input id="cfg-business-phone" type="tel" maxlength="25" placeholder="10 dígitos o código de país"></label></div><p class="sy-config-help">Los comprobantes de transferencia se envían a este WhatsApp.</p><div class="sy-business-image"><img id="cfg-business-preview" src="logo.png" alt="Imagen actual del negocio"><label class="sy-config-field" for="cfg-business-image">Imagen del negocio<input id="cfg-business-image" type="file" accept="image/jpeg,image/png,image/webp,image/avif"><span class="sy-config-help">JPG, PNG, WebP o AVIF, hasta 5 MB. Se aplica al guardar.</span></label></div></fieldset><fieldset class="sy-config-section"><legend>Atención y horarios</legend><p class="sy-config-help">Días y horas en que recibes pedidos.</p><label class="sy-setting-option" for="cfg-accepting"><span>Aceptar pedidos</span><input id="cfg-accepting" type="checkbox"></label><label class="sy-config-field" for="cfg-hours-mode">Horario de atención<select id="cfg-hours-mode" onchange="BusinessSettings.mode()"><option value="common">Mismo horario todos los días</option><option value="daily">Elegir días y horarios</option></select></label><div id="cfg-weekdays" hidden></div><div id="cfg-common-hours" class="sy-config-grid"><label class="sy-config-field" for="cfg-open-time">Apertura<input id="cfg-open-time" type="time" ></label><label class="sy-config-field" for="cfg-close-time">Cierre<input id="cfg-close-time" type="time" ></label></div><p class="sy-config-help">Puede terminar al día siguiente, por ejemplo de 18:00 a 02:00. Deja ambos campos vacíos para abrir 24 horas.</p></fieldset><fieldset class="sy-config-section"><legend>Ubicación</legend><p class="sy-config-help">Punto de origen para calcular la cobertura y las entregas.</p><div class="sy-config-grid"><label class="sy-config-field" for="cfg-lat">Latitud<input id="cfg-lat" type="number" min="-90" max="90" step="any"></label><label class="sy-config-field" for="cfg-lng">Longitud<input id="cfg-lng" type="number" min="-180" max="180" step="any"></label></div><button type="button" onclick="usarUbicacionActual()" class="sy-config-secondary">Usar mi ubicación actual</button></fieldset><fieldset class="sy-config-section"><legend>Pedidos y cocina</legend><p class="sy-config-help">Cómo recibes los pedidos y sus tiempos iniciales.</p><label class="sy-setting-option" for="cfg-guest-pickup"><span>Pedidos para llevar sin cuenta</span><input id="cfg-guest-pickup" type="checkbox"></label><p class="sy-config-help">Desde el menú público, el cliente indica su nombre y paga en caja o con Mercado Pago. El pago confirmado libera el pedido a cocina.</p><h3>Tiempos iniciales de preparación</h3><p class="sy-config-help">Se usan mientras cocina aprende los tiempos de cada servicio.</p><div class="sy-config-grid"><label class="sy-config-field" for="cfg-pickup-prep">Para recoger (min)<input id="cfg-pickup-prep" type="number" min="5" max="240" required></label><label class="sy-config-field" for="cfg-dine-in-prep">En mesa (min)<input id="cfg-dine-in-prep" type="number" min="5" max="240" required></label><label class="sy-config-field" for="cfg-delivery-prep">Delivery (min)<input id="cfg-delivery-prep" type="number" min="5" max="240" required></label></div></fieldset><fieldset class="sy-config-section"><legend>Delivery</legend><p class="sy-config-help">Cobertura y tarifas del servicio a domicilio.</p><label class="sy-setting-option" for="cfg-delivery-enabled"><span>Ofrecer delivery</span><input id="cfg-delivery-enabled" type="checkbox"></label><div class="sy-config-grid"><label class="sy-config-field" for="cfg-delivery-radius">Cobertura máxima (km)<input id="cfg-delivery-radius" type="number" min="0.5" max="50" step="0.1" required></label><label class="sy-config-field" for="cfg-delivery-minimum">Pedido mínimo ($)<input id="cfg-delivery-minimum" type="number" min="0" step="0.01" required></label><label class="sy-config-field" for="cfg-delivery-base">Tarifa base ($)<input id="cfg-delivery-base" type="number" min="0" step="0.01" required></label><label class="sy-config-field" for="cfg-delivery-km">Costo por km ($)<input id="cfg-delivery-km" type="number" min="0" step="0.01" required></label><label class="sy-config-field" for="cfg-delivery-free">Envío gratis desde ($)<input id="cfg-delivery-free" type="number" min="0" step="0.01" placeholder="Opcional"></label></div><p class="sy-config-help">Requiere ubicación y cobro en efectivo o Mercado Pago. Caja asigna cada entrega al personal del restaurante.</p></fieldset><fieldset class="sy-config-section"><legend>Cobros</legend><p class="sy-config-help">Métodos de pago y cuenta receptora.</p><div class="sy-setting-options"><label class="sy-setting-option" for="cfg-cash"><span>Efectivo</span><input id="cfg-cash" type="checkbox"></label><label class="sy-setting-option" for="cfg-transfer"><span>Transferencia</span><input id="cfg-transfer" type="checkbox"></label><label class="sy-setting-option" for="cfg-online"><span>Mercado Pago</span><input id="cfg-online" type="checkbox"></label></div>                    <div id="mp-status-card" class="p-4 rounded-2xl border border-slate-100 bg-slate-50">
+<form id="business-config-form" class="sy-config-form"><fieldset class="sy-config-section"><legend>Datos del negocio</legend><p class="sy-config-help">La información que ven tus clientes.</p><div class="sy-config-grid"><label class="sy-config-field" for="cfg-business-name">Nombre del negocio<input id="cfg-business-name" type="text" maxlength="120" required></label><label class="sy-config-field" for="cfg-business-phone">WhatsApp del negocio<input id="cfg-business-phone" type="tel" maxlength="25" placeholder="10 dígitos o código de país"></label></div><p class="sy-config-help">Los comprobantes de transferencia se envían a este WhatsApp.</p><div class="sy-business-image"><img id="cfg-business-preview" src="logo.png" alt="Imagen actual del negocio"><label class="sy-config-field" for="cfg-business-image">Imagen del negocio<input id="cfg-business-image" type="file" accept="image/jpeg,image/png,image/webp,image/avif"><span class="sy-config-help">JPG, PNG, WebP o AVIF, hasta 5 MB. Se aplica al guardar.</span></label></div></fieldset><fieldset class="sy-config-section"><legend>Atención y horarios</legend><p class="sy-config-help">Días y horas en que recibes pedidos.</p><label class="sy-setting-option" for="cfg-accepting"><span>Aceptar pedidos</span><input id="cfg-accepting" type="checkbox"></label><label class="sy-config-field" for="cfg-hours-mode">Horario de atención<select id="cfg-hours-mode" onchange="BusinessSettings.mode()"><option value="common">Mismo horario todos los días</option><option value="daily">Elegir días y horarios</option></select></label><div id="cfg-weekdays" hidden></div><div id="cfg-common-hours" class="sy-config-grid"><label class="sy-config-field" for="cfg-open-time">Apertura<input id="cfg-open-time" type="time" ></label><label class="sy-config-field" for="cfg-close-time">Cierre<input id="cfg-close-time" type="time" ></label></div><p class="sy-config-help">Puede terminar al día siguiente, por ejemplo de 18:00 a 02:00. Deja ambos campos vacíos para abrir 24 horas.</p></fieldset><fieldset class="sy-config-section"><legend>Dirección del negocio</legend><p class="sy-config-help">Indica dónde está el restaurante para calcular la cobertura de entrega.</p><label class="sy-config-field" for="cfg-address">Dirección completa<input id="cfg-address" type="text" maxlength="300" autocomplete="street-address" placeholder="Calle, número, colonia, ciudad y código postal"></label><input id="cfg-lat" type="hidden"><input id="cfg-lng" type="hidden"><button type="button" id="cfg-address-search" class="sy-config-secondary">Buscar dirección</button><p id="cfg-address-status" role="status" aria-live="polite"></p><div id="cfg-address-results" class="sy-address-results"></div><small class="sy-config-help">Datos de OpenStreetMap · búsqueda con Photon</small></fieldset><fieldset class="sy-config-section"><legend>Pedidos y cocina</legend><p class="sy-config-help">Cómo recibes los pedidos y sus tiempos iniciales.</p><label class="sy-setting-option" for="cfg-guest-pickup"><span>Pedidos para llevar sin cuenta</span><input id="cfg-guest-pickup" type="checkbox"></label><p class="sy-config-help">Desde el menú público, el cliente indica su nombre y paga en caja o con Mercado Pago. El pago confirmado libera el pedido a cocina.</p><h3>Tiempos iniciales de preparación</h3><p class="sy-config-help">Se usan mientras cocina aprende los tiempos de cada servicio.</p><div class="sy-config-grid"><label class="sy-config-field" for="cfg-pickup-prep">Para recoger (min)<input id="cfg-pickup-prep" type="number" min="5" max="240" required></label><label class="sy-config-field" for="cfg-dine-in-prep">En mesa (min)<input id="cfg-dine-in-prep" type="number" min="5" max="240" required></label><label class="sy-config-field" for="cfg-delivery-prep">Delivery (min)<input id="cfg-delivery-prep" type="number" min="5" max="240" required></label></div></fieldset><fieldset class="sy-config-section"><legend>Delivery</legend><p class="sy-config-help">Cobertura y tarifas del servicio a domicilio.</p><label class="sy-setting-option" for="cfg-delivery-enabled"><span>Ofrecer delivery</span><input id="cfg-delivery-enabled" type="checkbox"></label><div class="sy-config-grid"><label class="sy-config-field" for="cfg-delivery-radius">Cobertura máxima (km)<input id="cfg-delivery-radius" type="number" min="0.5" max="50" step="0.1" required></label><label class="sy-config-field" for="cfg-delivery-minimum">Pedido mínimo ($)<input id="cfg-delivery-minimum" type="number" min="0" step="0.01" required></label><label class="sy-config-field" for="cfg-delivery-base">Tarifa base ($)<input id="cfg-delivery-base" type="number" min="0" step="0.01" required></label><label class="sy-config-field" for="cfg-delivery-km">Costo por km ($)<input id="cfg-delivery-km" type="number" min="0" step="0.01" required></label><label class="sy-config-field" for="cfg-delivery-free">Envío gratis desde ($)<input id="cfg-delivery-free" type="number" min="0" step="0.01" placeholder="Opcional"></label></div><p class="sy-config-help">Requiere ubicación y cobro en efectivo o Mercado Pago. Caja asigna cada entrega al personal del restaurante.</p></fieldset><fieldset class="sy-config-section"><legend>Cobros</legend><p class="sy-config-help">Métodos de pago y cuenta receptora.</p><div class="sy-setting-options"><label class="sy-setting-option" for="cfg-cash"><span>Efectivo</span><input id="cfg-cash" type="checkbox"></label><label class="sy-setting-option" for="cfg-transfer"><span>Transferencia</span><input id="cfg-transfer" type="checkbox"></label><label class="sy-setting-option" for="cfg-online"><span>Mercado Pago</span><input id="cfg-online" type="checkbox"></label></div>                    <div id="mp-status-card" class="p-4 rounded-2xl border border-slate-100 bg-slate-50">
                         <p id="mp-status" class="text-xs font-black text-slate-600">Consultando Mercado Pago...</p>
                         <button id="mp-connect" type="button" onclick="conectarMercadoPago()" class="w-full mt-3 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase">Conectar Mercado Pago</button>
                         <button id="mp-disconnect" type="button" onclick="desconectarMercadoPago()" class="hidden w-full mt-3 py-3 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase">Desconectar cuenta</button>
@@ -88,7 +83,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
     <script src="app-config.js"></script>
-    <script src="runtime.js"></script><script src="app.js"></script><script src="business-settings.js"></script>
+    <script src="runtime.js"></script><script src="app.js"></script><script src="address-location.js"></script><script src="business-settings.js"></script>
     <script>
         const _supabase = window.serveYourself.supabase;
         const escapeHtml = window.serveYourself.escapeHtml;
@@ -96,6 +91,12 @@
         let currentRestaurantId = null;
         let currentProfile = null;
         let currentAdminSection = 'home';
+        const businessAddressLocation=new AddressLocation({
+            input:document.getElementById('cfg-address'),button:document.getElementById('cfg-address-search'),results:document.getElementById('cfg-address-results'),status:document.getElementById('cfg-address-status'),
+            onSelect:point=>{document.getElementById('cfg-lat').value=point.latitude;document.getElementById('cfg-lng').value=point.longitude;},
+            onInvalidate:()=>{document.getElementById('cfg-lat').value='';document.getElementById('cfg-lng').value='';}
+        });
+
 
 
         function mostrarSeccion(seccion) {
@@ -104,7 +105,6 @@
             ['productos', 'dashboard', 'config'].forEach(id => {
                 document.getElementById(`view-${id}`).classList.toggle('hidden', id !== seccion);
             });
-            document.getElementById('admin-back').classList.toggle('hidden', seccion === 'home' || seccion === 'config');
             if (seccion === 'dashboard') cargarDashboard();
         }
 
@@ -141,6 +141,7 @@
             document.getElementById('biz-name-display').innerText = profile.business_name;
             document.getElementById('admin-email-display').innerText = user.email;
             cargarConfiguracion(profile);
+            businessAddressLocation.setResolved(profile.address,profile.latitude,profile.longitude);
             const section = new URLSearchParams(window.location.search).get('section');
             if (!['productos','dashboard','config'].includes(section)) { window.location.replace('funciones.html'); return; }
             mostrarSeccion(section);
@@ -199,6 +200,12 @@
             }
             adminProducts = prods;
 
+            renderProductos();
+        }
+
+        function renderProductos(){
+            const term=document.getElementById('product-search').value.trim().toLocaleLowerCase();
+            const prods=adminProducts.filter(p=>(p.name+' '+(p.category||'')).toLocaleLowerCase().includes(term));
             document.getElementById('lista-menu-admin').innerHTML = prods.map(p => `
                 <div class="bg-white p-4 rounded-3xl border border-slate-100 flex items-center justify-between ${!p.is_available ? 'opacity-50' : ''}">
                     <div class="flex items-center gap-4">
@@ -215,7 +222,7 @@
                         <button type="button" onclick="eliminarProducto('${p.id}')" class="text-slate-300">Eliminar</button>
                     </div>
                 </div>
-            `).join('');
+            `).join('')||'<p class="sy-config-help">No hay productos que mostrar.</p>';
         }
 
         window.toggleDisponibilidad = async (id, actual) => {
@@ -239,7 +246,7 @@
             editingProductId = null;
             document.getElementById('add-product-form').reset();
             document.getElementById('product-form-title').textContent = 'Nuevo producto';
-            document.getElementById('btn-save-prod').textContent = 'Agregar';
+            document.getElementById('btn-save-prod').textContent = 'Agregar producto';
             document.getElementById('cancel-product-edit').hidden = true;
             document.getElementById('product-edit-help').hidden = true;
         }
@@ -295,13 +302,14 @@
                 document.getElementById('product-save-status').textContent = message;
                 alert(message);
             } finally { productSaving = false; button.disabled = false; }
-            if (saved) { cancelarEdicionProducto(); document.getElementById('product-save-status').textContent = id ? 'Cambios guardados.' : 'Producto agregado.'; await cargarProductos(); }
+            if (saved) { cancelarEdicionProducto(); if(!id){document.getElementById('prod-category').value=payload.category;document.getElementById('prod-station').value=payload.kitchen_station_id==null?'':String(payload.kitchen_station_id);document.getElementById('prod-name').focus();} document.getElementById('product-save-status').textContent = id ? 'Cambios guardados.' : 'Producto agregado. Puedes agregar el siguiente.'; await cargarProductos(); }
         });
 
         function cargarConfiguracion(profile) {
             document.getElementById('cfg-accepting').checked = profile.accepting_orders ?? true;
             document.getElementById('cfg-open-time').value = profile.open_time ? String(profile.open_time).slice(0, 5) : '';
             document.getElementById('cfg-close-time').value = profile.close_time ? String(profile.close_time).slice(0, 5) : '';
+            document.getElementById('cfg-address').value = profile.address || '';
             document.getElementById('cfg-lat').value = profile.latitude ?? '';
             document.getElementById('cfg-lng').value = profile.longitude ?? '';
             document.getElementById('cfg-delivery-enabled').checked = profile.delivery_enabled ?? false;
@@ -330,14 +338,6 @@
             BusinessSettings.load(profile);
         }
 
-        function usarUbicacionActual() {
-            if (!navigator.geolocation) { alert('Tu dispositivo no permite obtener la ubicación.'); return; }
-            navigator.geolocation.getCurrentPosition(position => {
-                document.getElementById('cfg-lat').value = position.coords.latitude;
-                document.getElementById('cfg-lng').value = position.coords.longitude;
-            }, () => alert('No fue posible obtener tu ubicación. Revisa los permisos del navegador.'));
-        }
-
         async function conectarMercadoPago() {
             const { data, error } = await _supabase.functions.invoke('mercado-pago-connect-url', { body: {} });
             if (error || !data?.authorizationUrl) { alert(data?.error || error?.message || 'No se pudo conectar Mercado Pago.'); return; }
@@ -358,6 +358,7 @@
             if (clabe && !/^\d{18}$/.test(clabe)) { alert('La CLABE debe tener 18 dígitos.'); return; }
             const updates = {
                 ...businessSettings,
+                address: document.getElementById('cfg-address').value.trim() || null,
                 accepting_orders: document.getElementById('cfg-accepting').checked,
                 latitude: document.getElementById('cfg-lat').value === '' ? null : Number(document.getElementById('cfg-lat').value),
                 longitude: document.getElementById('cfg-lng').value === '' ? null : Number(document.getElementById('cfg-lng').value),
@@ -385,8 +386,13 @@
             if (updates.payment_online && !currentProfile.mercado_pago_connected) {
                 alert('Primero conecta tu cuenta de Mercado Pago.'); return;
             }
-            if (updates.delivery_enabled && (updates.latitude === null || updates.longitude === null)) {
-                alert('Para activar delivery debes guardar la ubicación exacta del restaurante.'); return;
+            if(updates.address&&!businessAddressLocation.point()&&(updates.address!==(currentProfile.address||'')||updates.delivery_enabled)){
+                await businessAddressLocation.search();
+                document.getElementById('cfg-address').focus();
+                return;
+            }
+            if(updates.delivery_enabled&&!businessAddressLocation.point()){
+                alert('Indica la dirección del restaurante y selecciónala en la búsqueda para activar delivery.');return;
             }
             if (updates.delivery_enabled && !updates.payment_cash && !updates.payment_online) {
                 alert('Delivery necesita Efectivo o Mercado Pago como método de cobro.'); return;
