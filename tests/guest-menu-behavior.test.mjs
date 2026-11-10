@@ -45,7 +45,7 @@ test('returning to an older payment uses that receipt instead of the latest cart
 // Disconnecting Mercado Pago must not leave a checked, disabled option blocking all settings saves.
 test('guest setting reflects effective payment availability after disconnect',()=>{
  const html=fs.readFileSync(new URL('../admin.html',import.meta.url),'utf8');
- const method=html.slice(html.indexOf('        function cargarConfiguracion('),html.indexOf('        function usarUbicacionActual'));
+ const method=html.slice(html.indexOf('        function cargarConfiguracion('),html.indexOf('        async function conectarMercadoPago'));
  for(const [connected,online,cash,expected] of [[false,true,false,false],[true,false,false,false],[true,true,false,true],[false,false,true,true]]){
   const elements=new Map();const get=id=>{if(!elements.has(id))elements.set(id,{classList:{toggle(){}}});return elements.get(id);};
   vm.runInNewContext(method+'cargarConfiguracion(profile)',{BusinessSettings:{load(){}},document:{getElementById:get},profile:{guest_pickup_enabled:true,mercado_pago_connected:connected,payment_online:online,payment_cash:cash}});
