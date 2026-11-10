@@ -369,7 +369,7 @@ window.serveYourself = {
                             await OneSignal.User.PushSubscription.optIn();
                             window.localStorage.removeItem('sy-install-push-pending');
                         }
-                        finished = true; clearTimeout(timer); this._pushSDK = OneSignal; resolve(OneSignal);
+                        finished = true; clearTimeout(timer); this._pushSDK = OneSignal; window.dispatchEvent?.(new CustomEvent('sy:push-state')); resolve(OneSignal);
                     } catch (error) { fail(new Error('No se pudieron preparar las notificaciones: ' + (error.message || 'Recarga la app.'))); }
                 });
                 if (!document.querySelector('script[data-onesignal]')) {
@@ -411,6 +411,7 @@ window.serveYourself = {
         if (!sdk.Notifications.permission) return false;
         await sdk.User.PushSubscription.optIn();
         if (!sdk.User.PushSubscription.optedIn) throw new Error('El permiso está concedido, pero no se pudo activar la suscripción. Recarga y vuelve a intentarlo.');
+        window.dispatchEvent?.(new CustomEvent('sy:push-state'));
         return true;
     },
 
@@ -570,3 +571,6 @@ const dateControls=document.createElement('script');
 dateControls.src='date-controls.js';dateControls.defer=true;document.head.appendChild(dateControls);
 const timeControls=document.createElement('script');
 timeControls.src='time-controls.js';timeControls.defer=true;document.head.appendChild(timeControls);
+
+const notificationControls=document.createElement('script');
+notificationControls.src='notification-controls.js';notificationControls.defer=true;document.head.appendChild(notificationControls);
