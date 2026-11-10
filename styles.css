@@ -1486,3 +1486,12 @@ img[src="app-icon.svg"], img[src="/app-icon.svg"],
 .sy-training-history p { font-size:.85rem;margin:4px 0;overflow-wrap:anywhere; }
 .sy-training-dialog button:disabled { opacity:.5;cursor:wait; }
 @media(max-width:600px) { .sy-training-dialog { padding:16px; }.sy-training-models { grid-template-columns:1fr; }.sy-training-item { grid-template-columns:minmax(0,1fr) 80px; }.sy-training-item>button { grid-column:1/-1;justify-self:end; }.sy-training-heading { gap:10px; } }
+
+.kitchen-batch { border:2px solid var(--theme-accent);border-radius:20px;overflow:hidden;background:var(--theme-surface); }
+.kitchen-batch-heading { padding:16px;background:var(--theme-accent-bg);color:var(--theme-text); }
+.kitchen-batch-heading h3 { font-size:1rem;font-weight:800;color:var(--theme-accent); }
+.kitchen-batch-heading p,.kitchen-batch-product small { font-size:.8rem;color:var(--theme-muted); }
+.kitchen-batch-product { display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:10px; }
+.kitchen-batch-heading button { display:block;width:100%;margin-top:14px;padding:12px;border-radius:12px;background:var(--theme-primary);color:var(--theme-on-primary);font-weight:800;min-height:44px; }
+.kitchen-batch-heading button:disabled { opacity:.5;cursor:wait; }
+.kitchen-batch-members { display:grid;gap:12px;padding:12px; }.kitchen-batch-members .kitchen-card { margin:0; }

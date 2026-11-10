@@ -6,6 +6,7 @@ const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
 function kitchen(){
  const elements=new Map();const get=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',textContent:'',classList:{add(){},remove(){},toggle(){}},addEventListener(){}});return elements.get(id);};
  const context=vm.createContext({console,Date,Number,setTimeout,clearTimeout,SYRuntime:{},document:{getElementById:get,addEventListener(){},visibilityState:'visible'},window:{serveYourself:{supabase:{},escapeHtml:v=>String(v)},addEventListener(){}}});
+ vm.runInContext(read('kitchen-batches.js'),context);
  const scripts=[...read('cocina.html').matchAll(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/g)];
  vm.runInContext(scripts.at(-1)[1].replace(/init\(\);\s*$/,''),context);
  vm.runInContext("orders=[];tables=[];products=[];",context);
@@ -30,4 +31,10 @@ test('render preserves database priority rather than sorting again by age',()=>{
  const ui=kitchen();ui.context.ordered=[{...base,id:2,priority_override:2,has_shortage:false},{...base,id:1,priority_override:0,has_shortage:false}];
  vm.runInContext('orders=ordered;render()',ui.context);const html=ui.elements.get('orders-pendiente').innerHTML;
  assert.ok(html.indexOf('Comanda #2')<html.indexOf('Comanda #1'));
+});
+
+test('joint preparation renders common totals without merging ticket identities or duplicating start actions',()=>{
+ const ui=kitchen();ui.context.ordered=[{...base,id:2},{...base,id:3}];
+ vm.runInContext('orders=ordered;render()',ui.context);const html=ui.elements.get('orders-pendiente').innerHTML;
+ assert.match(html,/2 comandas · preparación conjunta/);assert.match(html,/2 × Plato/);assert.match(html,/#2: 1 · #3: 1/);assert.match(html,/Comanda #2/);assert.match(html,/Comanda #3/);assert.equal((html.match(/Comenzar juntas/g)||[]).length,1);assert.doesNotMatch(html,/onclick="moveOrder/);
 });
