@@ -1461,3 +1461,28 @@ img[src="app-icon.svg"], img[src="/app-icon.svg"],
 
 /* Granted permission actions must stay hidden despite shared button display rules. */
 #installed-permissions [hidden] { display:none !important; }
+
+/* Kitchen training shares the active app palette and keeps long forms scrollable. */
+.sy-training-dialog { width:min(94vw,880px);max-height:88dvh;overflow:auto;margin:auto;padding:24px;border:1px solid var(--theme-border);border-radius:24px;background:var(--theme-surface);color:var(--theme-text); }
+.sy-training-dialog::backdrop { background:rgb(15 23 42 / .55); }
+.sy-training-heading { display:flex;gap:20px;justify-content:space-between;align-items:start; }
+.sy-training-heading h2 { font-size:1.35rem;font-weight:800; }
+.sy-training-heading p,.sy-training-help,.sy-training-models p,.sy-training-history small,.sy-training-models small { color:var(--theme-muted);font-size:.85rem;line-height:1.5; }
+.sy-training-secondary { min-height:44px;padding:10px 14px;border:1px solid var(--theme-border);border-radius:12px;background:var(--theme-subtle);color:var(--theme-text);font-weight:700; }
+.sy-training-models { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:20px 0; }
+.sy-training-models article { padding:14px;border:1px solid var(--theme-border);border-radius:14px; }
+.sy-training-models strong { display:block;margin:8px 0;color:var(--theme-accent); }
+.sy-training-fields { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+.sy-training-dialog label { display:grid;gap:8px;font-size:.9rem;font-weight:700; }
+.sy-training-dialog select,.sy-training-dialog input:not([type=checkbox]) { width:100%;min-height:48px;border:1px solid var(--theme-border);border-radius:12px;padding:10px;background:var(--theme-subtle);color:var(--theme-text); }
+.sy-training-dialog .sy-training-peak { display:flex;align-items:center;gap:10px;margin:16px 0 6px; }
+.sy-training-item { display:grid;grid-template-columns:minmax(0,1fr) 95px auto;align-items:end;gap:10px;margin:14px 0; }
+.sy-training-actions { display:flex;flex-wrap:wrap;gap:10px;margin:20px 0; }
+#training-message { margin:14px 0;color:var(--theme-muted); }
+#training-message[data-error=true] { color:var(--theme-danger); }
+.sy-training-preview:not(:empty) { padding:14px;border-radius:12px;background:var(--theme-accent-bg);color:var(--theme-accent);margin-bottom:20px; }
+.sy-training-dialog h3 { font-weight:800;font-size:1.05rem;margin-top:20px; }
+.sy-training-history li { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--theme-border); }
+.sy-training-history p { font-size:.85rem;margin:4px 0;overflow-wrap:anywhere; }
+.sy-training-dialog button:disabled { opacity:.5;cursor:wait; }
+@media(max-width:600px) { .sy-training-dialog { padding:16px; }.sy-training-models { grid-template-columns:1fr; }.sy-training-item { grid-template-columns:minmax(0,1fr) 80px; }.sy-training-item>button { grid-column:1/-1;justify-self:end; }.sy-training-heading { gap:10px; } }
