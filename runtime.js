@@ -29,6 +29,23 @@
             const get = type => parts.find(part => part.type === type).value;
             return `${get('year')}-${get('month')}-${get('day')}`;
         },
+        serialRefresh(work) {
+            let running = null;
+            let dirty = false;
+            return () => {
+                dirty = true;
+                if (running) return running;
+                running = (async () => {
+                    try {
+                        do {
+                            dirty = false;
+                            await work();
+                        } while (dirty);
+                    } finally { running = null; }
+                })();
+                return running;
+            };
+        },
         async allRows(makeQuery, size = 500) {
             const rows = [];
             for (let offset = 0; ; offset += size) {

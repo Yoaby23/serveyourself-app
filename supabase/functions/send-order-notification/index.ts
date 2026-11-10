@@ -103,7 +103,7 @@ Deno.serve(async request => {
       })});
       const outcome = await response.json();
       if(!response.ok || !outcome.id) {
-        const unsubscribed = response.ok && Array.isArray(outcome.errors) && outcome.errors.some((error: unknown) => typeof error === 'string' && error.includes('not subscribed'));
+        const unsubscribed = response.ok && (Array.isArray(outcome.errors) && outcome.errors.some((error: unknown) => typeof error === 'string' && error.includes('not subscribed')) || Array.isArray(outcome.errors?.invalid_aliases?.external_id));
         if (!unsubscribed) {
           console.error('push_provider_error', JSON.stringify({status:response.status,errors:outcome.errors}));
           providerFailed = true;
