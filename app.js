@@ -477,8 +477,11 @@ async function showInstalledPermissions(afterInstall = false) {
         locationPermission=geo||null;
         // The stored value is only a UI hint when Permissions API is unavailable.
         // It never grants location access; the browser still enforces that permission.
-        locationAllowed=geo?geo.state==='granted':rememberedLocation();
-        if(geo)rememberLocation(locationAllowed);
+        locationAllowed=geo?.state==='denied'?false:geo?.state==='granted'||rememberedLocation();
+        // A temporary `prompt` state must not erase an already completed onboarding.
+        // This only suppresses our dialog; actual access always remains browser-controlled.
+        if(geo?.state==='granted')rememberLocation(true);
+        else if(geo?.state==='denied')rememberLocation(false);
         notificationPermission=checks[1].status==='fulfilled'?checks[1].value:null;
     }
     function notificationsAllowed(){return Boolean(window.Notification)&&(window.Notification.permission==='granted'||notificationPermission?.state==='granted');}
@@ -497,6 +500,7 @@ async function showInstalledPermissions(afterInstall = false) {
         push.hidden=notifications;push.disabled=notifications||!window.Notification;
         geo.hidden=locationAllowed;geo.disabled=locationAllowed||!navigator.geolocation;
         if(notifications&&locationAllowed){if(shown)dialog.close();return false;}
+        status.textContent='';
         if(!window.Notification||!navigator.geolocation)status.textContent='Abre la app en un dispositivo compatible con notificaciones y ubicación para continuar.';
         else if(window.Notification.permission==='denied'||locationPermission?.state==='denied')status.textContent='Permite las notificaciones y la ubicación en los ajustes de este sitio. Al regresar se comprobarán automáticamente.';
         return true;
@@ -519,10 +523,14 @@ async function showInstalledPermissions(afterInstall = false) {
         }catch{if(!disposed)status.textContent='No se pudo activar el permiso. Revisa los ajustes e intenta nuevamente.';}
         refresh();
     };
-    geo.onclick=()=>{
+    geo.onclick=async()=>{
+        await recheck();
+        if(disposed||locationAllowed)return;
         geo.disabled=true;
-        navigator.geolocation.getCurrentPosition(()=>{locationAllowed=true;rememberLocation(true);refresh();},error=>{
+        navigator.geolocation.getCurrentPosition(()=>{locationAllowed=true;rememberLocation(true);refresh();},async error=>{
             if(disposed)return;
+            await recheck();
+            if(disposed||locationAllowed)return;
             if(error.code===1){locationAllowed=false;rememberLocation(false);}
             status.textContent=error.code===1?'Permite la ubicación en los ajustes de este sitio para continuar.':'No se pudo comprobar la ubicación. Revisa tu conexión e intenta nuevamente.';geo.disabled=false;
         },{enableHighAccuracy:false,timeout:10000,maximumAge:60000});

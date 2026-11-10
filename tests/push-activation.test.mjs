@@ -47,7 +47,7 @@ test('la app instalada solicita ambos permisos y avanza únicamente cuando ambos
   await nodes.get('[data-permission="push"]').onclick();
   assert.deepEqual([pushes, locations], [1, 0]);
   assert.equal(closed, 0);
-  nodes.get('[data-permission="location"]').onclick();
+  await nodes.get('[data-permission="location"]').onclick();
   assert.equal(locations, 1);
   assert.equal(closed, 1);
   assert.equal(nodes.has('[data-finish]'), false);
