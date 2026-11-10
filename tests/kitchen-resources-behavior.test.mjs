@@ -29,12 +29,12 @@ test('sufficient but unsuitable observations clearly use configured time',()=>{
 });
 test('render preserves database priority rather than sorting again by age',()=>{
  const ui=kitchen();ui.context.ordered=[{...base,id:2,priority_override:2,has_shortage:false},{...base,id:1,priority_override:0,has_shortage:false}];
- vm.runInContext('orders=ordered;render()',ui.context);const html=ui.elements.get('orders-pendiente').innerHTML;
+ vm.runInContext('trainingMode=false;orders=ordered;render()',ui.context);const html=ui.elements.get('orders-pendiente').innerHTML;
  assert.ok(html.indexOf('Comanda #2')<html.indexOf('Comanda #1'));
 });
 
 test('joint preparation renders common totals without merging ticket identities or duplicating start actions',()=>{
  const ui=kitchen();ui.context.ordered=[{...base,id:2},{...base,id:3}];
- vm.runInContext('orders=ordered;render()',ui.context);const html=ui.elements.get('orders-pendiente').innerHTML;
+ vm.runInContext('trainingMode=false;orders=ordered;render()',ui.context);const html=ui.elements.get('orders-pendiente').innerHTML;
  assert.match(html,/2 comandas · preparación conjunta/);assert.match(html,/2 × Plato/);assert.match(html,/#2: 1 · #3: 1/);assert.match(html,/Comanda #2/);assert.match(html,/Comanda #3/);assert.equal((html.match(/Comenzar juntas/g)||[]).length,1);assert.doesNotMatch(html,/onclick="moveOrder/);
 });
