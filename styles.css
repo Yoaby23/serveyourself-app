@@ -1447,3 +1447,11 @@ input[type=file]:disabled, input[type=file]:disabled::file-selector-button { cur
 .sy-danger-button:disabled { cursor: not-allowed; opacity: .55; }
 .sy-settings-card > .sy-action-danger { margin-top: 8px; }
 .sy-action-danger[hidden], .sy-danger-button[hidden] { display: none; }
+
+/* App and restaurant logos keep rounded corners at every displayed size. */
+img[src="logo.png"], img[src="/logo.png"], img[src$="/logo.png"],
+img[src="app-icon.svg"], img[src="/app-icon.svg"],
+#restaurant-logo, #cfg-business-preview, .auth-splash-content img {
+    border-radius: 20%;
+    overflow: hidden;
+}
