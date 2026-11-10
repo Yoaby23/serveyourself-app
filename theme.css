@@ -96,3 +96,10 @@ html[data-theme] :is([class~="text-violet-600"],[class~="text-violet-700"]) { co
 html[data-theme] :is([class~="bg-slate-300"],[class~="bg-white/10"]) { background:var(--theme-subtle); }
 html[data-theme] [class~="bg-green-200"] { background:var(--theme-success-bg); }
 html[data-theme] :is([class~="border-green-200"],[class~="border-emerald-100"],[class~="border-emerald-200"],[class~="border-blue-200"],[class~="border-violet-200"],[class~="border-red-200"],[class~="border-orange-200"],[class~="border-orange-300"],[class~="border-slate-950"]) { border-color:var(--theme-border); }
+/* Explicit text colors from work views must follow the same palette too. */
+html[data-theme] body[class] { background:var(--theme-page);color:var(--theme-text); }
+html[data-theme] :is(.sy-config-field,.sy-page-header h1,.driver-pickup b,.sy-guest-message) { color:var(--theme-text); }
+html[data-theme] :is(.sy-theme-preference label,.kitchen-timing-grid small,.kitchen-priority-reason small,.admin-feature-card small,.payment-form label,.sy-legal-footer,.sy-account-links a,.sy-delete-page form>label:first-child,.sy-confirm-row,.sy-favorites-status,.sy-customer-bottom-nav button,.sy-restaurant-nav,.sy-header-identity small,.sy-account-identity span,.sy-guest-help,.cash-workspace-heading p,.cash-muted,.cash-section-intro p,.cash-sections a,.cash-empty,.cash-account-tools summary,.cash-preparing-card p,.cash-preparing-card span,#installed-permissions p,.sy-select-option:disabled,.sy-calendar-weekdays,.sy-calendar-outside,.sy-config-save p) { color:var(--theme-muted); }
+html[data-theme] :is(.cash-action:not(.cash-action-primary):not(.cash-action-danger),.sy-guest-product button,.sy-guest-panel button:not(#guest-pay):not(#resume-payment),#installed-permissions button:not([data-finish])) { background:var(--theme-subtle);color:var(--theme-text); }
+html[data-theme] .cash-sections a[aria-current] { color:var(--theme-success);background:var(--theme-success-bg); }
+html[data-theme] .sy-policy-card a:not(.sy-action-danger) { color:var(--theme-accent); }
