@@ -359,6 +359,10 @@ window.serveYourself = {
                         await OneSignal.init({ appId, serviceWorkerPath: 'sw.js' });
                         await OneSignal.login(user.id);
                         if (finished) return;
+                        if (window.Notification?.permission === 'granted' && window.localStorage?.getItem('sy-install-push-pending')) {
+                            await OneSignal.User.PushSubscription.optIn();
+                            window.localStorage.removeItem('sy-install-push-pending');
+                        }
                         finished = true; clearTimeout(timer); this._pushSDK = OneSignal; resolve(OneSignal);
                     } catch (error) { fail(new Error('No se pudieron preparar las notificaciones: ' + (error.message || 'Recarga la app.'))); }
                 });
@@ -435,7 +439,54 @@ window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
     window.serveYourself._installPrompt = event;
 });
-window.addEventListener('appinstalled', () => { window.serveYourself._installPrompt = null; });
+// A browser permission prompt needs its own tap, including on an installed PWA.
+function showInstalledPermissions(afterInstall = false) {
+    const installed = afterInstall || window.navigator?.standalone || window.matchMedia?.('(display-mode: standalone)').matches;
+    if (!installed || document.getElementById('installed-permissions')) return;
+    const key = 'sy-installed-permissions-v1';
+    try { if (window.localStorage.getItem(key)) return; } catch { return; }
+    const dialog = document.createElement('dialog');
+    if (typeof dialog.showModal !== 'function') return;
+    dialog.id = 'installed-permissions';
+    dialog.setAttribute('aria-labelledby', 'installed-permissions-title');
+    dialog.innerHTML = `<h2 id="installed-permissions-title">Permisos de ServeYourself</h2><p>Activa avisos sobre tus pedidos y permite usar tu ubicación para las entregas.</p><button type="button" data-permission="push">Activar notificaciones</button><button type="button" data-permission="location">Permitir ubicación</button><p role="status" aria-live="polite"></p><button type="button" data-finish>Continuar</button>`;
+    const push = dialog.querySelector('[data-permission="push"]');
+    const geo = dialog.querySelector('[data-permission="location"]');
+    const status = dialog.querySelector('[role="status"]');
+    function result(button, text) { button.disabled = true; button.textContent = text; }
+    if (!window.Notification) result(push, 'Notificaciones no disponibles');
+    else if (Notification.permission === 'granted') result(push, 'Notificaciones permitidas');
+    else if (Notification.permission === 'denied') result(push, 'Notificaciones bloqueadas en el navegador');
+    push.onclick = async () => {
+        push.disabled = true;
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                result(push, 'Notificaciones permitidas');
+                window.localStorage.setItem('sy-install-push-pending', '1');
+                if (window.serveYourself._pushSDK) {
+                    await window.serveYourself._pushSDK.User.PushSubscription.optIn();
+                    window.localStorage.removeItem('sy-install-push-pending');
+                }
+            } else if (permission === 'denied') result(push, 'Notificaciones bloqueadas en el navegador');
+            else push.disabled = false;
+        } catch { status.textContent = 'Puedes volver a activar las notificaciones desde Cuenta.'; push.disabled = false; }
+    };
+    if (!navigator.geolocation) result(geo, 'Ubicación no disponible');
+    geo.onclick = () => {
+        geo.disabled = true;
+        navigator.geolocation.getCurrentPosition(() => result(geo, 'Ubicación permitida'), error => {
+            if (error.code === 1) result(geo, 'Ubicación bloqueada en el navegador');
+            else { geo.disabled = false; status.textContent = 'No se pudo obtener la ubicación. Puedes reintentar o continuar.'; }
+        }, {enableHighAccuracy:false, timeout:10000, maximumAge:60000});
+    };
+    dialog.querySelector('[data-finish]').onclick = () => dialog.close();
+    dialog.addEventListener('close', () => { try { window.localStorage.setItem(key,'1'); } catch {} dialog.remove(); });
+    document.body.appendChild(dialog);
+    dialog.showModal();
+}
+window.addEventListener('load', () => showInstalledPermissions());
+window.addEventListener('appinstalled', () => { window.serveYourself._installPrompt = null; showInstalledPermissions(true); });
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         window.serveYourself.ensureGlobalBackButton();

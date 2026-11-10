@@ -1179,3 +1179,10 @@ body.sy-restaurant-menu.sy-has-cart { padding-bottom: calc(var(--sy-bottom-nav-h
 .sy-restaurant-menu #cart-bar { bottom: calc(var(--sy-bottom-nav-height, 6rem + env(safe-area-inset-bottom)) + .75rem); z-index: 75; }
 .sy-restaurant-menu #modal-carrito { z-index: 100; }
 .sy-restaurant-menu #modal-carrito .modal-content { max-height: 90dvh; padding-bottom: calc(2rem + env(safe-area-inset-bottom)); }
+
+#installed-permissions { width:min(90vw,24rem); margin:auto; padding:1.5rem; border:1px solid #e2e8f0; border-radius:1.5rem; background:white; color:#0f172a; }
+#installed-permissions::backdrop { background:rgb(15 23 42 / .55); }
+#installed-permissions h2 { font-size:1.25rem; font-weight:800; }
+#installed-permissions p { margin:.75rem 0; color:#475569; font-size:.9rem; }
+#installed-permissions button { width:100%; margin-top:.5rem; padding:.8rem; border-radius:.8rem; background:#f1f5f9; font-weight:700; }
+#installed-permissions button[data-finish] { background:#0f172a; color:white; }

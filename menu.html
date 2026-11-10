@@ -269,7 +269,7 @@
             let html = `<button type="button" onclick="mostrarSeccion('pedidos')">Mis pedidos</button>`;
             if (role === 'negocio') html += `<button type="button" onclick="window.location.href='funciones.html'" class="${linkClass}">Mi Panel de Control</button>`;
             else if (access) html += `<button type="button" onclick="window.location.href=window.serveYourself.restaurantHome(restaurantAccess)" class="${linkClass}">Volver al restaurante</button>`;
-            html += `<button type="button" onclick="window.location.href='repartidor.html'" class="${linkClass}">Modo repartidor</button>`;
+            if (access?.can_deliver_orders && role !== 'negocio') html += `<button type="button" onclick="window.location.href='repartidor.html'" class="${linkClass}">Modo repartidor</button>`;
             html += `<button type="button" onclick="window.serveYourself.installApp()" class="${linkClass}">Instalar aplicación</button>`;
             html += '<a id="customer-platform-link" href="platform-admin.html" hidden>Administración de plataforma</a>';
             html += `<button type="button" class="sy-account-signout" onclick="cerrarSesion()">Cerrar sesión</button>`;

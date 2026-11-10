@@ -47,7 +47,7 @@ async function buildNotices(db: ReturnType<typeof createWorkerClient>, event: Ev
     if (event.state === 'pending_acceptance') await staff('can_manage_delivery',`Pedido a domicilio #${order.id} pendiente de aceptación.`, '/delivery.html');
     if (event.state === 'ready_for_dispatch') add(order.assigned_driver_id,`Pedido #${order.id} listo para recoger.`, '/repartidor.html');
     if (event.state === 'accepted' && !order.assigned_driver_id) {
-      const {data,error}=await db.from('delivery_drivers').select('user_id').eq('status','active').eq('is_available',true);
+      const {data,error}=await db.rpc('team_drivers_for_push', {p_restaurant_id:order.restaurant_id});
       if(error) throw error;
       for(const driver of data || []) add(driver.user_id,`Entrega #${order.id} disponible en ${order.restaurant_name}.`, '/repartidor.html');
     }
