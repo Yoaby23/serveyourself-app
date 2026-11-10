@@ -27,9 +27,14 @@ Deno.serve(async (request) => {
       if (result.error || !user) return jsonResponse(request, { error: 'Sesión inválida' }, 401);
     }
     const { data: order, error: orderError } = await orderClient.from('orders')
-      .select('id, customer_id, restaurant_id, restaurant_name, items, total, delivery_fee, service_type, payment_method, payment_status, created_at, payment_expires_at, mercado_pago_preference_id')
+      .select('id, customer_id, restaurant_id, restaurant_name, items, total, delivery_fee, service_type, payment_method, payment_status, created_at, payment_expires_at, mercado_pago_preference_id, order_source')
       .eq('id', orderId).single();
-    if (orderError || !order || (guest ? order.customer_id !== null || order.service_type !== 'pickup' : order.customer_id !== user?.id)) {
+    let cashier = false;
+    if (!guest && order && order.order_source === 'pos' && order.service_type === 'pickup') {
+      const { data: allowed, error: permissionError } = await orderClient.rpc('has_restaurant_permission', {p_restaurant_id:order.restaurant_id,p_permission:'close_accounts'});
+      cashier = !permissionError && allowed === true;
+    }
+    if (orderError || !order || (guest ? order.customer_id !== null || order.service_type !== 'pickup' : order.customer_id !== user?.id && !cashier)) {
       return jsonResponse(request, { error: 'Pedido no encontrado' }, 404);
     }
     if (order.payment_method !== 'mercado_pago' || order.payment_status !== 'pending') {
@@ -70,7 +75,7 @@ Deno.serve(async (request) => {
     const returnId = guest ? order.restaurant_id : order.id;
     const preferenceBody: Record<string, unknown> = {
       items: checkoutItems,
-      ...(user?.email ? { payer: { email: user.email } } : {}),
+      ...(user?.email && !cashier ? { payer: { email: user.email } } : {}),
       external_reference: String(order.id),
       statement_descriptor: 'SERVEYOURSELF',
       back_urls: {

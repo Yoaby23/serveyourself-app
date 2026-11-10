@@ -74,7 +74,7 @@
             </div>
             <div id="pickup-fields" class="mb-6 space-y-3"><label for="pickup-name" class="block text-sm font-bold">Nombre de quien recoge</label><input id="pickup-name" type="text" maxlength="80" autocomplete="name" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold" placeholder="Nombre del cliente">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2 block">¿Cuándo recoges?</label>
-                <select id="pickup-timing" onchange="togglePickupSchedule()" class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold"><option value="asap">Lo antes posible</option><option value="scheduled">Programar hora</option></select>
+                <select id="pickup-timing" onchange="togglePickupSchedule()" class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold"><option value="asap">Estoy en el restaurante · para llevar</option><option value="scheduled">Pickup · programar recogida</option></select>
                 <input id="pickup-scheduled-for" type="datetime-local" class="hidden w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold">
                 <p id="pickup-estimate" class="text-xs font-bold text-orange-600 px-2"></p>
             </div>
@@ -193,7 +193,7 @@
         }
         function renderPaymentMethods(res) {
             const options = [];
-            if (res.payment_cash) options.push(`<option value="cash">${serviceType === 'delivery' ? 'Efectivo al entregar' : 'Efectivo en caja antes de preparar'}</option>`);
+            if (res.payment_cash) options.push(`<option value="cash">${serviceType === 'delivery' ? 'Efectivo al entregar' : 'Efectivo en caja'}</option>`);
             if (serviceType !== 'delivery' && res.payment_transfer) options.push('<option value="transfer">Transferencia bancaria</option>');
             if (res.payment_online && res.mercado_pago_connected) options.push('<option value="mercado_pago">Mercado Pago</option>');
             document.getElementById('payment-method').innerHTML = options.join('');
@@ -456,7 +456,7 @@
                 sessionStorage.removeItem(storageKey);
                 if(paymentMethod==='transfer'){const receiptUrl=SYRuntime.transferReceiptUrl(restaurant.phone,order);if(receiptUrl){document.getElementById('transfer-receipt-link').href=receiptUrl;document.getElementById('transfer-receipt').classList.remove('hidden');}}
                 if (serviceType === 'delivery') { window.location.href = `delivery-tracking.html?id=${order.id}`; return; }
-                alert(paymentMethod === 'transfer' ? 'Pedido registrado. Realiza la transferencia y solicita su confirmación en caja. Se preparará al confirmar el pago.' : 'Pedido registrado. Paga en caja para que comience la preparación.');
+                alert(order.scheduled_for ? 'Tu pickup quedó programado. Te avisaremos cuando esté listo.' : paymentMethod === 'transfer' ? 'Pedido registrado. Realiza la transferencia y solicita su confirmación en caja. Se preparará al confirmar el pago.' : 'Pedido registrado. Te esperamos en caja para completar tu pedido.');
                 carrito = [];
                 // Resetear UI de cantidades en el menú
                 document.querySelectorAll('[id^="qty-"]').forEach(el => el.innerText = '0');
