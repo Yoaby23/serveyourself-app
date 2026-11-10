@@ -8,13 +8,10 @@
 <body class="bg-slate-950 text-white min-h-screen kitchen-screen">
     <header class="kitchen-header sticky top-0 z-30 bg-slate-950/95 border-b border-slate-800 px-4 py-3">
         <div class="kitchen-identity"><p class="text-xs font-black text-orange-400 uppercase tracking-widest">Pantalla de cocina</p><h1 id="restaurant-name" class="text-xl font-black">ServeYourself</h1></div>
-        <div class="kitchen-toolbar"><select id="station-filter" class="px-3 py-3 rounded-xl bg-slate-800 text-white font-black text-sm"><option value="all">Todas las estaciones</option><option value="general">General</option></select><button type="button" onclick="toggleAvailability()" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">Disponibilidad</button><button type="button" id="sound-button" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm"> Activar sonido</button><button type="button" id="kitchen-mode-toggle" class="kitchen-mode-toggle" role="switch" aria-checked="false" aria-label="Entrenamiento"><span class="kitchen-mode-copy"><b>Entrenamiento</b><small data-mode-state>Comprobar</small></span><span class="kitchen-mode-track" aria-hidden="true"><span></span></span></button></div>
+        <div class="kitchen-toolbar"><select id="station-filter" class="px-3 py-3 rounded-xl bg-slate-800 text-white font-black text-sm"><option value="all">Todas las estaciones</option><option value="general">General</option></select><button type="button" onclick="toggleAvailability()" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">Disponibilidad</button><button type="button" id="sound-button" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm"> Activar sonido</button><button type="button" id="kitchen-mode-toggle" class="kitchen-mode-toggle" role="switch" aria-checked="false" aria-label="Entrenamiento" aria-describedby="ml-status"><span class="kitchen-mode-copy"><b>Entrenamiento</b><small data-mode-state>Comprobar</small></span><span class="kitchen-mode-track" aria-hidden="true"><span></span></span></button></div>
         <div id="restaurant-nav" class="sy-restaurant-nav kitchen-navigation"></div>
     </header>
-    <section class="kitchen-intelligence kitchen-mode-bar">
-        <div><b id="kitchen-mode-title">Cocina automática</b><small id="ml-status" role="status" aria-live="polite">Comprobando configuración de cocina…</small></div>
-
-    </section>
+    <p id="ml-status" class="sr-only" role="status" aria-live="polite"></p>
     <p id="sync-status" role="status" aria-live="polite" class="sy-sync-status">Conectando con cocina…</p>
     <main class="p-3 grid lg:grid-cols-2 gap-3 min-h-[calc(100vh-76px)]">
         <section class="kitchen-column"><div class="kitchen-heading bg-orange-500"><span>Nuevos</span><b id="count-pendiente">0</b></div><div id="orders-pendiente" class="kitchen-list"></div></section>
@@ -35,7 +32,7 @@
             window.serveYourself.initPushNotifications(access.user);
             const [{ data: stationData }, { data: productData }, { data: tableData }] = await Promise.all([db.from('kitchen_stations').select('*').eq('restaurant_id',access.restaurant_id).eq('is_active',true).order('name'),db.from('products').select('id,name,kitchen_station_id,is_available').eq('restaurant_id',access.restaurant_id).order('name'),db.from('restaurant_tables').select('id,name').eq('restaurant_id',access.restaurant_id)]);
             stations=stationData||[];products=productData||[];tables=tableData||[];document.getElementById('station-filter').innerHTML += stations.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');renderAvailability();
-            modeControl=window.SYKitchenMode.create({db,restaurantId:access.restaurant_id,button:document.getElementById('kitchen-mode-toggle'),title:document.getElementById('kitchen-mode-title'),status:document.getElementById('ml-status'),onChange:value=>{trainingMode=value;render();},onRefresh:loadOrders});
+            modeControl=window.SYKitchenMode.create({db,restaurantId:access.restaurant_id,button:document.getElementById('kitchen-mode-toggle'),status:document.getElementById('ml-status'),onChange:value=>{trainingMode=value;render();},onRefresh:loadOrders});
             await modeControl.load();
             await loadOrders();
             db.channel(`kitchen-${access.restaurant_id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'kitchen_tickets', filter: `restaurant_id=eq.${access.restaurant_id}` }, payload => {

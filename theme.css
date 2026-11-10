@@ -103,3 +103,12 @@ html[data-theme] :is(.sy-theme-preference label,.kitchen-timing-grid small,.kitc
 html[data-theme] :is(.cash-action:not(.cash-action-primary):not(.cash-action-danger),.sy-guest-product button,.sy-guest-panel button:not(#guest-pay):not(#resume-payment),#installed-permissions button:not([data-finish])) { background:var(--theme-subtle);color:var(--theme-text); }
 html[data-theme] .cash-sections a[aria-current] { color:var(--theme-success);background:var(--theme-success-bg); }
 html[data-theme] .sy-policy-card a:not(.sy-action-danger) { color:var(--theme-accent); }
+
+/* Kitchen toolbar actions follow the selected palette, including custom select triggers. */
+html[data-theme] .kitchen-toolbar > :is(button,select),
+html[data-theme] .kitchen-toolbar .sy-select-button {
+ background:var(--theme-subtle);color:var(--theme-text);border:1px solid var(--theme-border);
+}
+html[data-theme] .kitchen-toolbar > button:hover:not(:disabled) { background:var(--theme-elevated);border-color:var(--theme-muted); }
+html[data-theme] .kitchen-toolbar #kitchen-mode-toggle[aria-checked=true] { background:var(--theme-accent-bg);color:var(--theme-accent);border-color:var(--theme-accent); }
+html[data-theme] .kitchen-toolbar .kitchen-mode-copy small { color:inherit; }
