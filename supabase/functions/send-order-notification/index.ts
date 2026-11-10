@@ -29,13 +29,16 @@ async function buildNotices(db: ReturnType<typeof createWorkerClient>, event: Ev
   }
   if (event.kind === 'order' && order.status === 'cancelado') {
     const detail = paymentMessages[order.payment_status];
-    customer(detail && order.payment_status !== 'approved' ? `Pedido cancelado. ${detail}` : 'Pedido cancelado.');
+    customer(detail && !['approved','on_credit'].includes(order.payment_status) ? `Pedido cancelado. ${detail}` : 'Pedido cancelado.');
     if (order.order_source === 'pos') add(order.created_by,`Cuenta #${order.id} cancelada.`, '/pos.html');
     add(order.assigned_driver_id,`Entrega #${order.id} cancelada.`, '/repartidor.html');
+    await staff('can_close_accounts',`Pedido #${order.id} cancelado.`, '/caja.html');
+    await staff('can_view_kitchen',`Pedido #${order.id} cancelado.`, '/cocina.html');
     return notices;
   }
   if (order.status === 'cancelado') return notices;
-  if (event.kind === 'cashier' && order.payment_status === 'pending') {
+  if (event.kind === 'received') customer('Recibimos tu pedido. Puedes consultar su estado en Mis pedidos.');
+  else if (event.kind === 'cashier' && order.payment_status === 'pending') {
     const action = order.payment_method === 'transfer' ? 'validar transferencia' : 'cobrar en caja';
     await staff('can_close_accounts',`Pedido para llevar #${order.id}: ${action}.`, '/caja.html#pickup');
   } else if (event.kind === 'payment' && order.payment_status === event.state && paymentMessages[event.state]) {
@@ -54,7 +57,7 @@ async function buildNotices(db: ReturnType<typeof createWorkerClient>, event: Ev
   } else if (event.kind === 'ticket') {
     const {data:ticket,error}=await db.from('kitchen_tickets').select('id,status').eq('id',event.ticket_id).eq('order_id',order.id).maybeSingle();
     if(error) throw error;
-    if(!ticket || ticket.status !== event.state || (order.payment_before_kitchen && order.payment_status !== 'approved')) return notices;
+    if(!ticket || ticket.status !== event.state || (order.payment_before_kitchen && !['approved','on_credit'].includes(order.payment_status))) return notices;
     if(event.state === 'pendiente') await staff('can_view_kitchen',`Nueva comanda #${ticket.id} del pedido #${order.id}.`, '/cocina.html');
     if(order.service_type !== 'delivery') {
       if(event.state === 'preparando') customer('Tu pedido se está preparando.');
@@ -92,13 +95,23 @@ Deno.serve(async request => {
     const {data:order,error}=await db.from('orders').select('id,restaurant_id,restaurant_name,customer_id,created_by,order_source,service_type,status,payment_status,payment_before_kitchen,payment_method,delivery_status,assigned_driver_id,pickup_name').eq('id',event.order_id).maybeSingle();
     if(error) throw error;
     const notices=order?await buildNotices(db,event,order):new Map<string,Notice>();
+    let providerFailed = false;
     for(const [recipient,notice] of notices) {
-      const response=await fetch('https://api.onesignal.com/notifications',{method:'POST',headers:{Authorization:`Key ${Deno.env.get('ONESIGNAL_REST_API_KEY')}`,'Content-Type':'application/json'},body:JSON.stringify({
-        app_id:Deno.env.get('ONESIGNAL_APP_ID'),idempotency_key:await deliveryKey(event.id,recipient),target_channel:'push',include_aliases:{external_id:[recipient]},
+      const response=await fetch('https://api.onesignal.com/notifications',{method:'POST',headers:{Authorization:`Key ${Deno.env.get('ONESIGNAL_REST_API_KEY')?.trim()}`,'Content-Type':'application/json'},body:JSON.stringify({
+        app_id:'c77aa3bf-9fbf-4928-9441-18093c934dcd',idempotency_key:await deliveryKey(event.id,recipient),target_channel:'push',include_aliases:{external_id:[recipient]},
         headings:{es:order?.restaurant_name || 'ServeYourself',en:order?.restaurant_name || 'ServeYourself'},contents:{es:notice.message,en:notice.message},url:(Deno.env.get('APP_URL')||'https://serveyourself-app.vercel.app')+notice.path
       })});
-      if(!response.ok) throw Error(`OneSignal rechazó el aviso (${response.status})`);
+      const outcome = await response.json();
+      if(!response.ok || !outcome.id) {
+        const unsubscribed = response.ok && Array.isArray(outcome.errors) && outcome.errors.some((error: unknown) => typeof error === 'string' && error.includes('not subscribed'));
+        if (!unsubscribed) {
+          console.error('push_provider_error', JSON.stringify({status:response.status,errors:outcome.errors}));
+          providerFailed = true;
+        }
+
+      }
     }
+    if (providerFailed) throw Error('OneSignal no confirmó todos los envíos');
     const {error:finishError}=await db.from('order_notification_events').update({completed_at:new Date().toISOString()}).eq('id',event.id);
     if(finishError) throw finishError;
     return jsonResponse(request,{processed:true});

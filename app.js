@@ -115,6 +115,9 @@ window.serveYourself = {
     restaurantHome(access) {
         if (!access) return 'menu.html';
         if (access.staff_role === 'owner') return 'funciones.html';
+        if (access.staff_role === 'cashier' && access.can_close_accounts) return 'caja.html';
+        if (access.staff_role === 'kitchen' && access.can_view_kitchen) return 'cocina.html';
+        if (access.staff_role === 'waiter' && access.can_create_orders) return 'pos.html';
         if (access.can_deliver_orders) return 'repartidor.html';
         if (access.can_manage_delivery) return 'delivery.html';
         if (access.can_create_orders) return 'pos.html';
@@ -218,7 +221,8 @@ window.serveYourself = {
         if (!document.body || !document.querySelector) return;
         const page = (window.location.pathname || '/index.html').split('/').pop() || 'index.html';
         const mainPages = ['menu-publico.html', 'index.html', 'menu.html', 'admin.html', 'pos.html', 'caja.html', 'cocina.html', 'delivery.html', 'repartidor.html', 'cuenta.html', 'platform-admin.html'];
-        if (mainPages.includes(page) || page === 'funciones.html' || document.querySelector('[data-sy-back], .sy-global-back')) return;
+        const detailPages = ['restaurante.html','delivery-tracking.html','productos.html','estaciones.html','equipo.html','clientes.html','reportes.html','qr.html','unirse.html'];
+        if (mainPages.includes(page) || !detailPages.includes(page) || document.querySelector('[data-sy-back], .sy-global-back, #restaurant-nav')) return;
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'sy-global-back no-print';
@@ -359,7 +363,7 @@ window.serveYourself = {
                         await OneSignal.init({ appId, serviceWorkerPath: 'sw.js' });
                         await OneSignal.login(user.id);
                         if (finished) return;
-                        if (window.Notification?.permission === 'granted' && window.localStorage?.getItem('sy-install-push-pending')) {
+                        if (window.Notification?.permission === 'granted') {
                             await OneSignal.User.PushSubscription.optIn();
                             window.localStorage.removeItem('sy-install-push-pending');
                         }
@@ -440,50 +444,71 @@ window.addEventListener('beforeinstallprompt', event => {
     window.serveYourself._installPrompt = event;
 });
 // A browser permission prompt needs its own tap, including on an installed PWA.
-function showInstalledPermissions(afterInstall = false) {
+async function showInstalledPermissions(afterInstall = false) {
     const installed = afterInstall || window.navigator?.standalone || window.matchMedia?.('(display-mode: standalone)').matches;
     if (!installed || document.getElementById('installed-permissions')) return;
-    const key = 'sy-installed-permissions-v1';
-    try { if (window.localStorage.getItem(key)) return; } catch { return; }
+    let locationAllowed = false;
+    let locationPermission;
+    try {
+        locationPermission = await navigator.permissions?.query({name:'geolocation'});
+        locationAllowed = locationPermission?.state === 'granted';
+    } catch {}
+    if (window.Notification?.permission === 'granted' && locationAllowed) return;
+    if (document.getElementById('installed-permissions')) return;
     const dialog = document.createElement('dialog');
     if (typeof dialog.showModal !== 'function') return;
     dialog.id = 'installed-permissions';
     dialog.setAttribute('aria-labelledby', 'installed-permissions-title');
-    dialog.innerHTML = `<h2 id="installed-permissions-title">Permisos de ServeYourself</h2><p>Activa avisos sobre tus pedidos y permite usar tu ubicación para las entregas.</p><button type="button" data-permission="push">Activar notificaciones</button><button type="button" data-permission="location">Permitir ubicación</button><p role="status" aria-live="polite"></p><button type="button" data-finish>Continuar</button>`;
+    dialog.innerHTML = '<h2 id="installed-permissions-title">Prepara tu app</h2><p>Activa las notificaciones y la ubicación para continuar. Te avisaremos sobre tus pedidos y usaremos tu ubicación cuando la necesites.</p><button type="button" data-permission="push">Activar notificaciones</button><button type="button" data-permission="location">Permitir ubicación</button><p role="status" aria-live="polite"></p>';
     const push = dialog.querySelector('[data-permission="push"]');
     const geo = dialog.querySelector('[data-permission="location"]');
     const status = dialog.querySelector('[role="status"]');
-    function result(button, text) { button.disabled = true; button.textContent = text; }
-    if (!window.Notification) result(push, 'Notificaciones no disponibles');
-    else if (Notification.permission === 'granted') result(push, 'Notificaciones permitidas');
-    else if (Notification.permission === 'denied') result(push, 'Notificaciones bloqueadas en el navegador');
+    const refresh = () => {
+        const notificationsAllowed = window.Notification?.permission === 'granted';
+        push.disabled = notificationsAllowed || !window.Notification;
+        geo.disabled = locationAllowed || !navigator.geolocation;
+        push.textContent = notificationsAllowed ? 'Notificaciones activadas' : 'Activar notificaciones';
+        geo.textContent = locationAllowed ? 'Ubicación permitida' : 'Permitir ubicación';
+        if (notificationsAllowed && locationAllowed) dialog.close();
+        else if (!window.Notification || !navigator.geolocation) status.textContent = 'Abre la app en un dispositivo compatible con notificaciones y ubicación para continuar.';
+        else if (window.Notification.permission === 'denied' || locationPermission?.state === 'denied') status.textContent = 'Permite las notificaciones y la ubicación en los ajustes de este sitio. Al regresar se comprobarán automáticamente.';
+    };
+    const onFocus = () => {
+        if (locationPermission) locationAllowed = locationPermission.state === 'granted';
+        refresh();
+    };
     push.onclick = async () => {
         push.disabled = true;
         try {
             const permission = await Notification.requestPermission();
             if (permission === 'granted') {
-                result(push, 'Notificaciones permitidas');
-                window.localStorage.setItem('sy-install-push-pending', '1');
-                if (window.serveYourself._pushSDK) {
-                    await window.serveYourself._pushSDK.User.PushSubscription.optIn();
-                    window.localStorage.removeItem('sy-install-push-pending');
-                }
-            } else if (permission === 'denied') result(push, 'Notificaciones bloqueadas en el navegador');
-            else push.disabled = false;
-        } catch { status.textContent = 'Puedes volver a activar las notificaciones desde Cuenta.'; push.disabled = false; }
+                try { window.localStorage.setItem('sy-install-push-pending', '1'); } catch {}
+                if (window.serveYourself._pushSDK) await window.serveYourself._pushSDK.User.PushSubscription.optIn();
+            }
+        } catch { status.textContent = 'No se pudo activar el permiso. Revisa los ajustes e intenta nuevamente.'; }
+        refresh();
     };
-    if (!navigator.geolocation) result(geo, 'Ubicación no disponible');
     geo.onclick = () => {
         geo.disabled = true;
-        navigator.geolocation.getCurrentPosition(() => result(geo, 'Ubicación permitida'), error => {
-            if (error.code === 1) result(geo, 'Ubicación bloqueada en el navegador');
-            else { geo.disabled = false; status.textContent = 'No se pudo obtener la ubicación. Puedes reintentar o continuar.'; }
+        navigator.geolocation.getCurrentPosition(() => {
+            locationAllowed = true;
+            refresh();
+        }, error => {
+            status.textContent = error.code === 1 ? 'Permite la ubicación en los ajustes de este sitio para continuar.' : 'No se pudo comprobar la ubicación. Revisa tu conexión e intenta nuevamente.';
+            geo.disabled = false;
         }, {enableHighAccuracy:false, timeout:10000, maximumAge:60000});
     };
-    dialog.querySelector('[data-finish]').onclick = () => dialog.close();
-    dialog.addEventListener('close', () => { try { window.localStorage.setItem(key,'1'); } catch {} dialog.remove(); });
+    dialog.addEventListener('cancel', event => event.preventDefault());
+    dialog.addEventListener('close', () => {
+        window.removeEventListener('focus', onFocus);
+        locationPermission?.removeEventListener('change', onFocus);
+        dialog.remove();
+    });
+    window.addEventListener('focus', onFocus);
+    locationPermission?.addEventListener('change', onFocus);
     document.body.appendChild(dialog);
     dialog.showModal();
+    refresh();
 }
 window.addEventListener('load', () => showInstalledPermissions());
 window.addEventListener('appinstalled', () => { window.serveYourself._installPrompt = null; showInstalledPermissions(true); });

@@ -493,7 +493,7 @@
             container.innerHTML = pedidos.map(p => {
                 const pagoPendiente = p.status !== 'cancelado' && p.payment_method === 'mercado_pago' && p.payment_status === 'pending';
                 const pagoEnCaja = p.status !== 'cancelado' && p.service_type === 'pickup' && p.payment_status === 'pending' && ['cash','transfer'].includes(p.payment_method);
-                const pagoVencido = p.payment_method === 'mercado_pago' && p.payment_status === 'expired';
+                const pagoVencido = p.payment_status === 'expired';
                 const pagoProcesando = pagoPendiente && Boolean(p.mercado_pago_payment_id);
                 return `
                 <div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
@@ -511,6 +511,8 @@
                     <p class="text-[10px] font-black uppercase ${pagoVencido ? 'text-red-500' : 'text-slate-400'} mt-3">${pagoEnCaja ? (p.payment_method==='transfer'?'Pendiente de confirmar transferencia en caja':'Te esperamos en caja para completar tu pedido') : pagoVencido ? 'Pago vencido · haz un pedido nuevo' : pagoProcesando ? 'Mercado Pago está procesando el cobro' : `Pago: ${escapeHtml(p.payment_method || 'cash')} · ${escapeHtml(p.payment_status || 'not_required')}${pagoPendiente ? ` · quedan ${tiempoRestantePago(p)}` : ''}`}</p>
                     ${p.service_type === 'delivery' && !['cancelled'].includes(p.delivery_status) ? `<a href="delivery-tracking.html?id=${escapeHtml(p.id)}" class="block text-center w-full mt-3 py-3 bg-orange-500 text-white rounded-2xl text-xs font-black"> SEGUIR ENTREGA</a>` : ''}
                     ${pagoEnCaja&&p.payment_method==='transfer'?`<button type="button" onclick="enviarComprobante(${Number(p.id)})" class="w-full mt-3 py-3 rounded-2xl bg-blue-50 text-blue-700 font-bold">ENVIAR COMPROBANTE</button>`:''}
+                    ${pagoPendiente && !pagoProcesando ? `<button type="button" onclick="continuarPago(${Number(p.id)},this)" class="w-full mt-3 py-3 bg-orange-500 text-white rounded-2xl font-bold">Continuar pago · ${tiempoRestantePago(p)}</button>` : ''}
+                    ${pagoEnCaja ? `<p class="text-xs text-slate-500 mt-2">Puedes completar el pago en los próximos ${tiempoRestantePago(p)}.</p>` : ''}
                     ${pagoPendiente ? `<button type="button" onclick="verificarPago('${escapeHtml(p.id)}', this)" class="w-full mt-3 py-3 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-2xl text-[10px] font-black uppercase transition-colors">Verificar pago</button>` : ''}
                     ${p.status === 'cancelado' && p.cancellation_reason ? `<p class="text-xs text-red-500 mt-2">Motivo: ${escapeHtml(p.cancellation_reason)}</p>` : ''}
                     ${p.status === 'pendiente' ? `<button type="button" onclick="cancelarMiPedido('${escapeHtml(p.id)}')" class="w-full mt-4 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black">CANCELAR PEDIDO</button>` : ''}
@@ -521,7 +523,7 @@
         }
 
         function tiempoRestantePago(order) {
-            const expiresAt = new Date(order.payment_expires_at || new Date(order.created_at).getTime() + 20 * 60000).getTime();
+            const expiresAt = new Date(order.payment_expires_at || new Date(order.created_at).getTime() + 5 * 60000).getTime();
             const seconds = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
             return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
         }
@@ -611,6 +613,15 @@
 
         function ocultarEstadoPago() {
             document.getElementById('payment-feedback').classList.remove('is-visible');
+        }
+
+        async function continuarPago(orderId,button) {
+            button.disabled=true;
+            try {
+                const {data,error}=await _supabase.functions.invoke('create-mercado-pago-preference',{body:{orderId}});
+                if(error||!data?.checkoutUrl)throw new Error(data?.error||error?.message||'No se pudo abrir el pago.');
+                location.assign(data.checkoutUrl);
+            }catch(error){alert(error.message);button.disabled=false;await cargarHistorialPedidos();}
         }
 
         async function verificarPago(orderId, button) {

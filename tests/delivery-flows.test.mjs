@@ -53,7 +53,7 @@ assert.match(driverRealtime, /alter publication supabase_realtime add table publ
 assert.match(driverRegistration, /data&&!editing[\s\S]*repartidor\.html/, 'Un repartidor ya registrado no debe capturar sus datos nuevamente');
 assert.match(driverRegistration, /select\('full_name,phone'\)/, 'El primer registro debe aprovechar los datos de la cuenta');
 assert.match(app + menu, /Modo repartidor/, 'Los accesos existentes deben abrir directamente el modo repartidor');
-assert.match(index, /CREAR CUENTA NUEVA[\s\S]*Quiero repartir/, 'El alta de repartidor debe estar dentro del flujo Crear cuenta');
+assert.doesNotMatch(index, /Quiero repartir/, 'El alta de repartidores se realiza desde Equipo');
 assert.doesNotMatch(index, />Soy repartidor</, 'La portada no debe duplicar el acceso de repartidor fuera de Crear cuenta');
 assert.match(readiness, /max_active_orders=1/, 'La plataforma debe limitar a una entrega activa');
 assert.match(readiness, /Termina tu entrega activa antes de aceptar otra/, 'La toma de pedido debe bloquear una segunda entrega incluso con concurrencia');

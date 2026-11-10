@@ -29,3 +29,21 @@ async function authorizeCustomerCredit(restaurantId, customerId) {
     dialog.remove();
     return authorized;
 }
+
+async function showCashierPaymentQR(orderId, button) {
+    button.disabled = true;
+    try {
+        const {data,error} = await window.serveYourself.supabase.functions.invoke('create-mercado-pago-preference', {body:{orderId}});
+        if (error || !data?.checkoutUrl) throw new Error(data?.error || error?.message || 'No se pudo abrir el pago.');
+        const dialog = document.createElement('dialog');
+        dialog.className = 'rounded-3xl p-6 border max-w-sm w-full';
+        dialog.innerHTML = '<h2 class="text-xl font-black">Pagar con Mercado Pago</h2><div data-qr class="my-4"></div><p>Escanea con tu celular para continuar el pago.</p><a target="_blank" rel="noopener" class="block my-4 font-bold">Abrir pago</a><button type="button" class="p-3 rounded-xl bg-slate-100">Cerrar</button>';
+        dialog.querySelector('a').href = data.checkoutUrl;
+        dialog.querySelector('button').onclick = () => dialog.close();
+        dialog.addEventListener('close', () => dialog.remove(), {once:true});
+        document.body.appendChild(dialog);
+        new QRCode(dialog.querySelector('[data-qr]'), {text:data.checkoutUrl,width:220,height:220});
+        dialog.showModal();
+    } catch (error) { alert(error.message); }
+    finally { button.disabled = false; }
+}
