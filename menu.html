@@ -106,11 +106,13 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
     <script src="app-config.js"></script>
     <script src="runtime.js"></script><script src="business-image.js"></script><script src="app.js"></script>
+    <script src="pickup-arrival.js"></script>
     <script>
         const _supabase = window.serveYourself.supabase;
         const escapeHtml = window.serveYourself.escapeHtml;
         const safeImageUrl = window.serveYourself.safeImageUrl;
         let currentUser = null;
+        const pickupArrival=window.SYPickupArrival?.create({db:_supabase});
         let searchTimer = null;
         let restaurantRequest = 0;
         let matchedRestaurants = [];
@@ -341,6 +343,7 @@
                         <span class="text-[9px] font-black uppercase px-3 py-1 rounded-full ${p.status === 'pendiente' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}">${escapeHtml(p.status)}</span>
                     </div>
                     <p class="text-[10px] font-black uppercase ${pagoVencido ? 'text-red-500' : 'text-slate-400'} mt-3">${pagoEnCaja ? (p.payment_method==='transfer'?'Pendiente de confirmar transferencia en caja':'Te esperamos en caja para completar tu pedido') : pagoVencido ? 'Pago vencido · haz un pedido nuevo' : pagoProcesando ? 'Mercado Pago está procesando el cobro' : `Pago: ${escapeHtml(p.payment_method || 'cash')} · ${escapeHtml(p.payment_status || 'not_required')}${pagoPendiente ? ` · quedan ${tiempoRestantePago(p)}` : ''}`}</p>
+                    ${window.SYPickupArrival?.eligible(p)?`<div class="sy-pickup-arrival" data-pickup-arrival="${Number(p.id)}"><label>¿Cómo vienes?<select data-pickup-transport aria-label="Medio de transporte para pickup ${Number(p.id)}"><option value="car">En auto</option><option value="walking">Caminando</option><option value="bicycle">En bicicleta</option></select></label><button type="button" data-share-pickup="${Number(p.id)}" aria-pressed="false">Voy en camino</button><p data-pickup-arrival-status role="status" aria-live="polite"></p></div>`:''}
                     ${p.service_type === 'delivery' && !['cancelled'].includes(p.delivery_status) ? `<a href="delivery-tracking.html?id=${escapeHtml(p.id)}" class="block text-center w-full mt-3 py-3 bg-orange-500 text-white rounded-2xl text-xs font-black"> SEGUIR ENTREGA</a>` : ''}
                     ${pagoEnCaja&&p.payment_method==='transfer'?`<button type="button" onclick="enviarComprobante(${Number(p.id)})" class="w-full mt-3 py-3 rounded-2xl bg-blue-50 text-blue-700 font-bold">ENVIAR COMPROBANTE</button>`:''}
                     ${pagoPendiente && !pagoProcesando ? `<button type="button" onclick="continuarPago(${Number(p.id)},this)" class="w-full mt-3 py-3 bg-orange-500 text-white rounded-2xl font-bold">Continuar pago · ${tiempoRestantePago(p)}</button>` : ''}
@@ -352,6 +355,7 @@
                     ${ratingsByOrder.has(p.id) ? `<p class="mt-3 text-center text-amber-500 font-black">${'★'.repeat(ratingsByOrder.get(p.id))}${'☆'.repeat(5 - ratingsByOrder.get(p.id))}</p>` : ''}
                 </div>
             `;}).join('');
+            await pickupArrival?.setOrders(pedidos);
         }
 
         function tiempoRestantePago(order) {

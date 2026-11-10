@@ -1,25 +1,21 @@
-# Entrenamiento de tiempos de cocina
+# Cocina automática
 
-En Cocina, **Entrenar tiempos** permite registrar una preparación medida, seleccionar servicio y productos con cantidades, e indicar duración real y si ocurrió en hora pico. **Guardar y entrenar** registra la medición y recalcula el modelo; no crea un pedido ni afecta caja. Las comandas reales siguen alimentando el mismo entrenamiento al pasar de Preparando a Listo.
+La cocina viene preconfigurada en automático. El único interruptor **Entrenamiento** permite cambiar temporalmente a calibración, sin abrir formularios ni registrar ejemplos manualmente. Activado, usa los tiempos configurados y recopila duraciones reales. Al desactivarlo aplica los modelos validados y vuelve a agrupar comandas compatibles. El ajuste se guarda por restaurante y se sincroniza entre sus dispositivos.
 
-**Probar estimación** usa los productos, cantidades, servicio y horario seleccionados sin guardar muestras. Muestra si se usó el modelo o el tiempo configurado y explica el motivo. **Reentrenar servicio** vuelve a procesar sus últimas 500 mediciones. El historial permite eliminar únicamente mediciones manuales incorrectas y recalcula el modelo.
+Cada comanda con un inicio medido alimenta el modelo al marcarse Lista, también cuando la última estación termina. No incluye espera en cola, pedidos cancelados ni duraciones fuera de 1–240 minutos. El aprendizaje continúa en automático. No se crean datos ficticios para preentrenar.
 
-Cada servicio tiene su modelo. Requiere al menos 10 mediciones, reserva el 20 % más reciente (mínimo 2) para validación y acepta un error medio de hasta el mayor entre 5 minutos y 35 % del tiempo observado. Para aplicar una estimación requiere al menos 3 muestras del horario seleccionado, productos conocidos y una cantidad dentro del rango observado. Hasta entonces se conserva el tiempo configurado. El modelo actual aprende efectos del volumen y la hora pico; no calcula tiempos individuales por receta o estación.
+El modelo de cada servicio requiere 10 mediciones y una validación temporal del error antes de usarse. También exige productos conocidos, cantidades dentro del rango observado y 3 muestras del horario correspondiente. Si aún no hay datos suficientes, se usan los tiempos configurados. Las comandas ya en preparación conservan la predicción capturada al comenzar.
 
-Registra ejemplos reales y variados. No repitas mediciones inventadas para completar el mínimo. Hora pico: 13:00–16:59 y 19:00–22:59 de la zona horaria del negocio. Las comandas pendientes usan el modelo validado al actualizarse la cola; una comanda ya en preparación conserva la predicción que tenía al comenzar.
+La agrupación automática conserva el orden de prioridad. Reúne de 2 a 5 comandas consecutivas con un producto común de la misma estación, el mismo estado y prioridad, y horas de inicio/entrega dentro de cinco minutos. Excluye notas, modificaciones especiales y trabajo pospuesto. Muestra cantidades por comanda, permite Comenzar juntas y mantiene cuentas, pagos, notificaciones y finalización separados.
 
-## Seguridad y publicación
+# Llegada de pickup
 
-Se usa el permiso existente de operar cocina. Las operaciones verifican usuario y negocio en el servidor; los productos se validan contra el menú del negocio. El navegador no puede modificar coeficientes ni escribir directamente en muestras/modelos. Los reintentos de guardado tienen UUID para no duplicar una medición; las escrituras y reentrenamientos se serializan por negocio y servicio.
+En Mis pedidos, un cliente con pickup programado y pagado puede pulsar **Voy en camino**, elegir auto, bicicleta o caminando y compartir su posición mientras la app está abierta. Puede detener la ubicación desde el mismo botón. No se solicita ubicación por el simple hecho de abrir el historial y no se vuelve a abrir un permiso nativo automáticamente al restaurar la sesión.
 
-Antes de publicar el frontend debe aplicarse `supabase/migrations/20261110181450_manual_kitchen_training.sql`. La migración amplía las muestras con su contenido y admite mediciones manuales sin comanda. Conserva las observaciones existentes.
+El servidor calcula una llegada aproximada con distancia geográfica, un factor de recorrido, velocidad orientativa por transporte y un margen de llegada. No incluye tráfico ni rutas reales y no promete un minuto exacto. Cocina resta el tiempo de preparación aprendido (o configurado) a la llegada estimada para recomendar cuándo empezar. El sistema no marca ni empieza a cocinar por sí solo: el equipo conserva el control de Comenzar y Listo.
 
-Validación automática de interfaz: `node --test tests/*.test.mjs`. La prueba de base de datos `supabase/tests/manual_kitchen_training.sql` debe ejecutarse dentro de `BEGIN; ... ROLLBACK;`: crea datos aislados, verifica aprendizaje y aplicación a la cola real, aislamiento de negocios, idempotencia, validación y aprendizaje automático. No se deben conservar los datos sintéticos.
+Solo usa posiciones con precisión de hasta 100 metros y fechas recientes; deja de usar la estimación si la última posición tiene más de tres minutos. Entonces recupera el horario programado. Al detener la ubicación o entregar/cancelar el pedido borra las coordenadas y la llegada guardadas. Las coordenadas no se incluyen en la cola de cocina; esta solo recibe la hora y explicación de llegada.
 
-## Aprendizaje automático y preparación conjunta
+# Verificación
 
-No hace falta abrir el panel ni pulsar Reentrenar: cada transición de Comenzar a Listo registra una medición y recalcula el modelo del servicio. Esto también ocurre al trabajar por estaciones, cuando la última estación queda lista. Los pedidos sin un inicio medido, cancelados o con duración fuera de 1–240 minutos no se utilizan. Nunca se sustituye el inicio por la fecha de creación: eso confundiría espera con preparación.
-
-La cola agrupa automáticamente de dos a cinco comandas consecutivas que comparten al menos un producto en la misma estación, el mismo estado y la misma prioridad. Sus horas previstas de inicio y entrega deben caber en una ventana de cinco minutos; no se adelantan recogidas cuyo inicio aún queda lejos. No cruza otras comandas de la cola, no agrupa trabajo pospuesto ni preparaciones con notas o modificaciones especiales.
-
-Cada grupo muestra el total del producto compartido y las cantidades por comanda. Comenzar juntas inicia todas las comandas del grupo en una sola transacción; el servidor vuelve a comprobar que la cola y las condiciones sigan siendo compatibles. Los números de cuenta, pagos, cantidades, entrega y notificaciones de cada pedido siguen separados. Cada comanda se marca Lista individualmente. Agrupar no aplica una reducción ficticia al tiempo estimado: el modelo seguirá aprendiendo de las duraciones realmente observadas.
+Ejecutar `node --test --test-concurrency=4 tests/*.test.mjs`. Las pruebas de base de datos de cocina y pickup se ejecutan con datos aislados dentro de BEGIN/ROLLBACK. No se deben conservar fixtures. Las migraciones de modo de cocina y llegada de pickup deben aplicarse antes de publicar el frontend.
