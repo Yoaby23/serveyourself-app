@@ -139,7 +139,7 @@
             const [r, p] = await Promise.all([db.from('public_qr_restaurants').select('*').eq('id', restaurantId).single(), db.from('public_qr_products').select('*').eq('restaurant_id', restaurantId).order('category').order('name')]);
             if (r.error || p.error || !r.data) throw new Error('No se pudo cargar el menú. Recarga para intentarlo de nuevo.');
             restaurant = r.data; products = p.data || [];
-            document.title = `Menú de ${restaurant.business_name}`;
+
             $('restaurant-name').textContent = restaurant.business_name;
             $('restaurant-logo').src = safe(restaurant.avatar_url) || 'logo.png';
             $('restaurant-info').textContent = [restaurant.address, restaurant.business_hours ? (SYRuntime.isBusinessOpen(restaurant)?'Abierto ahora':'Cerrado ahora') : restaurant.open_time && restaurant.close_time ? `Horario ${restaurant.open_time.slice(0, 5)}–${restaurant.close_time.slice(0, 5)}` : ''].filter(Boolean).join(' · ');
