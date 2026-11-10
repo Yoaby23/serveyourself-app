@@ -6,7 +6,7 @@ const cash=fs.readFileSync(new URL('../caja.html',import.meta.url),'utf8');
 test('credit double click sends one payment and network failure restores controls',async()=>{
  let release,calls=0;const gate=new Promise(r=>release=r);const alerts=[];
  const elements={'credit-method-1':{value:'cash'},'credit-amount-1':{value:'50'},'credit-received-1':{value:'100'}};
- const ctx=vm.createContext({document:{getElementById:id=>elements[id]},alert:m=>alerts.push(m),money:String,loadAll:async()=>{},db:{rpc:async()=>{calls++;await gate;throw Error('Offline');}}});
+ const ctx=vm.createContext({access:{user:{id:'u'}},sessionStorage:{},recordCashOperationOnce:async(db,_storage,_key,_operation,payload)=>{const result=await db.rpc('record_cash_operation_once',payload);if(result.error)throw result.error;return result;},document:{getElementById:id=>elements[id]},alert:m=>alerts.push(m),money:String,loadAll:async()=>{},db:{rpc:async()=>{calls++;await gate;throw Error('Offline');}}});
  vm.runInContext(cash.slice(cash.indexOf('        const creditPaymentsInFlight='),cash.indexOf('        async function coupon(')),ctx);ctx.button={};
  const first=vm.runInContext('payCredit(1,button)',ctx),second=vm.runInContext('payCredit(1,button)',ctx);release();await Promise.all([first,second]);
  assert.equal(calls,1);assert.equal(ctx.button.disabled,false);assert.equal(alerts[0],'Offline');

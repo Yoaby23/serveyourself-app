@@ -42,7 +42,7 @@ assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
 assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v45/, 'La PWA debe renovar su caché al publicar cambios de producción');
+assert.match(read('sw.js'), /serveyourself-shell-v46/, 'La PWA debe renovar su caché al publicar cambios de producción');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
@@ -59,7 +59,7 @@ assert.doesNotMatch(pos, /pending-panel|register_pos_payment|PRECUENTA|COBRAR/, 
 assert.doesNotMatch(pos, /db\.rpc\('create_pos_order'|db\.rpc\('append_pos_order_items'/, 'El POS no debe usar rutas antiguas que omiten comandas independientes');
 assert.doesNotMatch(pos, /id="modal-payment-method"|id="charge-button"/, 'La confirmación de cocina no debe mostrar cobro ni forma de pago');
 assert.match(pos, /setTimeout\([\s\S]*3000\)/, 'La confirmación debe cerrarse sola después de tres segundos');
-assert.match(pos, /create_pos_table_order/, 'El POS debe reutilizar la cuenta abierta de la mesa');
+assert.match(pos, /submit_pos_order_once/, 'El POS debe reutilizar la cuenta abierta de la mesa');
 assert.match(pos, /Selecciona una mesa/, 'El POS debe iniciar mostrando el estado de las mesas');
 assert.match(kitchen, /requireRestaurantPermission\('can_view_kitchen'\)/, 'Cocina debe exigir su permiso');
 assert.match(kitchen, /class="kitchen-toolbar"/, 'Los controles de cocina deben usar una barra adaptable');
@@ -113,7 +113,7 @@ for (const feature of ['cash_shifts','order_payments','order_audit_logs','kitche
 assert.match(operations, /register_pos_payment/, 'Debe soportar pagos parciales y combinados');
 assert.match(operations, /split_pos_order/, 'Debe permitir dividir una cuenta por productos');
 assert.match(read('caja.html'), /CERRAR TURNO/, 'Caja debe permitir realizar el corte');
-assert.match(read('caja.html'), /register_pos_payment_v2/, 'Caja debe registrar el efectivo recibido');
+assert.match(read('caja.html'), /recordCashOperationOnce/, 'Caja debe registrar el efectivo recibido');
 assert.match(read('caja.html'), /Efectivo recibido/, 'Caja debe capturar el importe recibido');
 assert.match(read('caja.html'), /Cambio a entregar/, 'Caja debe calcular el cambio');
 assert.match(read('caja.html'), /IMPRIMIR CUENTA/, 'Caja debe imprimir la cuenta sin llamarla precuenta');

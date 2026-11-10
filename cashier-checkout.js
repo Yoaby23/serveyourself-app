@@ -47,3 +47,32 @@ async function showCashierPaymentQR(orderId, button) {
     } catch (error) { alert(error.message); }
     finally { button.disabled = false; }
 }
+
+async function createCashierOrderOnce(db, storage, key, payload) {
+    const adapter = {rpc:(_name, request) => db.rpc('cashier_create_takeaway', {
+        p_request_id:request.p_request_id, ...request.p_payload
+    })};
+    try {
+        return await SYRuntime.createOrderOnce(adapter, storage, key, payload);
+    } catch (error) {
+        // Validation failures rolled back the transaction. Unknown outcomes retain the key.
+        if (error.code === 'P0001' || error.code === '23514' || error.code === '22023') storage.removeItem(key);
+        throw error;
+    }
+}
+
+async function recordCashOperationOnce(db, storage, key, operation, payload) {
+    const pending=JSON.parse(storage.getItem(key)||'null');
+    const request=pending?JSON.parse(pending.fingerprint):{operation,payload};
+    const adapter={rpc:(_name,args)=>db.rpc('record_cash_operation_once',{
+        p_request_id:args.p_request_id,p_operation:args.p_payload.operation,p_payload:args.p_payload.payload
+    })};
+    try{
+        const data=await SYRuntime.createOrderOnce(adapter,storage,key,request);
+        storage.removeItem(key);
+        return {data:{...data,confirmed_payment_method:request.payload.p_payment_method},recovered:Boolean(pending)};
+    }catch(error){
+        if(error.code==='P0001'||error.code==='23514'||error.code==='22023')storage.removeItem(key);
+        throw error;
+    }
+}

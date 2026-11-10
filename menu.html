@@ -644,7 +644,7 @@
             }
         }
 
-        async function cerrarSesion() { await window.serveYourself.logoutPushNotifications(); await _supabase.auth.signOut(); window.location.href = 'index.html'; }
+        async function cerrarSesion() { await window.serveYourself.signOut(); }
         conciliarRetornoMercadoPago().finally(() => inicializar());
     </script>
 </body>

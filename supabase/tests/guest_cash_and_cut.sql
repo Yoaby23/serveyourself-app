@@ -1,7 +1,7 @@
 -- Real database permissions and transitions; wrap in BEGIN/ROLLBACK.
 do $$
 declare owner_id uuid:=gen_random_uuid(); cashier_id uuid:=gen_random_uuid(); stranger_id uuid:=gen_random_uuid();
- product_id uuid;table_id bigint;items jsonb;a jsonb;b jsonb;c jsonb;d jsonb;e jsonb;f jsonb;paid_result jsonb;cut jsonb;result jsonb;blocked boolean;
+ product_id uuid;table_id bigint;partial_table_id bigint;items jsonb;a jsonb;b jsonb;c jsonb;d jsonb;e jsonb;f jsonb;paid_result jsonb;cut jsonb;result jsonb;blocked boolean;
 begin
  insert into auth.users(id,email,raw_user_meta_data) values
  (owner_id,'qa-'||owner_id||'@example.invalid','{"role":"negocio","business_name":"Guest cash QA"}'),
@@ -10,6 +10,7 @@ begin
  update public.profiles set guest_pickup_enabled=true,payment_cash=true,payment_online=false,mercado_pago_connected=false,open_time=null,close_time=null where id=owner_id;
  insert into public.products(restaurant_id,name,price,is_available) values(owner_id,'Cash meal',25,true) returning id into product_id;
  insert into public.restaurant_tables(restaurant_id,name) values(owner_id,'QA table') returning id into table_id;
+ insert into public.restaurant_tables(restaurant_id,name) values(owner_id,'Partial table') returning id into partial_table_id;
  insert into public.restaurant_staff(restaurant_id,user_id,staff_role,is_active,can_close_accounts,can_view_kitchen) values(owner_id,cashier_id,'cashier',true,true,false);
  items:=jsonb_build_array(jsonb_build_object('id',product_id,'qty',2));
  assert (select guest_pickup_enabled and payment_cash and not payment_online from public.public_qr_restaurants where id=owner_id),'Cash-only guest menu unavailable';
@@ -18,7 +19,7 @@ begin
  a:=public.create_guest_pickup_order(repeat('1',64),repeat('2',64),owner_id,items,'Ana','cash');
  assert a->>'payment_status'='pending' and a->>'payment_method'='cash';
  assert (a->>'payment_before_kitchen')::boolean;
- assert a->>'payment_expires_at' is null,'Cash wrongly has online payment expiry';
+ assert (a->>'payment_expires_at')::timestamptz=(a->>'created_at')::timestamptz+interval '5 minutes','Guest cash deadline must be five minutes';
  assert (select count(*)=0 from public.kitchen_tickets where order_id=(a->>'id')::bigint),'Cash entered kitchen before payment';
  blocked:=false;
  begin update public.orders set status='preparando' where id=(a->>'id')::bigint;exception when raise_exception then blocked:=true;end;
@@ -91,7 +92,7 @@ begin
  assert (result->>'cash_sales')::numeric=50 and (result->>'expected_cash')::numeric=60,'Guest cash not included in shift';
  perform set_config('request.jwt.claim.sub',owner_id::text,true);
  d:=public.create_pos_table_order(owner_id,items,null,'pickup',null,'cash',null,'POS unpaid');
- e:=public.create_pos_table_order(owner_id,items,null,'pickup',null,'cash',null,'POS partial');
+ e:=public.create_pos_table_order(owner_id,items,null,'dine_in',partial_table_id,'cash',null,null);
  f:=public.create_pos_table_order(owner_id,items,null,'dine_in',table_id,'cash',null,null);
  perform public.register_pos_payment_v2((e->>'id')::bigint,'cash',20,0,20);
  blocked:=false;

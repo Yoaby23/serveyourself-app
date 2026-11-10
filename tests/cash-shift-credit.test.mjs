@@ -24,7 +24,7 @@ assert.match(pos, /get_pos_shift_status/, 'Meseros deben sincronizar el estado d
 assert.match(pos, /if\(!await checkShiftStatus\(\)\)/, 'El turno debe comprobarse nuevamente antes de enviar');
 assert.match(cash, /get_open_cash_shift_summary/, 'El resumen de corte debe calcularse en Supabase');
 assert.match(cash, /No puedes cerrar el turno/, 'Caja debe explicar qué cuentas faltan por cerrar');
-assert.match(cash, /record_customer_credit_payment/, 'Caja debe registrar la cobranza de clientes');
+assert.match(cash, /recordCashOperationOnce/, 'Caja debe registrar la cobranza de clientes');
 assert.match(customers, /set_customer_credit_settings/, 'El dueño debe autorizar el crédito y su límite');
 assert.match(reports, /\['approved','on_credit'\]/, 'Los reportes deben reconocer ventas cerradas a crédito');
 assert.match(reports, /VENTAS A CRÉDITO/, 'Los reportes deben separar las ventas a crédito');

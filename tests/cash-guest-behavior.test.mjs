@@ -21,7 +21,7 @@ test('cut blockers retain tables and partial pickup payments, but exclude zero-p
 test('cash payment retries do not double-submit and a failure restores the button',async()=>{
  let release,calls=0;const gate=new Promise(r=>release=r);const alerts=[];
  const elements={'method-42':{value:'cash'},'amount-42':{value:'50'},'tip-42':{value:'0'},'received-42':{value:'100'}};
- const context=vm.createContext({document:{getElementById:id=>elements[id]},alert:m=>alerts.push(m),db:{rpc:async()=>{calls++;await gate;return {error:Error('Offline')};}},loadAll:async()=>{},money:String});
+ const context=vm.createContext({access:{user:{id:'u'}},sessionStorage:{},recordCashOperationOnce:async(db,_storage,_key,_operation,payload)=>{const result=await db.rpc('record_cash_operation_once',payload);if(result.error)throw result.error;return result;},document:{getElementById:id=>elements[id]},alert:m=>alerts.push(m),db:{rpc:async()=>{calls++;await gate;return {error:Error('Offline')};}},loadAll:async()=>{},money:String});
  const code=cash.slice(cash.indexOf('        const paymentsInFlight='),cash.indexOf('        async function sendToCredit'));
  vm.runInContext(code,context);context.button={disabled:false,textContent:'Cobrar'};
  const first=vm.runInContext('pay(42,button)',context);const second=vm.runInContext('pay(42,button)',context);release();await Promise.all([first,second]);

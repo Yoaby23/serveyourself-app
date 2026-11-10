@@ -343,9 +343,11 @@ window.serveYourself = {
     },
 
     async signOut() {
-        await this.logoutPushNotifications();
-        await this.supabase.auth.signOut();
-        window.location.href = 'index.html';
+        try { await this.logoutPushNotifications(); }
+        catch(error){ console.warn('No se pudo cerrar la conexión de avisos',error); }
+        const {error}=await this.supabase.auth.signOut();
+        if(error){alert('No se pudo cerrar la sesión. Revisa tu conexión e intenta nuevamente.');return;}
+        window.location.replace('index.html');
     },
 
     async initPushNotifications(user) {
@@ -379,10 +381,17 @@ window.serveYourself = {
                 }
             });
         }
-        try { await this._pushReady; return true; } catch { return false; }
+        try { await this._pushReady; this._pushError=null; return true; }
+        catch(error){
+            this._pushError=error;
+            this._pushReady=null;
+            document.querySelector('script[data-onesignal]')?.remove?.();
+            return false;
+        }
     },
 
     async requestPushPermission() {
+        if (this._pushError) {const error=this._pushError;this._pushError=null;throw error;}
         if (!window.APP_CONFIG?.oneSignalAppId) throw new Error('Las notificaciones no están configuradas');
         if (window.Notification?.permission === 'denied') throw new Error('Las notificaciones están bloqueadas. En los permisos de este sitio cambia Notificaciones a Permitir y recarga la app.');
         const ios = /iphone|ipad|ipod/i.test(window.navigator.userAgent || '') || (/Macintosh/.test(window.navigator.userAgent || '') && window.navigator.maxTouchPoints > 1);

@@ -38,9 +38,10 @@ begin
  execute 'set local role authenticated';
  assert (select count(*)=0 from public.kitchen_tickets where order_id=(result->>'id')::bigint),'Unpaid pickup has ticket';
  assert (select count(*)=1 from public.orders where id=(result->>'id')::bigint),'Cashier cannot read pickup';
- perform public.register_pos_payment_v2((result->>'id')::bigint,'cash',20,0,20);
+ blocked:=false;begin perform public.register_pos_payment_v2((result->>'id')::bigint,'cash',20,0,20);exception when raise_exception then blocked:=true;end;
+ assert blocked,'Partial pickup payment accepted';
  assert (select count(*)=0 from public.kitchen_tickets where order_id=(result->>'id')::bigint),'Partial payment entered kitchen';
- perform public.register_pos_payment_v2((result->>'id')::bigint,'cash',30,0,100);
+ perform public.register_pos_payment_v2((result->>'id')::bigint,'cash',50,0,100);
  select id into ticket_id from public.kitchen_tickets where order_id=(result->>'id')::bigint;
  assert ticket_id is not null,'Paid pickup missing ticket';
  assert (select count(*)=1 from public.kitchen_tickets where order_id=(result->>'id')::bigint),'Duplicate kitchen tickets';

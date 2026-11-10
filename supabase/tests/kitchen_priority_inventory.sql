@@ -48,6 +48,7 @@ begin
  next_round:=public.create_pos_table_order(owner_id,jsonb_build_array(jsonb_build_object('id',product_id,'qty',2)),null,'pickup',null,'cash',null,'Nombre dividido');
  queue:=public.split_pos_order((next_round->>'id')::bigint,items);
  assert queue->'new_order'->>'pickup_name'='Nombre dividido','Split lost pickup name';
+ assert queue->'new_order'->>'payment_expires_at'=queue->'original_order'->>'payment_expires_at','Split extended the payment deadline';
  blocked:=false;
  begin perform public.transfer_pos_order((next_round->>'id')::bigint,null,null,'');exception when others then blocked:=true;end;
  assert blocked,'Transfer accepted empty pickup name';

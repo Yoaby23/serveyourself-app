@@ -2,13 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import {createRequire} from 'node:module';
+const runtime=createRequire(import.meta.url)('../runtime.js');
 const html=fs.readFileSync(new URL('../pos.html',import.meta.url),'utf8');
 const code=html.slice(html.indexOf('let submittingOrder=false;'),html.indexOf('async function loadReady()'));
 function screen(name,{rpcError=false}={}){
  let release;const gate=new Promise(resolve=>release=resolve);let calls=0;const alerts=[];
  const elements={'success-message':{},'pickup-name':{value:name,focus(){}},'submit-order':{disabled:false,textContent:''}};
  const cart=new Map([['product',1]]);
- const context=vm.createContext({$:id=>elements[id],cart,alert:m=>alerts.push(m),checkShiftStatus:()=>gate,db:{rpc:async()=>{calls++;return rpcError?{error:new Error('Offline')}:{data:{id:1,total:100,pickup_name:name}};}},access:{restaurant_id:'r'},cashierPickup:false,serviceType:'pickup',selectedTable:null,selectedAccount:null,orderNotes:{value:''},successTitle:{},successOrder:{},successModal:{classList:{add(){},remove(){}}},renderCart(){},clearTimeout(){},setTimeout(){return 1;},successTimer:null,showTables(){},refreshAccounts:async()=>{},money:n=>String(n)});
+ const stored=new Map();
+ const context=vm.createContext({SYRuntime:runtime,lockCheckout(){},sessionStorage:{getItem:key=>stored.get(key),setItem:(key,value)=>stored.set(key,value),removeItem:key=>stored.delete(key)},$:id=>elements[id],cart,alert:m=>alerts.push(m),checkShiftStatus:()=>gate,db:{rpc:async()=>{calls++;return rpcError?{error:new Error('Offline')}:{data:{id:1,total:100,pickup_name:name}};}},access:{restaurant_id:'r',user:{id:'u'}},cashierPickup:false,serviceType:'pickup',selectedTable:null,selectedAccount:null,orderNotes:{value:''},successTitle:{},successOrder:{},successModal:{classList:{add(){},remove(){}}},renderCart(){},clearTimeout(){},setTimeout(){return 1;},successTimer:null,showTables(){},refreshAccounts:async()=>{},money:n=>String(n)});
  vm.runInContext(code,context);
  return {context,release,cart,elements,alerts,get calls(){return calls;},submit:()=>vm.runInContext('submitOrder()',context)};
 }

@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import {stripTypeScriptTypes} from 'node:module';
 import {webcrypto} from 'node:crypto';
 const source=fs.readFileSync(new URL('../supabase/functions/send-order-notification/index.ts',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
-test('an unsubscribed recipient does not block other staff and the app ID matches the installed client',async()=>{
+for(const errors of [['All included players are not subscribed'],{invalid_aliases:{external_id:['customer']}}])test('an unsubscribed recipient does not block other staff and the app ID matches the installed client',async()=>{
  let handler, completed=false;
  const requests=[];
  const order={id:1,restaurant_id:'owner',customer_id:'customer',created_by:'waiter',order_source:'pos',service_type:'pickup',status:'cancelado',payment_status:'expired'};
@@ -16,7 +16,7 @@ test('an unsubscribed recipient does not block other staff and the app ID matche
  vm.runInNewContext(stripTypeScriptTypes(source),{createClient:()=>db,Deno:{env:{get:()=>''},serve:fn=>handler=fn},console,crypto:webcrypto,TextEncoder,Response,Map,
  corsHeaders:()=>({}),jsonResponse:(_req,data,status=200)=>new Response(JSON.stringify(data),{status}),fetch:async(_url,options)=>{
   requests.push(JSON.parse(options.body));
-  return new Response(JSON.stringify(requests.length===1?{errors:['All included players are not subscribed']}:{id:'notice'}),{status:200});
+  return new Response(JSON.stringify(requests.length===1?{errors}:{id:'notice'}),{status:200});
  }});
  const response=await handler(new Request('https://app.test',{method:'POST',body:JSON.stringify({dispatchId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'})}));
  assert.equal(response.status,200);
