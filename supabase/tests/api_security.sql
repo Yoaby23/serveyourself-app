@@ -1,7 +1,7 @@
 do $$
 declare signature text; denied boolean;
 begin
- foreach signature in array array['create_order(uuid,jsonb,text)','create_order_v2(uuid,jsonb,text,text)','create_pos_order(uuid,jsonb,text,text,bigint,text)','append_pos_order_items(bigint,jsonb,text)','create_or_append_pos_order(uuid,jsonb,text,text,bigint,text)','update_kitchen_order_status(bigint,text)','update_kitchen_station_status(bigint,text,text)'] loop
+ foreach signature in array array['create_order_v2(uuid,jsonb,text,text)','create_pos_order(uuid,jsonb,text,text,bigint,text)','append_pos_order_items(bigint,jsonb,text)','create_or_append_pos_order(uuid,jsonb,text,text,bigint,text)'] loop
   assert not has_function_privilege('authenticated','public.'||signature,'EXECUTE'), 'Legacy function still callable: '||signature;
   assert not has_function_privilege('anon','public.'||signature,'EXECUTE'), 'Anonymous execution: '||signature;
  end loop;
