@@ -260,7 +260,7 @@
                     </div>
                     <div class="flex items-center gap-3 flex-wrap">
                         <button type="button" onclick="editarProducto('${p.id}')" class="text-orange-500 font-bold text-sm">Editar</button>
-                        <input type="checkbox" ${p.is_available ? 'checked' : ''} onchange="toggleDisponibilidad('${p.id}', ${p.is_available})" class="w-4 h-4 accent-green-500">
+                        <input type="checkbox" ${p.is_available ? 'checked' : ''} onchange="toggleDisponibilidad('${p.id}', ${p.is_available})" aria-label="Producto disponible: ${escapeHtml(p.name)}">
                         <button type="button" onclick="eliminarProducto('${p.id}')" class="text-slate-300">Eliminar</button>
                     </div>
                 </div>
