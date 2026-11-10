@@ -563,3 +563,6 @@ document.addEventListener('click', event => {
     event.preventDefault();
     window.serveYourself.goBack(link.getAttribute('href')||'menu.html');
 });
+
+const selectControls=document.createElement('script');
+selectControls.src='select-controls.js';selectControls.defer=true;document.head.appendChild(selectControls);

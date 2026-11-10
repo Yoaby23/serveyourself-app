@@ -7,7 +7,7 @@ const read = path => fs.readFileSync(new URL(path, root), 'utf8');
 function listeners() {
     const events = new Map();
     const document = {
-        readyState: 'loading', querySelector: () => ({}),
+        readyState: 'loading', querySelector: () => ({}), createElement: () => ({}), head: {appendChild(){}},
         addEventListener(type, callback, options) { events.set(type, {callback, options}); }
     };
     const window = {supabase: {createClient: () => ({})}, addEventListener() {}};
