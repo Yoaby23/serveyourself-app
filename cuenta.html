@@ -16,7 +16,7 @@ async function init(){
   document.getElementById('account-email').textContent=accountUser.email||'';
   document.getElementById('account-role').textContent=access?({owner:'Propietario',waiter:'Mesero',cashier:'Caja',kitchen:'Cocina',manager:'Encargado',driver:'Repartidor'}[access.staff_role]||'Personal'):'Cuenta personal';
   document.getElementById('account-status').textContent='';
-  const {data:platformAdmin}=await app.supabase.rpc('is_platform_admin');document.getElementById('platform-account-link').hidden=!platformAdmin;
+  const {data:platformAdmin}=await app.supabase.rpc('is_platform_admin');document.getElementById('platform-account-link').hidden=platformAdmin!==true;
  }catch(error){document.getElementById('account-status').textContent='No se pudo cargar tu cuenta. Recarga para reintentar.';}
 }
 init();

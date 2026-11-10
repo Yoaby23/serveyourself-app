@@ -568,3 +568,5 @@ const selectControls=document.createElement('script');
 selectControls.src='select-controls.js';selectControls.defer=true;document.head.appendChild(selectControls);
 const dateControls=document.createElement('script');
 dateControls.src='date-controls.js';dateControls.defer=true;document.head.appendChild(dateControls);
+const timeControls=document.createElement('script');
+timeControls.src='time-controls.js';timeControls.defer=true;document.head.appendChild(timeControls);

@@ -10,7 +10,7 @@ async function init(){
   document.getElementById('work-identity').textContent=access.business_name;
   const features=app.workFeatures(access);
   const {data:platformAdmin}=await app.supabase.rpc('is_platform_admin');
-  if(platformAdmin)features.push({href:'platform-admin.html',label:'Plataforma',icon:'people',description:'Revisar altas y gestionar repartidores.'});
+  if(platformAdmin===true)features.push({href:'platform-admin.html',label:'Plataforma',icon:'people',description:'Revisar altas y gestionar repartidores.'});
   document.getElementById('work-features').innerHTML=features.map(item=>`<a class="sy-feature-card" href="${app.escapeHtml(item.href)}">${app.navigationIcon(item.icon)}<b>${app.escapeHtml(item.label)}</b><p>${app.escapeHtml(item.description)}</p></a>`).join('')||'<p>No tienes funciones operativas asignadas. Consulta con el propietario.</p>';
  }catch(error){document.getElementById('work-status').textContent='No se pudieron cargar tus funciones. Recarga para reintentar.';}
 }init();
