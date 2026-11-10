@@ -49,7 +49,7 @@ for (const legalPage of ['privacidad.html', 'terminos.html', 'eliminar-cuenta.ht
 }
 assert.match(read('index.html'), /privacidad\.html/);
 assert.match(read('registro.html'), /Términos de uso/);
-assert.match(read('menu.html'), /eliminar-cuenta\.html/);
+assert.match(read('cuenta.html'), /eliminar-cuenta\.html/);
 assert.match(read('eliminar-cuenta.html'), /request_account_deletion/);
 assert.match(read('supabase/migrations/023_account_privacy_requests.sql'), /account_deletion_requests_one_pending/);
 

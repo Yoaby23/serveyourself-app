@@ -64,5 +64,5 @@ test('bottom navigation switches Inicio, Favoritos and Cuenta with correct selec
  assert.match(ui.elements.get('lista-restaurantes').innerHTML,/restaurante.html\?id=a/);
  assert.equal(ui.elements.get('explore-title').textContent,'Inicio');
  vm.runInContext("mostrarSeccion('perfil')",ui.context);
- assert.equal(ui.tabs[2].attributes['aria-current'],'page');assert.equal(ui.tabs[0].attributes['aria-current'],undefined);
+ assert.equal(vm.runInContext('window.location.href',ui.context),'cuenta.html?mode=personal');
 });

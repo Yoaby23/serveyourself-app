@@ -311,7 +311,7 @@ window.serveYourself = {
         this.renderBottomNavigation([
             { href: 'menu.html', label: 'Inicio', icon: 'home' },
             { href: 'menu.html?section=favoritos', label: 'Favoritos', icon: 'heart' },
-            { href: 'menu.html?section=perfil', label: 'Cuenta', icon: 'account' }
+            { href: 'cuenta.html?mode=personal', label: 'Cuenta', icon: 'account' }
         ], { id: 'sy-personal-bottom-nav', label: 'Navegación principal' });
     },
 

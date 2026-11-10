@@ -8,7 +8,7 @@ async function initProfile(){
   // Explicit personal mode remains personal even if this user also owns a business.
   const access=mode==='personal'?null:await profileApp.getRestaurantAccess();
   if(access)profileApp.renderRestaurantNavigation(access);else profileApp.renderPersonalNavigation();
-  const context=access?'work':'personal';get('profile-return').href=access?'cuenta.html':'menu.html?section=perfil';get('profile-password').href='cambiar-contrasena.html?mode='+context;
+  const context=access?'work':'personal';get('profile-return').href=access?'cuenta.html':'cuenta.html?mode=personal';get('profile-password').href='cambiar-contrasena.html?mode='+context;
   const {data,error}=await profileApp.supabase.from('profiles').select('full_name,phone,address').eq('id',profileUser.id).single();
   if(error||!data)throw error||Error('Perfil no disponible.');
   get('profile-email').value=profileUser.email||'';get('profile-name').value=data.full_name||'';get('profile-phone').value=data.phone||'';get('profile-address').value=data.address||'';
