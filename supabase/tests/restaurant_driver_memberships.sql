@@ -23,6 +23,9 @@ begin
   perform public.accept_staff_invite(invite);
   assert public.register_delivery_driver('QA Driver','1234567890','walking')->>'status'='active';
   perform public.set_marketplace_driver_availability(true);
+  perform public.set_driver_availability(false);
+  assert not (public.get_delivery_driver_profile()->>'is_available')::boolean,'Legacy availability did not use the current profile';
+  perform public.set_driver_availability(true);
   assert not exists(select from public.list_delivery_offers());
   assert not exists(select from public.list_delivery_offers() where order_id=other_order);
   blocked := false;
@@ -33,10 +36,13 @@ begin
   assert public.assign_delivery_driver(own_order,driver)->>'assigned_driver_id'=driver::text;
   perform set_config('request.jwt.claim.sub',driver::text,true);
   execute 'reset role';
-  assert exists(select from public.team_drivers_for_push(a) where user_id=driver);
-  assert not exists(select from public.team_drivers_for_push(b) where user_id=driver);
+  perform set_config('request.jwt.claim.sub',a::text,true);
+  assert exists(select from public.list_delivery_drivers(a) where user_id=driver);
+  assert not exists(select from public.list_delivery_drivers(b) where user_id=driver);
+  perform set_config('request.jwt.claim.sub',driver::text,true);
   update public.restaurant_staff set is_active=false where user_id=driver and restaurant_id=a;
   assert not public.is_team_driver(a);
-  assert not exists(select from public.team_drivers_for_push(a) where user_id=driver);
+  perform set_config('request.jwt.claim.sub',a::text,true);
+  assert not exists(select from public.list_delivery_drivers(a) where user_id=driver);
 end;
 $$;
