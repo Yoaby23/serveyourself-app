@@ -41,12 +41,12 @@ Deno.serve(async (request) => {
       return jsonResponse(request, { error: 'El pedido no requiere pago en línea' }, 409);
     }
 
-    const paymentExpiresAt = new Date(order.payment_expires_at ?? new Date(order.created_at).getTime() + 20 * 60 * 1000);
+    const paymentExpiresAt = new Date(order.payment_expires_at ?? new Date(order.created_at).getTime() + 5 * 60 * 1000);
     if (paymentExpiresAt.getTime() <= Date.now()) {
       await adminClient.from('orders').update({
         payment_status: 'expired',
         status: 'cancelado',
-        cancellation_reason: 'Tiempo de pago agotado (20 minutos)'
+        cancellation_reason: 'Tiempo de pago agotado (5 minutos)'
       }).eq('id', order.id).eq('payment_status', 'pending');
       return jsonResponse(request, { error: 'El tiempo para pagar terminó. Crea un pedido nuevo.' }, 410);
     }

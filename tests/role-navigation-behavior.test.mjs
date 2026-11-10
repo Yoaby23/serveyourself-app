@@ -49,6 +49,6 @@ test('main account and platform screens do not add redundant back controls',()=>
  }
 });
 test('nested management screens retain a way back',()=>{
- const {app,nodes}=appFor('inventario.html');app.ensureGlobalBackButton();
+ const {app,nodes}=appFor('restaurante.html');app.ensureGlobalBackButton();
  assert.ok([...nodes.values()].some(node=>String(node.className||'').includes('sy-global-back')));
 });

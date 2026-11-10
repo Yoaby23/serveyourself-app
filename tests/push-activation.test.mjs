@@ -21,34 +21,34 @@ test('el permiso concedido antes del login activa la suscripción al identificar
   assert.equal(pending.size, 0);
 });
 
-test('la app instalada ofrece ambos permisos por separado y recuerda Continuar', async () => {
+test('la app instalada solicita ambos permisos y avanza únicamente cuando ambos están concedidos', async () => {
   const storage = new Map();
   const nodes = new Map();
   const events = {};
-  let dialogs = 0, pushes = 0, locations = 0;
+  let dialogs = 0, pushes = 0, locations = 0, closed = 0;
   const dialog = {
-    setAttribute() {}, remove() {}, showModal() { dialogs++; }, close() { events.close(); },
+    setAttribute() {}, remove() {}, showModal() { dialogs++; }, close() { closed++; events.close(); },
     addEventListener(name, callback) { events[name] = callback; },
     querySelector(selector) { const element = {}; nodes.set(selector, element); return element; }
   };
   const navigator = {standalone: false, geolocation: {getCurrentPosition(ok) { locations++; ok(); }}};
-  const Notification = {permission: 'default', async requestPermission() { pushes++; return 'granted'; }};
-  const window = {navigator, Notification, serveYourself: {}, localStorage: {
+  const Notification = {permission: 'default', async requestPermission() { pushes++; Notification.permission='granted'; return 'granted'; }};
+  const window = {navigator, Notification, addEventListener() {}, removeEventListener() {}, serveYourself: {}, localStorage: {
     getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value)
   }};
   const document = {getElementById() {}, createElement: () => dialog, body: {appendChild() {}}};
-  const start = source.indexOf('function showInstalledPermissions');
+  const start = source.indexOf('async function showInstalledPermissions');
   const show = vm.runInNewContext('(' + source.slice(start, source.indexOf("window.addEventListener('load'", start)) + ')', {window, document, navigator, Notification});
-  show();
+  await show();
   assert.equal(dialogs, 0);
   navigator.standalone = true;
-  show();
+  await show();
   assert.deepEqual([dialogs, pushes, locations], [1, 0, 0]);
   await nodes.get('[data-permission="push"]').onclick();
   assert.deepEqual([pushes, locations], [1, 0]);
+  assert.equal(closed, 0);
   nodes.get('[data-permission="location"]').onclick();
   assert.equal(locations, 1);
-  nodes.get('[data-finish]').onclick();
-  show();
-  assert.equal(dialogs, 1);
+  assert.equal(closed, 1);
+  assert.equal(nodes.has('[data-finish]'), false);
 });

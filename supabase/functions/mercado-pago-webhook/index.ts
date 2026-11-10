@@ -105,12 +105,12 @@ Deno.serve(async (request) => {
         : null;
       paymentId = matchingPayment?.id ? String(matchingPayment.id) : null;
       if (!searchResponse.ok || !paymentId) {
-        const expiresAt = new Date(order.payment_expires_at ?? new Date(order.created_at).getTime() + 20 * 60 * 1000).getTime();
+        const expiresAt = new Date(order.payment_expires_at ?? new Date(order.created_at).getTime() + 5 * 60 * 1000).getTime();
         if (expiresAt <= Date.now() && order.payment_status === 'pending') {
           const { error: expirationError } = await admin.from('orders').update({
             payment_status: 'expired',
             status: 'cancelado',
-            cancellation_reason: 'Tiempo de pago agotado (20 minutos)'
+            cancellation_reason: 'Tiempo de pago agotado (5 minutos)'
           }).eq('id', order.id).eq('payment_status', 'pending');
           if (expirationError) throw expirationError;
         }
@@ -138,8 +138,8 @@ Deno.serve(async (request) => {
     if (payment.currency_id !== 'MXN') return new Response('currency mismatch', { status: 409, headers: corsHeaders(request) });
     const { data: refundOperation, error: refundError } = await admin.from('payment_refund_operations').select('*').eq('order_id', order.id).maybeSingle();
     if (refundError) throw refundError;
-    const expiresAt = new Date(order.payment_expires_at ?? new Date(order.created_at).getTime() + 20 * 60 * 1000).getTime();
-    const paymentCreatedAt = new Date(payment.date_created).getTime();
+    const expiresAt = new Date(order.payment_expires_at ?? new Date(order.created_at).getTime() + 5 * 60 * 1000).getTime();
+    const paymentCreatedAt = new Date(payment.date_approved || payment.date_created).getTime();
     if (!Number.isFinite(paymentCreatedAt)) throw new Error('Invalid payment date');
     if (refundOperation?.status === 'pending') {
       await refundOrder(admin, order, refundOperation.payment_id, refundOperation.reason, refundOperation.actor_id);
