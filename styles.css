@@ -975,8 +975,7 @@ input[type='radio'] {
 .sy-delete-page textarea { width: 100%; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 1rem; background: #f8fafc; resize: vertical; }
 .sy-confirm-row { display: flex; align-items: flex-start; gap: .65rem; color: #64748b; font-size: .78rem; line-height: 1.5; }
 
-.sy-danger-button { min-height: 3.5rem; border-radius: 1rem; color: white; background: #dc2626; font-size: .76rem; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; }
-.sy-danger-button:disabled { opacity: .55; }
+
 .sy-status-card { margin-top: 1.5rem; padding: 1rem; border: 1px solid #fed7aa; border-radius: 1rem; background: #fff7ed; }
 .sy-status-card b { color: #9a3412; }
 .sy-status-card p { margin: .25rem 0 .75rem; }
@@ -1112,8 +1111,7 @@ button { text-transform: none; }
 .sy-global-back span:first-child { font-size: 1.15rem; line-height: 1; }
 
 /* Consistent secondary actions, long names and keyboard navigation. */
-.sy-action-danger { color: #b91c1c; font-size: .875rem; font-weight: 700; min-height: 44px; padding: .5rem .75rem; border-radius: .75rem; }
-.sy-action-danger:hover { background: #fef2f2; }
+
 .sy-feature-card, .sy-settings-card, .sy-account-identity { overflow-wrap: anywhere; min-width: 0; }
 #table-list b, #staff-list p { overflow-wrap: anywhere; min-width: 0; }
 #table-list button { flex-shrink: 0; }
@@ -1359,7 +1357,7 @@ html:has(#modal-carrito:not(.hidden)), body:has(#modal-carrito:not(.hidden)) { o
 .sy-config-secondary { min-height: 44px; padding: 10px 16px; background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; border-radius: 12px; font-size: 14px; font-weight: 700; }
 .sy-config-save { display: grid; justify-items: stretch; gap: 10px; }
 .sy-config-save p { color: #475569; font-size: 14px; }
-.sy-config-primary { min-height: 52px; padding: 14px 20px; border-radius: 16px; color: white; background: #0f172a; font-size: 14px; font-weight: 800; }
+.sy-config-primary, .sy-settings-card > .sy-config-primary { display: inline-flex; align-items: center; justify-content: center; text-align: center; gap: 8px; border: 1px solid transparent; min-height: 52px; padding: 14px 20px; border-radius: 16px; color: white; background: #0f172a; font-size: 14px; font-weight: 800; }
 @media(max-width:600px) { .sy-config-grid { grid-template-columns: 1fr; } .sy-config-section { padding: 16px; } .sy-business-image { align-items: flex-start; } }
 
 /* Contain Leaflet panes and controls below the app navigation. */
@@ -1386,3 +1384,67 @@ html:has(#modal-carrito:not(.hidden)), body:has(#modal-carrito:not(.hidden)) { o
 .sy-product-actions > button { flex: 1; }
 .sy-product-actions [hidden] { display: none; }
 @media(max-width:520px) { .sy-product-grid { grid-template-columns: 1fr; } .sy-product-form { padding: 16px; } }
+
+/* Native file inputs share one treatment in product and business forms. */
+input[type=file] {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 52px;
+    padding: 6px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+input[type=file]::file-selector-button {
+    min-height: 40px;
+    margin-right: 12px;
+    padding: 8px 14px;
+    border: 1px solid #fed7aa;
+    border-radius: 10px;
+    background: #fff7ed;
+    color: #9a3412;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+input[type=file]:enabled:hover::file-selector-button { border-color: #fb923c; background: #ffedd5; }
+input[type=file]:disabled, input[type=file]:disabled::file-selector-button { cursor: not-allowed; }
+/* One deletion action across lists, account links and confirmation forms. */
+.sy-action-danger,
+.sy-danger-button,
+.sy-settings-card > .sy-action-danger,
+.driver-account-card > .sy-action-danger,
+.sy-policy-card .sy-action-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid #fecaca;
+    border-radius: 12px;
+    background: #fef2f2;
+    color: #b91c1c;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: normal;
+    text-transform: none;
+    text-decoration: none;
+    cursor: pointer;
+}
+.sy-action-danger:hover,
+.sy-danger-button:enabled:hover { border-color: #f87171; background: #fee2e2; color: #991b1b; }
+.sy-action-danger:focus-visible,
+.sy-danger-button:focus-visible { outline: 3px solid #b91c1c; outline-offset: 3px; }
+.sy-action-danger:disabled,
+.sy-danger-button:disabled { cursor: not-allowed; opacity: .55; }
+.sy-settings-card > .sy-action-danger { margin-top: 8px; }
+.sy-action-danger[hidden], .sy-danger-button[hidden] { display: none; }
