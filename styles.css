@@ -1473,13 +1473,13 @@ img[src="app-icon.svg"], img[src="/app-icon.svg"],
 
 .kitchen-mode-bar { display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap; }
 .kitchen-mode-bar>div { display:grid;gap:6px;flex:1;min-width:min(100%,240px); }
-.kitchen-mode-toggle { display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:62px;padding:10px 16px;border:1px solid var(--theme-border);border-radius:16px;background:var(--theme-subtle);color:var(--theme-text);text-align:left; }
-.kitchen-mode-copy { display:grid;gap:3px; }.kitchen-mode-copy b { font-size:.9rem; }.kitchen-mode-copy small { font-size:.75rem;color:var(--theme-muted); }
+.kitchen-mode-toggle { display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:10px 14px;border:1px solid transparent;border-radius:12px;background:var(--theme-primary);color:var(--theme-on-primary);text-align:left; }
+.kitchen-mode-copy { display:grid;gap:3px; }.kitchen-mode-copy b { font-size:.9rem; }.kitchen-mode-copy small { font-size:.7rem;color:inherit;opacity:.8; }
 .kitchen-mode-track { display:flex;align-items:center;width:44px;height:26px;border-radius:20px;padding:3px;background:var(--theme-muted);flex-shrink:0;transition:background .2s; }
 .kitchen-mode-track>span { width:20px;height:20px;border-radius:50%;background:white;transition:transform .2s;box-shadow:0 1px 3px rgb(0 0 0 / .15); }
-.kitchen-mode-toggle[aria-checked=true] { border-color:var(--theme-accent);background:var(--theme-accent-bg); }.kitchen-mode-toggle[aria-checked=true] .kitchen-mode-track { background:#ea580c; }.kitchen-mode-toggle[aria-checked=true] .kitchen-mode-track>span { transform:translateX(18px); }
+.kitchen-mode-toggle[aria-checked=true] { border-color:var(--theme-accent);background:var(--theme-accent-bg);color:var(--theme-accent); }.kitchen-mode-toggle[aria-checked=true] .kitchen-mode-track { background:#ea580c; }.kitchen-mode-toggle[aria-checked=true] .kitchen-mode-track>span { transform:translateX(18px); }
 .kitchen-mode-toggle:disabled { opacity:.6;cursor:wait; }.kitchen-mode-toggle:focus-visible { outline:3px solid var(--theme-accent);outline-offset:3px; }
-@media(max-width:560px) { .kitchen-mode-toggle { width:100%; }.kitchen-mode-bar { gap:12px; } }
+@media(max-width:767px) { .kitchen-toolbar .kitchen-mode-toggle { grid-column:1 / -1;width:100%; } }
 
 .sy-pickup-arrival { display:grid;gap:12px;margin-top:16px;padding:16px;border:1px solid var(--theme-border);border-radius:16px;background:var(--theme-subtle); }
 .sy-pickup-arrival label { display:grid;gap:6px;font-size:.8rem;font-weight:700;color:var(--theme-text); }.sy-pickup-arrival select { width:100%;min-height:44px;border:1px solid var(--theme-border);border-radius:12px;padding:10px; }
