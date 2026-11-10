@@ -1471,8 +1471,6 @@ img[src="app-icon.svg"], img[src="/app-icon.svg"],
 .kitchen-batch-heading button:disabled { opacity:.5;cursor:wait; }
 .kitchen-batch-members { display:grid;gap:12px;padding:12px; }.kitchen-batch-members .kitchen-card { margin:0; }
 
-.kitchen-mode-bar { display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap; }
-.kitchen-mode-bar>div { display:grid;gap:6px;flex:1;min-width:min(100%,240px); }
 .kitchen-mode-toggle { display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:10px 14px;border:1px solid transparent;border-radius:12px;background:var(--theme-primary);color:var(--theme-on-primary);text-align:left; }
 .kitchen-mode-copy { display:grid;gap:3px; }.kitchen-mode-copy b { font-size:.9rem; }.kitchen-mode-copy small { font-size:.7rem;color:inherit;opacity:.8; }
 .kitchen-mode-track { display:flex;align-items:center;width:44px;height:26px;border-radius:20px;padding:3px;background:var(--theme-muted);flex-shrink:0;transition:background .2s; }
