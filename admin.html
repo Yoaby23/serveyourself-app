@@ -79,7 +79,7 @@
             <div><h2 class="text-2xl font-black text-slate-900">Configuración de restaurante</h2><p class="text-sm text-slate-400 font-semibold">Pedidos, ubicación y cobros.</p></div>
             <form id="business-config-form" class="bg-white p-6 rounded-[2.5rem] border border-slate-100 space-y-5">
                 <div class="space-y-3"><label class="block text-sm font-bold">Nombre del negocio<input type="text" id="cfg-business-name" maxlength="120" required class="w-full p-3 border rounded-xl"></label><label class="block text-sm font-bold">Teléfono del negocio (WhatsApp)<input id="cfg-business-phone" type="tel" maxlength="25" placeholder="10 dígitos o código de país" class="w-full p-3 border rounded-xl"></label><p class="text-xs text-slate-500">Aquí recibirás los comprobantes de transferencia.</p><img id="cfg-business-preview" src="logo.png" alt="Imagen actual del negocio" class="w-20 h-20 rounded-2xl object-cover"><label class="block text-sm font-bold">Cambiar imagen<input id="cfg-business-image" type="file" accept="image/jpeg,image/png,image/webp,image/avif" class="block w-full mt-2"></label><button type="button" id="cfg-save-image" onclick="BusinessSettings.upload(_supabase,currentRestaurantId,url=>{currentProfile.avatar_url=url})" class="px-4 py-3 bg-slate-900 text-white rounded-xl font-bold">Guardar imagen</button></div>
-                <label class="flex items-center justify-between font-bold text-sm"><span>Aceptar pedidos</span><input id="cfg-accepting" type="checkbox" class="w-5 h-5 accent-orange-500"></label>
+                <label class="sy-setting-option" for="cfg-accepting"><span>Aceptar pedidos</span><input id="cfg-accepting" type="checkbox"></label>
                 <div class="border-t border-slate-100 pt-4 space-y-3">
                     <p class="text-[10px] font-black text-slate-400 uppercase">Horario de servicio</p><select id="cfg-hours-mode" onchange="BusinessSettings.mode()" class="w-full p-3 border rounded-xl"><option value="common">Todos los días con el mismo horario</option><option value="daily">Elegir días y horarios</option></select><div id="cfg-weekdays" hidden></div>
                     <div id="cfg-common-hours" class="grid grid-cols-2 gap-3">
@@ -101,7 +101,7 @@
                     </div>
                 </div>
                 <div class="border-t border-slate-100 pt-4 space-y-3">
-                    <label class="flex items-center justify-between font-bold text-sm"><span>Ofrecer delivery</span><input id="cfg-delivery-enabled" type="checkbox" class="w-5 h-5 accent-orange-500"></label>
+                    <label class="sy-setting-option" for="cfg-delivery-enabled"><span>Ofrecer delivery</span><input id="cfg-delivery-enabled" type="checkbox"></label>
                     <div class="grid grid-cols-2 gap-3">
                         <label class="text-xs font-bold text-slate-600">Radio máximo (km)<input id="cfg-delivery-radius" type="number" min="0.5" max="50" step="0.1" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
                         <label class="text-xs font-bold text-slate-600">Pedido mínimo<input id="cfg-delivery-minimum" type="number" min="0" step="0.01" class="w-full mt-2 p-4 bg-slate-50 rounded-2xl"></label>
@@ -114,10 +114,12 @@
                 </div>
                 <div class="border-t border-slate-100 pt-4 space-y-3">
                     <p class="text-[10px] font-black text-slate-400 uppercase">Métodos de pago</p>
-                    <label class="flex gap-3 text-sm font-bold"><input id="cfg-cash" type="checkbox" class="accent-orange-500"> Efectivo</label>
-                    <label class="flex gap-3 text-sm font-bold"><input id="cfg-transfer" type="checkbox" class="accent-orange-500"> Transferencia</label>
-                    <label class="flex gap-3 text-sm font-bold"><input id="cfg-online" type="checkbox" class="accent-orange-500"> Mercado Pago</label>
-                    <label class="flex gap-3 text-sm font-bold"><input id="cfg-guest-pickup" type="checkbox" class="accent-orange-500"> Pedidos para llevar sin cuenta</label>
+                    <div class="sy-setting-options">
+                        <label class="sy-setting-option" for="cfg-cash"><span>Efectivo</span><input id="cfg-cash" type="checkbox"></label>
+                        <label class="sy-setting-option" for="cfg-transfer"><span>Transferencia</span><input id="cfg-transfer" type="checkbox"></label>
+                        <label class="sy-setting-option" for="cfg-online"><span>Mercado Pago</span><input id="cfg-online" type="checkbox"></label>
+                        <label class="sy-setting-option" for="cfg-guest-pickup"><span>Pedidos para llevar sin cuenta</span><input id="cfg-guest-pickup" type="checkbox"></label>
+                    </div>
                     <p class="text-xs text-slate-500">Permite pedir desde el menú público con nombre y pago en efectivo en caja o Mercado Pago. Cocina recibe el pedido cuando se confirma el pago.</p>
                     <div id="mp-status-card" class="p-4 rounded-2xl border border-slate-100 bg-slate-50">
                         <p id="mp-status" class="text-xs font-black text-slate-600">Consultando Mercado Pago...</p>
