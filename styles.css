@@ -1455,3 +1455,6 @@ img[src="app-icon.svg"], img[src="/app-icon.svg"],
     border-radius: 20%;
     overflow: hidden;
 }
+
+.sy-registration-logo { width:80px; height:80px; object-fit:cover; border-radius:20%; }
+.sy-registration-logo[hidden] { display:none; }

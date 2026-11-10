@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es" data-auth-pending>
-<head>
+<head><script src="theme.js"></script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -39,7 +39,7 @@
         })();
     </script>
 
-</head>
+<link rel="stylesheet" href="theme.css"></head>
 <body class="bg-slate-50">
     <div id="auth-splash" role="status" aria-live="polite" aria-label="Verificando sesión">
         <div class="auth-splash-content">
@@ -91,7 +91,7 @@
                             <input type="time" id="close-time" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 text-sm font-medium">
                         </div>
                     </div>
-                    <input type="url" id="biz-logo" placeholder="URL de la Foto del Local" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 text-sm font-medium">
+                    <label class="sy-config-field" for="biz-logo">Imagen del negocio (opcional)<input type="file" id="biz-logo" accept="image/jpeg,image/png,image/webp,image/avif"></label><img id="biz-logo-preview" hidden alt="Vista previa de la imagen del negocio" class="sy-registration-logo"><p class="sy-config-help">JPG, PNG, WebP o AVIF, hasta 5 MB.</p>
                 </div>
 
                 <button type="submit" id="btn-register" class="w-full bg-orange-500 text-white font-black py-5 rounded-[2rem] shadow-lg shadow-orange-200 mt-6 uppercase tracking-widest active:scale-95 transition-all">
@@ -104,7 +104,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
     <script src="app-config.js"></script>
-    <script src="runtime.js"></script><script src="app.js"></script>
+    <script src="runtime.js"></script><script src="business-image.js"></script><script src="app.js"></script>
     <script>
         const _supabase = window.serveYourself.supabase;
 
@@ -167,7 +167,7 @@
                 const profile = await window.serveYourself.getOrCreateProfile(user);
 
                 if (role !== 'negocio' || profile.role === 'negocio') {
-                    const destination = profile.role === 'negocio' ? 'admin.html' : window.serveYourself.restaurantHome(await window.serveYourself.getRestaurantAccess());
+                    const destination = profile.role === 'negocio' ? 'funciones.html' : window.serveYourself.restaurantHome(await window.serveYourself.getRestaurantAccess());
                     window.authStartup.redirect(requestedNextPage || destination);
                     return;
                 }
@@ -192,6 +192,13 @@
             }
         }
 
+        BusinessImages.preview(document.getElementById('biz-logo'),document.getElementById('biz-logo-preview'));
+        async function saveRegistrationImage(user,file,hasSession){
+            if(!file)return;
+            const pending=await BusinessImages.stage(user.id,file);
+            if(hasSession){try{await BusinessImages.applyPending(_supabase,user);}catch{alert('Tu cuenta está lista. La imagen quedó pendiente y se reintentará al abrir tu negocio.');}}
+            else if(!pending.persistent)alert('Tu cuenta está lista. No pudimos conservar la imagen en este dispositivo; podrás subirla en Configuración del restaurante.');
+        }
         document.getElementById('ui-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-register');
@@ -208,10 +215,12 @@
                 address: role === 'negocio' ? document.getElementById('biz-address').value.trim() : null,
                 open_time: role === 'negocio' ? (document.getElementById('open-time').value || null) : null,
                 close_time: role === 'negocio' ? (document.getElementById('close-time').value || null) : null,
-                avatar_url: role === 'negocio' ? (document.getElementById('biz-logo').value || null) : null
+                avatar_url: null
             };
 
             try {
+                const image=role==='negocio'?document.getElementById('biz-logo').files[0]:null;
+                await BusinessImages.validate(image);
                 if (e.currentTarget.dataset.oauth === 'true') {
                     const { data: { user }, error: userError } = await _supabase.auth.getUser();
                     if (userError || !user) throw userError || new Error('La sesión del proveedor terminó.');
@@ -219,7 +228,8 @@
                     const { error: profileError } = await _supabase.rpc('complete_business_registration', { p_profile: profileData });
                     if (profileError) throw profileError;
 
-                    window.location.replace('admin.html');
+                    await saveRegistrationImage(user,image,true);
+                    window.location.replace('funciones.html');
                     return;
                 }
 
@@ -230,8 +240,9 @@
                 });
                 if (authError) throw authError;
 
+                if(authData.user&&image)await saveRegistrationImage(authData.user,image,Boolean(authData.session));
                 if (authData.user && authData.session) {
-                    window.location.href = requestedNextPage || ((role === 'negocio') ? 'admin.html' : 'menu.html');
+                    window.location.href = requestedNextPage || ((role === 'negocio') ? 'funciones.html' : 'menu.html');
                 } else {
                     alert('Cuenta creada. Revisa tu correo para confirmar el registro y después inicia sesión.');
                     window.location.href = requestedNextPage ? `index.html?next=${encodeURIComponent(requestedNextPage)}` : 'index.html';
@@ -244,5 +255,5 @@
         });
         completeOAuthRegistration();
     </script>
-</body>
+<div data-theme-setting class="sy-theme-preference"></div></body>
 </html>

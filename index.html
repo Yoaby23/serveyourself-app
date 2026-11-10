@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es" data-auth-pending>
-<head>
+<head><script src="theme.js"></script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -44,7 +44,7 @@
         })();
     </script>
 
-</head>
+<link rel="stylesheet" href="theme.css"></head>
 <body class="bg-slate-50 min-h-screen">
     <div id="auth-splash" role="status" aria-live="polite" aria-label="Verificando sesión">
         <div class="auth-splash-content">
@@ -71,7 +71,7 @@
             <h2 class="text-4xl font-black mb-3 leading-tight text-slate-900">Pide fácil. <br><span class="text-orange-500">Atiende mejor.</span></h2>
             <p class="text-slate-500 font-medium leading-relaxed mb-6">Una sola app para clientes, equipo y cocina.</p>
             <div class="mb-10 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-orange-50 border-4 border-white">
-                <img src="welcome-image.png" alt="Comida lista" class="w-full">
+                <img src="welcome-app.webp" alt="Cliente, caja y cocina coordinando un pedido con ServeYourself" width="1672" height="941" fetchpriority="high" class="w-full">
             </div>
             <div class="space-y-4">
                 <button type="button" onclick="switchView('view-login')" class="w-full bg-orange-500 text-white font-black py-5 rounded-[2rem] shadow-xl shadow-orange-100 uppercase tracking-widest active:scale-95 transition-all hover:bg-orange-600">
@@ -144,7 +144,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
     <script src="app-config.js"></script>
-    <script src="app.js"></script>
+    <script src="business-image.js"></script><script src="app.js"></script>
 
     <script>
         let authRedirecting = false;
@@ -171,11 +171,15 @@
 
         async function openRequestedView() {
             if (!requestedNextPage) return;
-            const { data: { user }, error } = await window.serveYourself.supabase.auth.getUser();
-            if (error && error.status !== 401) throw error;
-            if (user) {
-                navigateAuthenticated(requestedNextPage);
-                return;
+            const client=window.serveYourself.supabase;
+            const {data:{session},error:sessionError}=await client.auth.getSession();
+            if(sessionError)throw sessionError;
+            // getUser without a saved session raises AuthSessionMissingError (400).
+            // That is a normal signed-out state when opening a staff invitation.
+            if(session?.user){
+                const {data:{user},error}=await client.auth.getUser();
+                if(error&&!window.serveYourself.isSignedOutError(error))throw error;
+                if(user){navigateAuthenticated(requestedNextPage);return;}
             }
             document.getElementById('login-description').textContent = requestedNextPage === 'repartidor.html'
                 ? 'Inicia sesión para abrir tu cuenta de repartidor.'
@@ -212,7 +216,7 @@
             if (!profile) profile = await window.serveYourself.getOrCreateProfile(user);
 
             if (profile.role === 'negocio') {
-                navigateAuthenticated('admin.html');
+                navigateAuthenticated('funciones.html');
                 return;
             }
 
@@ -297,7 +301,7 @@
                 }
                 if (!authRedirecting) window.authStartup.finish();
             } catch (error) {
-                const signedOut = error.status === 401 || ['refresh_token_not_found','refresh_token_already_used','session_not_found','bad_jwt','user_not_found'].includes(error.code);
+                const signedOut = error.name==='AuthSessionMissingError' || error.code==='session_not_found' || error.status === 401 || ['refresh_token_not_found','refresh_token_already_used','bad_jwt','user_not_found'].includes(error.code);
                 if (signedOut) { switchView('view-login'); window.authStartup.finish(); }
                 else { console.warn('No se pudo verificar la sesión:', error.message); window.authStartup.fail(); }
             }
@@ -335,5 +339,5 @@
         });
         initializeAccess();
     </script>
-</body>
+<div data-theme-setting class="sy-theme-preference"></div></body>
 </html>
