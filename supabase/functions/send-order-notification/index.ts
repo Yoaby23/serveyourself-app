@@ -3,7 +3,7 @@ import { corsHeaders, jsonResponse } from '../_shared/cors.ts';
 
 type Notice = { message: string; path: string };
 type Event = { id: string; order_id: number; ticket_id: number | null; kind: string; state: string };
-type Order = { id: number; restaurant_id: string; restaurant_name: string; customer_id: string | null; created_by: string | null; order_source: string; service_type: string; status: string; payment_status: string; payment_before_kitchen: boolean; payment_method: string; delivery_status: string | null; assigned_driver_id: string | null; pickup_name: string | null };
+type Order = { id: number; restaurant_id: string; restaurant_name: string; customer_id: string | null; created_by: string | null; order_source: string; service_type: string; status: string; payment_status: string; payment_before_kitchen: boolean; payment_method: string; delivery_status: string | null; assigned_driver_id: string | null; delivery_assignment_id?: string | null; pickup_name: string | null };
 const deliveryMessages: Record<string, string> = {
   pending_acceptance: 'El restaurante recibió tu pedido a domicilio.', accepted: 'El restaurante aceptó tu pedido.',
   preparing: 'Tu pedido se está preparando.', ready_for_dispatch: 'Tu pedido está listo para reparto.',
@@ -43,17 +43,13 @@ async function buildNotices(db: ReturnType<typeof createWorkerClient>, event: Ev
     await staff('can_close_accounts',`Pedido para llevar #${order.id}: ${action}.`, '/caja.html#pickup');
   } else if (event.kind === 'payment' && order.payment_status === event.state && paymentMessages[event.state]) {
     customer(paymentMessages[event.state]);
-  } else if (event.kind === 'driver' && order.assigned_driver_id === event.state) {
+  } else if (event.kind === 'driver' && (order.delivery_assignment_id || order.assigned_driver_id) === event.state) {
     add(order.assigned_driver_id,`Tienes asignada la entrega #${order.id}.`, '/repartidor.html');
   } else if (event.kind === 'delivery' && order.delivery_status === event.state && deliveryMessages[event.state]) {
     customer(deliveryMessages[event.state]);
-    if (event.state === 'pending_acceptance') await staff('can_manage_delivery',`Pedido a domicilio #${order.id} pendiente de aceptación.`, '/delivery.html');
+    if (event.state === 'pending_acceptance') await staff('can_close_accounts',`Pedido a domicilio #${order.id} pendiente de confirmar.`, '/caja.html#dispatch');
+    if(event.state === 'ready_for_dispatch' && !order.assigned_driver_id) await staff('can_close_accounts',`Pedido #${order.id} listo para asignar repartidor.`, '/caja.html#dispatch');
     if (event.state === 'ready_for_dispatch') add(order.assigned_driver_id,`Pedido #${order.id} listo para recoger.`, '/repartidor.html');
-    if (event.state === 'accepted' && !order.assigned_driver_id) {
-      const {data,error}=await db.rpc('team_drivers_for_push', {p_restaurant_id:order.restaurant_id});
-      if(error) throw error;
-      for(const driver of data || []) add(driver.user_id,`Entrega #${order.id} disponible en ${order.restaurant_name}.`, '/repartidor.html');
-    }
   } else if (event.kind === 'ticket') {
     const {data:ticket,error}=await db.from('kitchen_tickets').select('id,status').eq('id',event.ticket_id).eq('order_id',order.id).maybeSingle();
     if(error) throw error;
@@ -92,7 +88,7 @@ Deno.serve(async request => {
     if(claimError) throw claimError;
     const event:Event|undefined=events?.[0];
     if(!event) return jsonResponse(request,{skipped:true});
-    const {data:order,error}=await db.from('orders').select('id,restaurant_id,restaurant_name,customer_id,created_by,order_source,service_type,status,payment_status,payment_before_kitchen,payment_method,delivery_status,assigned_driver_id,pickup_name').eq('id',event.order_id).maybeSingle();
+    const {data:order,error}=await db.from('orders').select('id,restaurant_id,restaurant_name,customer_id,created_by,order_source,service_type,status,payment_status,payment_before_kitchen,payment_method,delivery_status,assigned_driver_id,delivery_assignment_id,pickup_name').eq('id',event.order_id).maybeSingle();
     if(error) throw error;
     const notices=order?await buildNotices(db,event,order):new Map<string,Notice>();
     let providerFailed = false;

@@ -25,3 +25,12 @@ for(const errors of [['All included players are not subscribed'],{invalid_aliase
  assert.ok(requests.some(r=>r.include_aliases.external_id.includes('staff')));
  for(const request of requests)assert.equal(request.app_id,'c77aa3bf-9fbf-4928-9441-18093c934dcd');
 });
+test('assignment notice targets the selected driver and ignores a superseded assignment',async()=>{
+ const context=vm.createContext({createClient(){},Deno:{serve(){},env:{get(){}}}});
+ vm.runInContext(stripTypeScriptTypes(source),context);
+ const order={id:7,status:'pendiente',service_type:'delivery',assigned_driver_id:'selected-driver',delivery_assignment_id:'current-assignment'};
+ const db={from(){throw Error('Assignment must not broadcast to other drivers');}};
+ const notices=await context.buildNotices(db,{kind:'driver',state:'current-assignment'},order);
+ assert.equal(notices.size,1);assert.equal(notices.get('selected-driver').path,'/repartidor.html');
+ assert.equal((await context.buildNotices(db,{kind:'driver',state:'previous-assignment'},order)).size,0);
+});
