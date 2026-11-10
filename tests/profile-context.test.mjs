@@ -1,0 +1,11 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
+const source=fs.readFileSync(new URL('../profile-editor.js',import.meta.url),'utf8').replace(/initProfile\(\);\s*$/,'');
+async function setup(mode,owner=true){
+ const nodes=new Map();const get=id=>{if(!nodes.has(id))nodes.set(id,{value:'',disabled:true,addEventListener(event,handler){this[event]=handler;}});return nodes.get(id);};
+ let navigation=null,payload=null;const access=owner?{staff_role:'owner'}:null;
+ const app={requireUser:async()=>({id:'me',email:'me@example.invalid'}),getRestaurantAccess:async()=>access,renderRestaurantNavigation:a=>navigation=a.staff_role,renderPersonalNavigation:()=>navigation='personal',supabase:{from:()=>({select:()=>({eq:()=>({single:async()=>({data:{full_name:'Yoab',phone:'3312345678',address:'Casa'}})})}),update:data=>{payload=data;return{eq:()=>({select:()=>({single:async()=>({data:{id:'me'}})})})};}})}};
+ const context=vm.createContext({window:{serveYourself:app,location:{search:mode?'?mode='+mode:''}},document:{getElementById:get},URLSearchParams});vm.runInContext(source,context);await context.initProfile();return{get,navigation,payload:()=>payload};
+}
+test('owner profile stays in work mode and returns to work account',async()=>{const s=await setup(null);assert.equal(s.navigation,'owner');assert.equal(s.get('profile-return').href,'cuenta.html');assert.equal(s.get('profile-password').href,'cambiar-contrasena.html?mode=work');});
+test('explicit personal profile stays personal even for a business owner',async()=>{const s=await setup('personal');assert.equal(s.navigation,'personal');assert.equal(s.get('profile-return').href,'menu.html?section=perfil');});
+test('profile saving changes only personal fields without redirecting or changing mode',async()=>{const s=await setup('work');s.get('profile-phone').value=' 3312345678 ';s.get('profile-address').value=' Nueva dirección ';await s.get('profile-form').submit({preventDefault(){}});assert.equal(s.payload().phone,'3312345678');assert.equal(s.payload().address,'Nueva dirección');assert.deepEqual(Object.keys(s.payload()).sort(),['address','phone']);assert.equal(s.navigation,'owner');assert.equal(s.get('profile-status').textContent,'Perfil actualizado.');});

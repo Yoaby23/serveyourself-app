@@ -38,7 +38,8 @@ test('active route, dark kitchen navigation and customer detail links remain acc
 });
 test('no role retains a navigation dropdown and account actions have full-page destinations',()=>{
  for(const page of ['app.js','menu.html','admin.html'])assert.doesNotMatch(read(page),/toggleUserMenu|toggleAdminMenu|toggleRestaurantMenu|id="user-menu"|id="admin-menu"|restaurant-menu-dropdown/);
- for(const action of ['enableWorkNotifications','installApp','signOut','platform-admin.html','menu.html?section=pedidos'])assert.ok(read('cuenta.html').includes(action),action);
+ for(const action of ['enableWorkNotifications','installApp','signOut','perfil.html'])assert.ok(read('cuenta.html').includes(action),action);
+ assert.doesNotMatch(read('cuenta.html'),/platform-admin.html|menu.html\?section=pedidos/);
  assert.match(read('styles.css'),/body\.sy-has-bottom-nav[^}]*safe-area-inset-bottom/);
  assert.match(read('styles.css'),/@media print[^}]*sy-role-bottom-nav/);
 });
