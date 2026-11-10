@@ -566,3 +566,5 @@ document.addEventListener('click', event => {
 
 const selectControls=document.createElement('script');
 selectControls.src='select-controls.js';selectControls.defer=true;document.head.appendChild(selectControls);
+const dateControls=document.createElement('script');
+dateControls.src='date-controls.js';dateControls.defer=true;document.head.appendChild(dateControls);

@@ -974,7 +974,7 @@ input[type='radio'] {
 .sy-delete-page form > label:first-child { color: #475569; font-size: .75rem; font-weight: 900; text-transform: uppercase; }
 .sy-delete-page textarea { width: 100%; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 1rem; background: #f8fafc; resize: vertical; }
 .sy-confirm-row { display: flex; align-items: flex-start; gap: .65rem; color: #64748b; font-size: .78rem; line-height: 1.5; }
-.sy-confirm-row input { width: 1.1rem; height: 1.1rem; margin-top: .1rem; accent-color: #dc2626; }
+
 .sy-danger-button { min-height: 3.5rem; border-radius: 1rem; color: white; background: #dc2626; font-size: .76rem; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; }
 .sy-danger-button:disabled { opacity: .55; }
 .sy-status-card { margin-top: 1.5rem; padding: 1rem; border: 1px solid #fed7aa; border-radius: 1rem; background: #fff7ed; }
@@ -1211,10 +1211,13 @@ body.sy-restaurant-menu.sy-has-cart { padding-bottom: calc(var(--sy-bottom-nav-h
 }
 .sy-setting-option:hover { border-color: #fdba74; }
 .sy-setting-option:has(input:checked) { border-color: #fdba74; background: #fff7ed; color: #9a3412; }
-.sy-setting-option input[type=checkbox] {
+input[type=checkbox] {
+    -webkit-appearance: none;
     appearance: none;
-    display: grid;
+    display: inline-grid;
     place-content: center;
+    flex: 0 0 22px;
+    min-width: 22px;
     width: 22px;
     height: 22px;
     margin: 0;
@@ -1223,7 +1226,7 @@ body.sy-restaurant-menu.sy-has-cart { padding-bottom: calc(var(--sy-bottom-nav-h
     background: #fff;
     cursor: pointer;
 }
-.sy-setting-option input[type=checkbox]::before {
+input[type=checkbox]::before {
     content: '';
     width: 6px;
     height: 11px;
@@ -1231,16 +1234,35 @@ body.sy-restaurant-menu.sy-has-cart { padding-bottom: calc(var(--sy-bottom-nav-h
     border-bottom: 2px solid #fff;
     transform: translateY(-1px) rotate(45deg) scale(0);
 }
-.sy-setting-option input[type=checkbox]:checked { border-color: #ea580c; background: #ea580c; }
-.sy-setting-option input[type=checkbox]:checked::before { transform: translateY(-1px) rotate(45deg) scale(1); }
-.sy-setting-option input:focus-visible { outline: 3px solid #c2410c; outline-offset: 4px; }
+input[type=checkbox]:checked { border-color: #ea580c; background: #ea580c; }
+input[type=checkbox]:checked::before { transform: translateY(-1px) rotate(45deg) scale(1); }
+input[type=checkbox]:focus-visible { outline: 3px solid #c2410c; outline-offset: 4px; }
+/* Shared by static fields and dynamically rendered permissions, hours and credit. */
+label:has(> input[type=checkbox]):not(.sy-setting-option) {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    cursor: pointer;
+}
+label:has(> input[type=checkbox]:disabled) { cursor: not-allowed; }
+input[type=checkbox]:enabled:hover { border-color: #c2410c; }
+input[type=checkbox]:disabled { cursor: not-allowed; }
+input[type=checkbox]:indeterminate { background: #ea580c; border-color: #ea580c; }
+input[type=checkbox]:indeterminate::before {
+    width: 10px;
+    height: 0;
+    border-right: 0;
+    border-bottom: 2px solid white;
+    transform: none;
+}
 .sy-setting-option:has(input:disabled) { cursor: default; opacity: .55; }
 .sy-action-dialog { width: min(calc(100% - 2rem), 28rem); max-height: 88dvh; overflow-y: auto; margin: auto; }
 .sy-action-dialog::backdrop { background: rgb(15 23 42 / .5); }
 @media (max-width: 600px) { .sy-setting-options { grid-template-columns: 1fr; } }
 @media (forced-colors: active) {
-    .sy-setting-option input[type=checkbox] { appearance: auto; }
-    .sy-setting-option input[type=checkbox]::before { content: none; }
+    input[type=checkbox] { -webkit-appearance: auto; appearance: auto; }
+    input[type=checkbox]::before { content: none; }
 }
 
 /* The order sheet scrolls within the viewport while its background remains still. */
@@ -1283,3 +1305,30 @@ html:has(#modal-carrito:not(.hidden)), body:has(#modal-carrito:not(.hidden)) { o
 .sy-select-option:disabled { color: #94a3b8; cursor: default; }
 .sy-select-error { display: block; margin-top: 6px; color: #b91c1c; font-size: 12px; line-height: 1.4; }
 .sy-select-error[hidden] { display: none; }
+
+/* Shared calendar for reports, coupons and scheduled orders. */
+.sy-date { display: inline-block; max-width: 100%; min-width: 0; }
+.sy-native-date { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); opacity: 0; pointer-events: none; }
+.sy-date-trigger { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 14px; background: #f8fafc; color: #0f172a; font-size: 14px; font-weight: 700; text-align: left; }
+.sy-date-trigger:hover { border-color: #fdba74; }
+.sy-date-trigger:focus-visible { outline: 3px solid #c2410c; outline-offset: 3px; }
+.sy-date-icon { width: 17px; height: 17px; flex: 0 0 17px; border: 2px solid currentColor; border-radius: 4px; position: relative; }
+.sy-date-icon::before { content: ''; position: absolute; top: 3px; left: 0; right: 0; border-top: 2px solid currentColor; }
+.sy-calendar { position: fixed; inset: auto; margin: 0; padding: 12px; border: 1px solid #e2e8f0; border-radius: 20px; background: white; color: #0f172a; box-shadow: 0 16px 48px rgb(15 23 42 / .16); overflow: auto; scrollbar-width: none; text-transform: none; }
+.sy-calendar::-webkit-scrollbar { display: none; }
+.sy-calendar button { min-height: 40px; border-radius: 10px; font-size: 14px; font-weight: 700; }
+.sy-calendar button:enabled:hover { background: #fff7ed; color: #9a3412; }
+.sy-calendar button:focus-visible { outline: 2px solid #c2410c; outline-offset: -2px; }
+.sy-calendar-header { display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; text-align: center; gap: 4px; }
+.sy-calendar-header strong { font-size: 15px; text-transform: capitalize; }
+.sy-calendar-header button { font-size: 24px; }
+.sy-calendar-weekdays, .sy-calendar-days { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 2px; text-align: center; }
+.sy-calendar-weekdays { margin: 8px 0; color: #64748b; font-size: 12px; font-weight: 700; }
+.sy-calendar-outside { color: #94a3b8; }
+.sy-calendar button[aria-current=date] { box-shadow: inset 0 0 0 1px #ea580c; }
+.sy-calendar button[aria-pressed=true], .sy-calendar button[aria-pressed=true]:hover { background: #ea580c; color: white; }
+.sy-calendar-footer { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #f1f5f9; }
+.sy-calendar-footer button { padding: 0 12px; color: #9a3412; }
+.sy-calendar-time { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 14px; font-weight: 700; }
+.sy-calendar-time input { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }
+.sy-date[hidden] { display: none; }
