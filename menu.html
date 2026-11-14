@@ -79,7 +79,7 @@
             <div class="relative group">
                 <span class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors"><svg class="sy-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-6-6M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0"/></svg></span>
                 <input type="text" id="search-input" oninput="debounceSearch()" placeholder="Busca comida o restaurantes..."
-                    class="w-full p-5 pl-14 bg-white rounded-[2rem] border-none shadow-xl shadow-slate-200/40 outline-none text-sm font-bold text-slate-900 focus:ring-2 focus:ring-orange-500/20 transition-all">
+                    class="w-full p-5 pl-14 bg-white rounded-[2rem] border-none shadow-xl shadow-slate-200/40 outline-none text-sm font-bold text-slate-900 focus:ring-2 focus:ring-orange-500/20 transition-all" aria-label="Buscar comida o restaurantes">
             </div>
 
             <p id="favorites-status" role="status" aria-live="polite" class="sy-favorites-status"></p>
@@ -106,7 +106,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
     <script src="app-config.js"></script>
     <script src="runtime.js"></script><script src="business-image.js"></script><script src="app.js"></script>
-    <script src="pickup-arrival.js"></script>
+    <script src="order-tools.js"></script><script src="pickup-arrival.js"></script>
     <script>
         const _supabase = window.serveYourself.supabase;
         const escapeHtml = window.serveYourself.escapeHtml;
@@ -312,17 +312,21 @@
             if(!url)return alert('El negocio no tiene un número válido. Contacta a caja.');
             if(confirm('Se abrirá WhatsApp del negocio. Adjunta tu comprobante y pulsa Enviar; caja deberá validar el pago.'))window.location.href=url;
         }
+        let historyLoadVersion=0;
         async function cargarHistorialPedidos() {
+            const version=++historyLoadVersion;
             const container = document.getElementById('lista-mis-pedidos');
-            container.innerHTML = '<p class="text-center py-10 animate-pulse text-xs font-black text-slate-400 uppercase">Consultando...</p>';
+            if(!container.innerHTML.trim()) container.innerHTML = '<p class="text-center py-10 animate-pulse text-xs font-black text-slate-400 uppercase">Consultando...</p>';
             await _supabase.rpc('expire_unpaid_online_orders', { p_restaurant_id: null });
             const fechaLimite = new Date(); fechaLimite.setDate(fechaLimite.getDate() - 15);
             const [{ data: pedidos, error }, { data: ratings }] = await Promise.all([
                 _supabase.from('orders').select('*').eq('customer_id', currentUser.id).gte('created_at', fechaLimite.toISOString()).order('created_at', { ascending: false }),
                 _supabase.from('ratings').select('order_id, rating').eq('customer_id', currentUser.id)
             ]);
-            if (error) { container.innerHTML = '<div class="p-10 text-center text-red-400 text-sm">No se pudo cargar el historial.</div>'; return; }
-            if (!pedidos || pedidos.length === 0) { container.innerHTML = '<div class="p-10 text-center text-slate-300 italic text-sm">Sin actividad reciente.</div>'; return; }
+            if(version!==historyLoadVersion)return;
+            if (error) { if(!container.dataset.loaded)container.innerHTML = '<div class="p-10 text-center text-red-400 text-sm">No se pudo cargar el historial. Reintenta con conexión.</div>'; return; }
+            container.dataset.loaded='true';
+            if (!pedidos || pedidos.length === 0) { container.innerHTML = '<div class="p-10 text-center text-slate-300 italic text-sm">Sin actividad reciente.</div>'; await pickupArrival?.setOrders([]); return; }
             const ratingsByOrder = new Map((ratings || []).map(item => [item.order_id, item.rating]));
             container.innerHTML = pedidos.map(p => {
                 const pagoPendiente = p.status !== 'cancelado' && p.payment_method === 'mercado_pago' && p.payment_status === 'pending';
@@ -372,16 +376,10 @@
             cargarHistorialPedidos();
         }
 
-        async function calificarPedido(orderId) {
-            const rating = Number(prompt('Califica del 1 al 5:'));
-            if (!Number.isInteger(rating) || rating < 1 || rating > 5) { alert('Escribe un número del 1 al 5.'); return; }
-            const comment = prompt('Comentario opcional:') || '';
-            const { error } = await _supabase.rpc('submit_rating', { p_order_id: orderId, p_rating: rating, p_comment: comment });
-            if (error) { alert(error.message); return; }
-            cargarHistorialPedidos();
-        }
+        function calificarPedido(orderId) { SYOrderTools.rating(_supabase,orderId,cargarHistorialPedidos); }
 
 
+        const readyOrderNotifications=new Set();
         function activarPedidosRealtime() {
             _supabase.channel(`customer-orders-${currentUser.id}`)
                 .on('postgres_changes', {
@@ -389,7 +387,7 @@
                     filter: `customer_id=eq.${currentUser.id}`
                 }, payload => {
                     if (!document.getElementById('sec-pedidos').classList.contains('hidden')) cargarHistorialPedidos();
-                    if (payload.new.status === 'listo') alert('¡Tu pedido está listo para recoger!');
+                    if (payload.new.status === 'listo' && !readyOrderNotifications.has(String(payload.new.id))) { readyOrderNotifications.add(String(payload.new.id)); alert('¡Tu pedido está listo para recoger!'); }
                 }).subscribe();
         }
 
@@ -399,30 +397,16 @@
             const orderId = params.get('order_id') || params.get('external_reference');
             const paymentId = params.get('payment_id') || params.get('collection_id');
             if (!paymentResult) return;
-
             try {
-                let reconciled = false;
-                let paymentExpired = false;
-                if (orderId) {
-                    const response = await window.serveYourself.reconcileMercadoPagoOrder(orderId, paymentId);
-                    reconciled = response.ok;
-                    paymentExpired = response.status === 410;
-                }
-
-                if (paymentExpired) {
-                    mostrarEstadoPago('failure', 'Tiempo de pago agotado', 'Este pedido venció. Regresa al restaurante y crea uno nuevo.');
-                } else if (paymentResult === 'success') {
-                    mostrarEstadoPago('success', reconciled ? 'Pago confirmado' : 'Pago recibido', reconciled
-                        ? 'La orden ya aparece como pagada.'
-                        : 'Mercado Pago notificará la confirmación en unos momentos.');
-                } else if (paymentResult === 'pending') {
-                    mostrarEstadoPago('pending', 'Pago en proceso', 'Mercado Pago está procesando el pago. El pedido se actualizará automáticamente.');
-                } else if (paymentResult === 'failure') {
-                    mostrarEstadoPago('failure', 'Pago no completado', 'Puedes regresar al restaurante e intentarlo nuevamente.');
-                }
-            } finally {
-                history.replaceState({}, '', 'menu.html');
-            }
+                if (!orderId || !/^\d+$/.test(orderId)) throw new Error('Consulta el estado de tu pago en Mis pedidos.');
+                await window.serveYourself.reconcileMercadoPagoOrder(orderId,paymentId);
+                const order=await window.serveYourself.verifiedPaymentOrder(orderId);
+                if(order.payment_status==='approved' && order.status!=='cancelado') mostrarEstadoPago('success','Pago confirmado','La orden ya aparece como pagada.');
+                else if(['expired','refunded','charged_back','rejected'].includes(order.payment_status)||order.status==='cancelado') mostrarEstadoPago('failure',order.payment_status==='expired'?'Tiempo de pago agotado':'Pago no completado','Revisa el estado del pedido antes de intentar otro pago.');
+                else mostrarEstadoPago(paymentResult==='failure'?'failure':'pending',paymentResult==='failure'?'Pago no completado':'Pago en proceso','Todavía no se ha confirmado un pago aprobado. Revisa Mis pedidos antes de volver a pagar.');
+            } catch(error) {
+                mostrarEstadoPago('pending','Confirmación pendiente',error.message||'No se pudo consultar el pago. Revisa Mis pedidos con conexión.');
+            } finally { history.replaceState({}, '', 'menu.html'); }
         }
 
         let paymentFeedbackTimer;
@@ -457,7 +441,9 @@
             try {
                 const response = await window.serveYourself.reconcileMercadoPagoOrder(orderId);
                 if (response.status === 410) throw new Error('El tiempo para pagar terminó. Crea un pedido nuevo.');
-                if (!response.ok) throw new Error('Mercado Pago todavía no reporta un pago aprobado.');
+                const saved=await window.serveYourself.verifiedPaymentOrder(orderId);
+                if(saved.payment_status==='expired')throw new Error('El tiempo para pagar terminó. Crea un pedido nuevo.');
+                if(saved.payment_status!=='approved'||saved.status==='cancelado')throw new Error('El pedido todavía no tiene un pago aprobado. Consulta su estado antes de volver a pagar.');
                 await cargarHistorialPedidos();
                 mostrarEstadoPago('success', 'Pago actualizado', 'La información del pago se sincronizó correctamente.');
             } catch (error) {

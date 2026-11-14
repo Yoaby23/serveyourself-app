@@ -47,10 +47,27 @@ window.serveYourself = {
         return error?.name==='AuthSessionMissingError'||error?.status===401||['refresh_token_not_found','refresh_token_already_used','session_not_found','bad_jwt','user_not_found'].includes(error?.code);
     },
 
+    showAccessRetry(message) {
+        let panel = document.getElementById('sy-access-retry');
+        if (!panel) {
+            panel = document.createElement('section');
+            panel.id = 'sy-access-retry'; panel.className = 'sy-access-retry';
+            panel.setAttribute('role','alert');
+            const text = document.createElement('p'); text.dataset.message = 'true';
+            const button = document.createElement('button'); button.type = 'button'; button.textContent = 'Reintentar';
+            button.onclick = () => window.location.reload();
+            panel.append(text,button); document.body.prepend(panel);
+        }
+        panel.querySelector('[data-message]').textContent = message;
+    },
+
     async requireUser() {
-        const { data: { user }, error } = await this.supabase.auth.getUser();
+        let user, error;
+        try { const result = await this.supabase.auth.getUser(); user = result.data?.user; error = result.error; }
+        catch (failure) { error = failure; }
         if (error || !user) {
-            window.location.replace('index.html');
+            if (error && !this.isSignedOutError(error)) this.showAccessRetry('No se pudo verificar tu sesión. Revisa la conexión y reintenta.');
+            else window.location.replace('index.html');
             return null;
         }
         const page = (window.location.pathname || '').split('/').pop();
@@ -60,10 +77,20 @@ window.serveYourself = {
         return user;
     },
 
+    async verifiedPaymentOrder(orderId) {
+        const {data,error} = await this.supabase.from('orders').select('id,payment_status,status').eq('id',orderId).single();
+        if (error || !data) throw new Error('No se pudo comprobar el estado guardado del pago. Reintenta desde tus pedidos.');
+        return data;
+    },
+
     async getRestaurantAccess() {
         const { data, error } = await this.supabase.rpc('get_my_restaurant_access');
         if (error) throw error;
-        return Array.isArray(data) ? (data[0] || null) : data;
+        const access = Array.isArray(data) ? (data[0] || null) : data;
+        if (!access) return null;
+        const settings = await this.supabase.from('public_restaurants').select('delivery_enabled').eq('id',access.restaurant_id).single();
+        if (settings.error) throw settings.error;
+        return {...access,delivery_enabled:settings.data?.delivery_enabled === true};
     },
 
     async getOrCreateProfile(user) {
@@ -123,12 +150,12 @@ window.serveYourself = {
         if (access.staff_role === 'cashier' && access.can_close_accounts) return 'caja.html';
         if (access.staff_role === 'kitchen' && access.can_view_kitchen) return 'cocina.html';
         if (access.staff_role === 'waiter' && access.can_create_orders) return 'pos.html';
-        if (access.can_deliver_orders) return 'repartidor.html';
-        if (access.can_manage_delivery) return 'delivery.html';
+        if (access.can_deliver_orders && access.delivery_enabled) return 'repartidor.html';
+        if (access.can_manage_delivery && access.delivery_enabled) return 'delivery.html';
         if (access.can_create_orders) return 'pos.html';
         if (access.can_close_accounts) return 'caja.html';
         if (access.can_view_kitchen) return 'cocina.html';
-        return 'menu.html';
+        return 'funciones.html';
     },
 
     restaurantDeniedDestination(access) {
@@ -148,8 +175,7 @@ window.serveYourself = {
             }
             return { user, ...access };
         } catch (error) {
-            alert('No fue posible comprobar el acceso del personal: ' + error.message);
-            window.location.replace('index.html');
+            this.showAccessRetry('No fue posible comprobar el acceso del personal. Revisa la conexión y reintenta.');
             return null;
         }
     },
@@ -167,8 +193,7 @@ window.serveYourself = {
             }
             return { user, ...access };
         } catch (error) {
-            alert('No fue posible comprobar tus permisos: ' + error.message);
-            window.location.replace('index.html');
+            this.showAccessRetry('No fue posible comprobar tus permisos. Revisa la conexión y reintenta.');
             return null;
         }
     },
@@ -247,7 +272,7 @@ window.serveYourself = {
         if (owner || access.can_create_orders) features.push({ href: 'pos.html', label: 'Meseros', icon: 'orders', description: 'Mesas, cuentas abiertas y nuevas rondas.' });
         if (owner || access.can_close_accounts) features.push({ href: 'caja.html', label: 'Caja', icon: 'cash', description: 'Cobros, turnos y cuentas.' });
         if (owner || access.can_view_kitchen) features.push({ href: 'cocina.html', label: 'Cocina', icon: 'kitchen', description: 'Prepara y entrega comandas.' });
-        if (owner || access.can_manage_delivery) features.push({ href: 'delivery.html', label: 'Delivery', icon: 'delivery', description: 'Despacho, repartidores y entregas.' });
+        if (access.delivery_enabled && (owner || access.can_manage_delivery)) features.push({ href: 'delivery.html', label: 'Delivery', icon: 'delivery', description: 'Despacho, repartidores y entregas.' });
         if (owner) features.push(
             { href: 'equipo.html', label: 'Personal y mesas', icon: 'people', description: 'Invitaciones, permisos y salón.' },
             { href: 'inventario.html', label: 'Estaciones', icon: 'kitchen', description: 'Crea categorías del menú y organiza las estaciones de cocina.' },

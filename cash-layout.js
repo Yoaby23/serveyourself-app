@@ -25,7 +25,7 @@ window.captureCashDraft = function captureCashDraft() {
     const panels = [...document.querySelectorAll('[data-cash-panel]')];
     function selectSection() {
         const requested = window.location.hash.slice(1);
-        const section = tabs.some(tab => tab.dataset.cashTab === requested) ? requested : 'pickup';
+        const section = tabs.some(tab => !tab.hidden && tab.dataset.cashTab === requested) ? requested : 'pickup';
         tabs.forEach(tab => {
             if (tab.dataset.cashTab === section) tab.setAttribute('aria-current', 'page');
             else tab.removeAttribute('aria-current');

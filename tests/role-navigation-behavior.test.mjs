@@ -12,7 +12,7 @@ function appFor(page='pos.html'){
  return {app:window.serveYourself,nodes};
 }
 const roles={
- owner:{staff_role:'owner'},waiter:{staff_role:'waiter',can_create_orders:true},kitchen:{staff_role:'kitchen',can_view_kitchen:true},cashier:{staff_role:'cashier',can_close_accounts:true},manager:{staff_role:'manager',can_create_orders:true,can_close_accounts:true,can_manage_delivery:true},driver:{staff_role:'driver',can_deliver_orders:true}
+ owner:{delivery_enabled:true,staff_role:'owner'},waiter:{staff_role:'waiter',can_create_orders:true},kitchen:{staff_role:'kitchen',can_view_kitchen:true},cashier:{staff_role:'cashier',can_close_accounts:true},manager:{staff_role:'manager',can_create_orders:true,can_close_accounts:true,can_manage_delivery:true},driver:{delivery_enabled:true,staff_role:'driver',can_deliver_orders:true}
 };
 for(const [role,access] of Object.entries(roles))test(`${role}: bottom navigation is bounded, unique and all operational features honor permissions`,()=>{
  const {app,nodes}=appFor();const items=app.workBottomItems(access);const features=app.workFeatures(access);
@@ -52,4 +52,11 @@ test('main account and platform screens do not add redundant back controls',()=>
 test('nested management screens retain a way back',()=>{
  const {app,nodes}=appFor('restaurante.html');app.ensureGlobalBackButton();
  assert.ok([...nodes.values()].some(node=>String(node.className||'').includes('sy-global-back')));
+});
+
+test('a driver with delivery disabled stays in the business account context',()=>{
+ const {app}=appFor();const access={staff_role:'driver',can_deliver_orders:true,delivery_enabled:false};
+ assert.equal(app.restaurantHome(access),'funciones.html');
+ assert.equal(app.workFeatures(access).some(x=>x.href==='delivery.html'),false);
+ assert.equal(app.workBottomItems(access).some(x=>x.href==='menu.html'),false);
 });

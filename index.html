@@ -106,13 +106,13 @@
                     <span class="h-px flex-1 bg-slate-200"></span>
                 </div>
                 <form id="login-form" class="space-y-4">
-                    <input type="email" id="login-email" placeholder="Correo electrónico" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
-                    <input type="password" id="login-password" autocomplete="current-password" placeholder="Contraseña" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required>
+                    <input type="email" id="login-email" autocomplete="username" placeholder="Correo electrónico" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required aria-label="Correo electrónico">
+                    <input type="password" id="login-password" autocomplete="current-password" placeholder="Contraseña" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-orange-500 focus:bg-white transition-all font-medium" required aria-label="Contraseña">
                     <button type="submit" id="btn-login" class="w-full bg-slate-900 text-white font-black py-5 rounded-[2rem] shadow-lg mt-6 uppercase tracking-widest active:scale-95 transition-all">
                         ENTRAR
                     </button>
                 </form>
-                <a href="recuperar.html" class="block text-center text-sm font-bold text-orange-500 mt-5 hover:text-orange-600">¿Olvidaste tu contraseña?</a>
+                <a id="recovery-link" href="recuperar.html" class="block text-center text-sm font-bold text-orange-500 mt-5 hover:text-orange-600">¿Olvidaste tu contraseña?</a>
                 <p id="staff-register-help" class="hidden text-center text-sm text-slate-500 mt-5">¿Aún no tienes cuenta? <a href="registro.html?role=cliente&next=unirse.html" class="font-black text-orange-500">Créala aquí</a></p>
             </div>
         </div>
@@ -154,6 +154,7 @@
             ? loginParams.get('next')
             : null;
         const isOAuthReturn = loginParams.get('oauth') === '1';
+        if(requestedNextPage)document.getElementById('recovery-link').href=`recuperar.html?next=${encodeURIComponent(requestedNextPage)}`;
 
         // Función para cambiar de vista
         function switchView(viewId) {

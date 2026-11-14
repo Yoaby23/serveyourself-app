@@ -23,3 +23,6 @@ test('owner retains credit configuration access and customer remains unauthorize
  const owner=setup({staff_role:'owner'});assert.equal((await owner.api.requireRestaurantAccess(['owner'])).staff_role,'owner');assert.equal(owner.destination,undefined);
  const customer=setup(null);assert.equal(await customer.api.requireRestaurantAccess(['owner']),null);assert.equal(customer.destination,'menu.html');
 });
+test('permission lookup network errors stay on the work page with a retry prompt',async()=>{
+ const ui=setup({staff_role:'kitchen'},'/cocina.html');const messages=[];ui.api.showAccessRetry=message=>messages.push(message);ui.api.getRestaurantAccess=async()=>{throw Error('Offline');};assert.equal(await ui.api.requireRestaurantPermission('can_view_kitchen'),null);assert.equal(ui.destination,undefined);assert.equal(messages.length,1);
+});
