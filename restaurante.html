@@ -12,12 +12,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
 
-        .cart-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes pop {
-            0% { transform: scale(0.9) translateX(-50%); opacity: 0; }
-            100% { transform: scale(1) translateX(-50%); opacity: 1; }
-        }
-
         #modal-carrito { transition: none; }
         .modal-content { animation: slideUp 0.4s ease-out; }
         @keyframes slideUp {
@@ -46,7 +40,7 @@
         <div id="contenedor-menu" class="space-y-10"></div>
     </main>
 
-    <button type="button" id="cart-bar" onclick="abrirCarrito()" aria-label="Ver mi pedido y total" class="fixed left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-slate-900 text-white p-5 rounded-[2.5rem] shadow-2xl flex justify-between items-center hidden z-50 cart-pop cursor-pointer">
+    <button type="button" id="cart-bar" onclick="abrirCarrito()" aria-label="Ver mi pedido y total" class="fixed w-[92%] max-w-md bg-slate-900 text-white p-5 rounded-[2.5rem] shadow-2xl flex justify-between items-center hidden z-50 cursor-pointer">
         <div class="flex items-center gap-4">
             <div class="relative">
                 <span class="bg-orange-500 w-7 h-7 rounded-full flex items-center justify-center font-black text-[11px]" id="cart-count">0</span>

@@ -1194,7 +1194,7 @@ button:focus-visible, a[href]:focus-visible { outline: 3px solid #c2410c; outlin
 /* Reserve separate space for navigation, cart summary and checkout. */
 body.sy-restaurant-menu { padding-bottom: calc(var(--sy-bottom-nav-height, 6rem + env(safe-area-inset-bottom)) + 1.5rem); }
 body.sy-restaurant-menu.sy-has-cart { padding-bottom: calc(var(--sy-bottom-nav-height, 6rem + env(safe-area-inset-bottom)) + 8rem); }
-.sy-restaurant-menu #cart-bar { bottom: calc(var(--sy-bottom-nav-height, 6rem + env(safe-area-inset-bottom)) + .75rem); z-index: 75; }
+.sy-restaurant-menu #cart-bar { left: 0; right: 0; margin-inline: auto; transform: none; transition: none; animation: none; bottom: calc(var(--sy-bottom-nav-height, 6rem + env(safe-area-inset-bottom)) + .75rem); z-index: 75; }
 .sy-restaurant-menu #modal-carrito { z-index: 100; }
 .sy-restaurant-menu #modal-carrito .modal-content { max-height: 90dvh; padding-bottom: calc(2rem + env(safe-area-inset-bottom)); }
 
