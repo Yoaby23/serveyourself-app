@@ -7,6 +7,7 @@ begin
     (a,a||'@example.invalid','{"role":"negocio","business_name":"QA A"}'),
     (b,b||'@example.invalid','{"role":"negocio","business_name":"QA B"}'),
     (driver,driver||'@example.invalid','{"role":"cliente"}');
+  update public.profiles set delivery_enabled=true where id in(a,b);
   insert into public.products(restaurant_id,name,price) values(a,'QA A',10) returning id into product_a;
   insert into public.products(restaurant_id,name,price) values(b,'QA B',10) returning id into product_b;
   insert into public.orders(restaurant_id,items,total,service_type,delivery_status,payment_method)

@@ -11,7 +11,8 @@ window.startCashDispatch=function startCashDispatch(access){
                 db.rpc('list_delivery_drivers',{p_restaurant_id:access.restaurant_id})
             ]);
             if(d.error)throw d.error;
-            orders=o;drivers=d.data||[];render();status.textContent='';
+            orders=o;drivers=d.data||[];render();status.textContent=access.delivery_enabled===false?'Servicio a domicilio desactivado. Solo se muestran entregas pendientes de completar.':'';
+            const tab=document.querySelector?.('[data-cash-tab=dispatch]');if(tab){tab.hidden=access.delivery_enabled===false&&!orders.length;window.dispatchEvent(new Event('hashchange'));}
         }catch(error){status.textContent='No se pudo actualizar el reparto. Se conservan los últimos datos.';}
     });
     function render(){

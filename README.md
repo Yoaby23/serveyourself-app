@@ -2,6 +2,8 @@
 
 Aplicación web para consultar restaurantes, ordenar comida para recoger y administrar pedidos en tiempo real.
 
+La operación actual de cocina y pickup se documenta en [Cocina automática](docs/kitchen-training.md). La última revisión está en [Revisión de calidad](docs/qa-review-2026-11-10.md).
+
 ## Funciones actuales
 
 - Registro e inicio de sesión con Supabase Auth.
@@ -280,7 +282,7 @@ El enlace enviado por correo abre `recuperar.html`, valida la sesión temporal y
 
 ### Mapas
 
-La vista de restaurantes usa Leaflet con los mosaicos estándar de OpenStreetMap.
+Los mapas de entrega y seguimiento usan Leaflet con los mosaicos estándar de OpenStreetMap.
 No requiere clave ni cuenta de facturación. Debe conservarse la atribución visible
 y respetarse la política de uso de mosaicos de OpenStreetMap. Para un volumen alto,
 cambia el proveedor de mosaicos por uno con capacidad y SLA adecuados.

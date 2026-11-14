@@ -18,7 +18,7 @@
             100% { transform: scale(1) translateX(-50%); opacity: 1; }
         }
 
-        #modal-carrito { transition: all 0.3s ease-in-out; }
+        #modal-carrito { transition: none; }
         .modal-content { animation: slideUp 0.4s ease-out; }
         @keyframes slideUp {
             from { transform: translateY(100%); }
@@ -74,17 +74,17 @@
             </div>
             <div id="pickup-fields" class="mb-6 space-y-3"><label for="pickup-name" class="block text-sm font-bold">Nombre de quien recoge</label><input id="pickup-name" type="text" maxlength="80" autocomplete="name" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold" placeholder="Nombre del cliente">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2 block">¿Cuándo recoges?</label>
-                <select id="pickup-timing" onchange="togglePickupSchedule()" class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold"><option value="asap">Estoy en el restaurante · para llevar</option><option value="scheduled">Pickup · programar recogida</option></select>
-                <input id="pickup-scheduled-for" type="datetime-local" class="hidden w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold">
+                <select id="pickup-timing" onchange="togglePickupSchedule()" class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold" aria-label="Tipo de recogida"><option value="asap">Estoy en el restaurante · para llevar</option><option value="scheduled">Pickup · programar recogida</option></select>
+                <input id="pickup-scheduled-for" type="datetime-local" class="hidden w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold" aria-label="Fecha y hora de recogida">
                 <p id="pickup-estimate" class="text-xs font-bold text-orange-600 px-2"></p>
             </div>
             <div id="delivery-fields" class="hidden mb-6 space-y-3">
-                <select id="saved-address" onchange="useSavedAddress()" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold"><option value="">Nueva dirección</option></select>
-                <input type="text" id="delivery-name" maxlength="120" placeholder="Nombre de quien recibe" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
-                <input type="text" id="delivery-phone" maxlength="30" inputmode="tel" placeholder="Teléfono" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
-                <input type="text" id="delivery-address" maxlength="300" placeholder="Calle, número, colonia y ciudad" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
+                <select id="saved-address" onchange="useSavedAddress()" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold" aria-label="Dirección guardada"><option value="">Nueva dirección</option></select>
+                <input type="text" id="delivery-name" maxlength="120" placeholder="Nombre de quien recibe" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold" aria-label="Nombre de quien recibe">
+                <input type="text" id="delivery-phone" maxlength="30" inputmode="tel" placeholder="Teléfono" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold" aria-label="Teléfono de quien recibe">
+                <input type="text" id="delivery-address" maxlength="300" placeholder="Calle, número, colonia y ciudad" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold" aria-label="Dirección de entrega">
                 <button type="button" id="delivery-address-search" class="sy-config-secondary">Buscar dirección</button><p id="delivery-address-status" role="status" aria-live="polite"></p><div id="delivery-address-results" class="sy-address-results"></div><small class="sy-config-help">Datos de OpenStreetMap · búsqueda con Photon</small>
-                <input type="text" id="delivery-reference" maxlength="300" placeholder="Referencias (color, entre calles, timbre)" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold">
+                <input type="text" id="delivery-reference" maxlength="300" placeholder="Referencias (color, entre calles, timbre)" class="w-full bg-slate-50 border rounded-2xl p-4 text-sm font-bold" aria-label="Referencias de entrega">
                 <button type="button" onclick="useMyLocation()" class="w-full py-3 rounded-2xl bg-blue-50 text-blue-700 text-xs font-black"> USAR MI UBICACIÓN</button>
                 <div id="delivery-map" class="h-52 rounded-2xl overflow-hidden border"></div>
                 <label class="flex items-center gap-2 text-xs font-bold text-slate-500"><input id="save-address" type="checkbox"> Guardar esta dirección</label>
@@ -92,11 +92,11 @@
             </div>
             <div class="mb-8">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Notas adicionales</label>
-                <textarea id="order-notes" maxlength="500" placeholder="Ej: Sin cebolla, salsas extra..." class="w-full bg-slate-50 border border-slate-100 rounded-[1.5rem] p-4 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all resize-none" rows="3"></textarea>
+                <textarea id="order-notes" maxlength="500" placeholder="Ej: Sin cebolla, salsas extra..." class="w-full bg-slate-50 border border-slate-100 rounded-[1.5rem] p-4 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all resize-none" rows="3" aria-label="Notas del pedido"></textarea>
             </div>
             <div class="mb-8">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Método de pago</label>
-                <select id="payment-method" onchange="mostrarDatosTransferencia()" class="w-full bg-slate-50 border border-slate-100 rounded-[1.5rem] p-4 text-sm font-bold outline-none"></select>
+                <select id="payment-method" onchange="mostrarDatosTransferencia()" class="w-full bg-slate-50 border border-slate-100 rounded-[1.5rem] p-4 text-sm font-bold outline-none" aria-label="Método de pago"></select>
                 <div id="transfer-details" class="hidden mt-3 p-4 bg-blue-50 rounded-2xl text-xs text-blue-700"></div>
             </div>
             <div class="border-t border-slate-100 pt-6 space-y-4">
@@ -373,8 +373,8 @@
             } else { cartBar.classList.add('hidden'); cerrarCarrito(); }
         }
 
-        function abrirCarrito() { actualizarModalCarrito(); document.getElementById('modal-carrito').classList.remove('hidden'); }
-        function cerrarCarrito() { document.getElementById('modal-carrito').classList.add('hidden'); }
+        function abrirCarrito() { actualizarModalCarrito(); document.documentElement.classList.add('sy-cart-open'); document.getElementById('modal-carrito').classList.remove('hidden'); }
+        function cerrarCarrito() { document.getElementById('modal-carrito').classList.add('hidden'); document.documentElement.classList.remove('sy-cart-open'); }
         window.addEventListener('sy:back-request', event => {
             if (!document.getElementById('modal-carrito').classList.contains('hidden')) { event.preventDefault(); cerrarCarrito(); }
         });
@@ -383,20 +383,24 @@
         function actualizarModalCarrito() {
             const lista = document.getElementById('lista-carrito');
             const totalElement = document.getElementById('modal-total');
-            lista.innerHTML = '';
+            const scroll = lista.closest('.modal-content').scrollTop;
+            const ids = new Set(carrito.map(item => String(item.id)));
+            [...lista.children].forEach(row => { if (!ids.has(row.dataset.product)) row.remove(); });
             let total = 0;
             carrito.forEach(item => {
                 total += item.price * item.qty;
-                const div = document.createElement('div');
+                let div = [...lista.children].find(row => row.dataset.product === String(item.id));
+                if (div) { div.querySelector('[data-line]').textContent = `$${item.price.toFixed(2)} x ${item.qty}`; div.querySelector('[data-qty]').textContent = item.qty; return; }
+                div = document.createElement('div'); div.dataset.product = String(item.id);
                 div.className = "flex justify-between items-center";
                 div.innerHTML = `
                     <div class="flex flex-col">
                         <span class="font-black text-slate-900 text-sm">${escapeHtml(item.nombre)}</span>
-                        <span class="text-orange-500 font-bold text-xs">$${item.price.toFixed(2)} x ${item.qty}</span>
+                        <span data-line class="text-orange-500 font-bold text-xs">$${item.price.toFixed(2)} x ${item.qty}</span>
                     </div>
                     <div class="flex items-center gap-3 bg-slate-50 p-1 rounded-full border border-slate-100">
                          <button type="button" onclick="cambiarCantidad('${escapeHtml(item.id)}', -1)" class="w-7 h-7 bg-white text-slate-400 rounded-full flex items-center justify-center font-black">-</button>
-                         <span class="font-black text-slate-900 text-xs">${item.qty}</span>
+                         <span data-qty class="font-black text-slate-900 text-xs">${item.qty}</span>
                          <button type="button" onclick="cambiarCantidad('${escapeHtml(item.id)}', 1)" class="w-7 h-7 bg-slate-900 text-white rounded-full flex items-center justify-center font-black">+</button>
                     </div>`;
                 lista.appendChild(div);
@@ -406,6 +410,7 @@
             const fee = serviceType === 'delivery' ? Number(deliveryQuote?.delivery_fee || 0) : 0;
             document.getElementById('modal-fee').innerText = `$${fee.toFixed(2)}`;
             totalElement.innerText = `$${(total + fee).toFixed(2)}`;
+            lista.closest('.modal-content').scrollTop = scroll;
         }
 
         async function confirmarPedido() {
@@ -472,7 +477,7 @@
                 // Resetear UI de cantidades en el menú
                 document.querySelectorAll('[id^="qty-"]').forEach(el => el.innerText = '0');
                 actualizarInterfazCarrito();
-                if(paymentMethod==='transfer'){document.getElementById('modal-carrito').classList.remove('hidden');}else cerrarCarrito();
+                if(paymentMethod==='transfer'){abrirCarrito();}else cerrarCarrito();
 
             } catch (err) {
                 alert("Error: " + err.message);

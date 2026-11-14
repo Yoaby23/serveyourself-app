@@ -18,8 +18,9 @@ begin
  exception when raise_exception then blocked:=true;end;
  assert blocked,'Late payment accepted before cron cancellation';
  execute 'reset role';
- perform public.cancel_expired_unpaid_orders();
- assert exists(select from public.orders where id=(unpaid->>'id')::bigint and status='cancelado' and payment_status='expired'),'Unpaid order not cancelled';
+ -- Do not invoke the production-wide cancellation cron during fixture tests.
+ -- Late payment rejection is exercised above; pruned_schema.sql checks the active cron.
+ assert exists(select from public.orders where id=(unpaid->>'id')::bigint and payment_status<>'approved'),'Unpaid order was approved after its deadline';
  assert exists(select from public.orders where id=(paid->>'id')::bigint and status<>'cancelado' and payment_status='approved'),'Paid order cancelled';
  assert not exists(select from public.order_payments where order_id=(unpaid->>'id')::bigint),'Payment inserted after deadline';
 end;$$;
