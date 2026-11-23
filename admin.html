@@ -47,6 +47,7 @@
                     <div class="sy-config-field"><label for="prod-category">Categoría del menú</label><select id="prod-category" disabled required><option value="">Cargando categorías…</option></select><button type="button" id="retry-categories" hidden onclick="cargarCategoriasProducto()">Reintentar categorías</button></div>
                     <div class="sy-config-field"><label for="prod-station">Estación de cocina</label><select id="prod-station" disabled><option value="">Cargando estaciones…</option></select><button type="button" id="retry-stations" hidden onclick="cargarEstacionesProducto()">Reintentar estaciones</button></div>
                 </div>
+                <section class="sy-product-variations"><h4>Variaciones (opcional)</h4><p class="sy-config-help">Agrega tamaños o presentaciones con su precio final. Sin variaciones se usa el precio del producto.</p><div id="product-variations"></div><button type="button" id="add-variation" class="sy-config-secondary">Agregar variación</button></section>
                 <div class="sy-product-photo"><label class="sy-config-field" for="prod-file">Imagen del producto (opcional)<input type="file" id="prod-file" accept="image/jpeg,image/png,image/webp,image/avif"></label><p id="product-edit-help" hidden class="sy-config-help">Si no seleccionas otra fotografía, se conserva la actual.</p></div>
                 <p id="product-save-status" role="status" aria-live="polite" class="sy-config-help"></p>
                 <div class="sy-product-actions"><button type="submit" id="btn-save-prod" class="sy-config-primary">Agregar producto</button><button type="button" id="cancel-product-edit" hidden onclick="cancelarEdicionProducto()" class="sy-config-secondary">Cancelar edición</button></div>
@@ -83,7 +84,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
     <script src="app-config.js"></script>
-    <script src="runtime.js"></script><script src="business-image.js"></script><script src="app.js"></script><script src="address-location.js"></script><script src="business-settings.js"></script>
+    <script src="runtime.js"></script><script src="business-image.js"></script><script src="app.js"></script><script src="product-variations.js"></script><script src="address-location.js"></script><script src="business-settings.js"></script>
     <script>
         const _supabase = window.serveYourself.supabase;
         const escapeHtml = window.serveYourself.escapeHtml;
@@ -193,6 +194,10 @@
             }
         }
 
+        const variationEditor=ProductVariations.editor(document.getElementById('product-variations'));
+        document.getElementById('add-variation').onclick=()=>variationEditor.add();
+        document.getElementById('product-variations').addEventListener('variationschange',()=>{const price=document.getElementById('prod-price');price.disabled=variationEditor.count()>0;price.required=!price.disabled;price.closest('label').hidden=price.disabled;});
+        let newProductId=null;
         async function cargarProductos() {
             const { data: prods, error } = await _supabase.from('products').select('*').eq('restaurant_id', currentRestaurantId).order('created_at', { ascending: false });
             if (error || !prods) {
@@ -206,7 +211,7 @@
 
         function renderProductos(){
             const term=document.getElementById('product-search').value.trim().toLocaleLowerCase();
-            const prods=adminProducts.filter(p=>(p.name+' '+(p.category||'')).toLocaleLowerCase().includes(term));
+            const prods=adminProducts.filter(p=>!p.parent_product_id&&!p.is_archived&&(p.name+' '+(p.category||'')).toLocaleLowerCase().includes(term));
             document.getElementById('lista-menu-admin').innerHTML = prods.map(p => `
                 <div class="bg-white p-4 rounded-3xl border border-slate-100 flex items-center justify-between ${!p.is_available ? 'opacity-50' : ''}">
                     <div class="flex items-center gap-4">
@@ -214,7 +219,7 @@
                         <div>
                             <h4 class="font-bold text-slate-900 text-sm">${escapeHtml(p.name)}</h4>
                             <p class="text-xs text-slate-500">${escapeHtml(p.category || 'General')}</p>
-                            <p class="text-orange-500 font-black text-xs">$${p.price}</p>
+                            <p class="text-orange-500 font-black text-xs">${p.has_variations?'Desde ':''}$${p.price}${p.has_variations?' · Variaciones':''}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-3 flex-wrap">
@@ -235,7 +240,7 @@
         window.eliminarProducto = async (id) => {
             if (productSaving) return;
             if (!confirm('¿Eliminar este producto del menú?')) return;
-            try { const { error } = await _supabase.from('products').delete().eq('id', id).select('id').single();
+            try { const { error } = await _supabase.rpc('archive_menu_product',{p_product_id:id});
                 if (error) throw error;
                 if (editingProductId === String(id)) cancelarEdicionProducto();
                 await cargarProductos();
@@ -244,7 +249,7 @@
 
         function cancelarEdicionProducto() {
             if (productSaving) return;
-            editingProductId = null;
+            editingProductId = null; newProductId=null; variationEditor.set([]);
             document.getElementById('add-product-form').reset();
             document.getElementById('product-form-title').textContent = 'Nuevo producto';
             document.getElementById('btn-save-prod').textContent = 'Agregar producto';
@@ -255,7 +260,7 @@
             if (productSaving) return;
             const product = adminProducts.find(p => String(p.id) === String(id));
             if (!product) return;
-            editingProductId = String(id);
+            editingProductId = String(id); variationEditor.set(adminProducts.filter(v=>v.parent_product_id===id&&!v.is_archived));
             document.getElementById('prod-name').value = product.name;
             document.getElementById('prod-price').value = product.price;
             document.getElementById('prod-category').value = menuCategories.find(c => c.name.toLowerCase() === String(product.category || '').toLowerCase())?.name || '';
@@ -272,10 +277,11 @@
         document.getElementById('add-product-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             if (productSaving) return;
+            let variations;try{variations=variationEditor.get()}catch(error){return alert(error.message)}
             const station = document.getElementById('prod-station');
             if (document.getElementById('prod-category').disabled) { alert('Espera a que se carguen las categorías o reintenta la carga.'); return; }
             if (station.disabled) { alert('Espera a que se carguen las estaciones o reintenta la carga.'); return; }
-            const payload = {category:document.getElementById('prod-category').value.trim().replace(/\s+/g,' '),name:document.getElementById('prod-name').value.trim(),price:Number(document.getElementById('prod-price').value),kitchen_station_id:station.value ? Number(station.value) : null};
+            const payload = {category:document.getElementById('prod-category').value.trim().replace(/\s+/g,' '),name:document.getElementById('prod-name').value.trim(),price:variations.length?Math.min(...variations.map(v=>v.price)):Number(document.getElementById('prod-price').value),kitchen_station_id:station.value ? Number(station.value) : null};
             if (!menuCategories.some(c => c.name === payload.category) || payload.category.length > 80 || !payload.name || !Number.isFinite(payload.price) || payload.price <= 0) { alert('Indica nombre, categoría y un precio mayor a cero.'); return; }
             const file = document.getElementById('prod-file').files[0];
             const formats = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/avif':'avif'};
@@ -291,14 +297,12 @@
                     uploadedPath = path;
                     payload.image_url = _supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl;
                 }
-                const query = id
-                    ? _supabase.from('products').update(payload).eq('id',id).eq('restaurant_id',currentRestaurantId)
-                    : _supabase.from('products').insert({...payload,restaurant_id:currentRestaurantId,is_available:true});
-                const {error} = await query.select('id').single();
+                const productId=id||(newProductId ||= crypto.randomUUID());
+                const {error}=await _supabase.rpc('save_menu_product',{p_product_id:productId,p_product:payload,p_variations:variations});
                 if (error) throw error;
                 saved = true;
             } catch (error) {
-                if (uploadedPath) { try { await _supabase.storage.from('product-images').remove([uploadedPath]); } catch {} }
+                if (uploadedPath && error.code && !['NETWORK_ERROR','FETCH_ERROR'].includes(error.code)) { try { await _supabase.storage.from('product-images').remove([uploadedPath]); } catch {} }
                 const message = 'No se pudo guardar el producto: ' + (error.message || 'Inténtalo de nuevo.');
                 document.getElementById('product-save-status').textContent = message;
                 alert(message);

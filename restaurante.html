@@ -108,7 +108,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app-config.js"></script>
-    <script src="runtime.js"></script><script src="business-image.js"></script><script src="app.js"></script><script src="address-location.js"></script>
+    <script src="runtime.js"></script><script src="business-image.js"></script><script src="app.js"></script><script src="product-variations.js"></script><script src="address-location.js"></script>
     <script>
         const _supabase = window.serveYourself.supabase;
         const escapeHtml = window.serveYourself.escapeHtml;
@@ -167,7 +167,7 @@
 
             const { data: productos, error: productsError } = await _supabase
                 .from('products')
-                .select('id, name, price, category, image_url, is_available')
+                .select('id, name, price, category, image_url, is_available, parent_product_id, variation_name, has_variations, is_archived')
                 .eq('restaurant_id', resId)
                 .order('category');
 
@@ -179,7 +179,7 @@
         }
 
         async function refreshMenuProducts() {
-            const { data, error } = await _supabase.from('products').select('id, name, price, category, image_url, is_available').eq('restaurant_id',resId).order('category');
+            const { data, error } = await _supabase.from('products').select('id, name, price, category, image_url, is_available, parent_product_id, variation_name, has_variations, is_archived').eq('restaurant_id',resId).order('category');
             if (error) return false;
             if (JSON.stringify(data || []) !== JSON.stringify([...productosPorId.values()])) {
                 renderizarProductos(data || []);
@@ -297,6 +297,8 @@
             productosPorId.clear();
             productos.forEach(p => {
                 productosPorId.set(String(p.id), p);
+            });
+            ProductVariations.catalog(productos).forEach(p => {
                 const category = (p.category || 'General').trim() || 'General';
                 if (!categorias.has(category)) categorias.set(category, []);
                 categorias.get(category).push(p);
@@ -320,15 +322,15 @@
                                     <div>
                                         <h4 class="font-bold text-slate-900 text-sm leading-tight">${escapeHtml(prod.name)}</h4>
                                         <p class="${agotado ? 'text-slate-400' : 'text-orange-500'} font-black text-sm mt-1">
-                                            ${agotado ? 'AGOTADO' : `$${parseFloat(prod.price).toFixed(2)}`}
+                                            ${agotado ? 'AGOTADO' : `${prod.has_variations?'Desde ':''}$${parseFloat(prod.price).toFixed(2)}`}
                                         </p>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-3 bg-slate-50 p-1.5 rounded-full border border-slate-100">
+                                ${prod.has_variations?`<button type="button" onclick="elegirVariacion('${productId}')" ${agotado?'disabled':''} class="sy-config-secondary">Elegir</button>`:`<div class="flex items-center gap-3 bg-slate-50 p-1.5 rounded-full border border-slate-100">
                                     <button type="button" onclick="${agotado ? '' : `cambiarCantidad('${productId}', -1)`}" class="w-8 h-8 bg-white text-slate-400 rounded-full flex items-center justify-center font-black shadow-sm ${agotado ? 'cursor-not-allowed opacity-30' : ''}">-</button>
                                     <span id="qty-${productId}" class="font-black text-slate-900 text-xs min-w-[15px] text-center">0</span>
                                     <button type="button" onclick="${agotado ? '' : `cambiarCantidad('${productId}', 1)`}" class="w-8 h-8 ${agotado ? 'bg-slate-300' : 'bg-slate-900'} text-white rounded-full flex items-center justify-center font-black ${agotado ? 'cursor-not-allowed' : 'shadow-md'}">+</button>
-                                </div>
+                                </div>`}
                             </div>
                         `}).join('')}
                     </div>
@@ -337,9 +339,10 @@
             }
         }
 
+        function elegirVariacion(id){ProductVariations.choose(id,[...productosPorId.values()],variantId=>cambiarCantidad(variantId,1));}
         function cambiarCantidad(id, cambio) {
             const producto = productosPorId.get(String(id));
-            if (!producto || !producto.is_available) return;
+            if (!producto || (cambio>0&&!ProductVariations.sellable(producto,[...productosPorId.values()]))) return;
             const index = carrito.findIndex(item => item.id === id);
             if (index !== -1) {
                 carrito[index].qty += cambio;
