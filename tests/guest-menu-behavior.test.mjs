@@ -1,3 +1,4 @@
+import {ProductVariations} from './variation-test-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -18,7 +19,7 @@ async function screen({enabled=true,query='',stored={},storageFails=false,create
   return {data:{checkoutUrl:'https://www.mercadopago.com.mx/checkout/test'}};
  }}};
  const location={search:'?id=rest'+query,hash:'',pathname:'/menu-publico.html',href:'https://app.test/menu-publico.html?id=rest'+query,assign:url=>redirects.push(url)};
- vm.runInNewContext(code,{window:{serveYourself:{supabase:db,escapeHtml:s=>String(s??''),safeImageUrl:s=>s}},document:{getElementById:element,hidden:false,addEventListener(){}},location,history:{replaceState(){}},navigator:{clipboard:{writeText:async()=>{}}},localStorage:{getItem:k=>storage.get(k),setItem(k,v){if(storageFails)throw Error('Blocked');storage.set(k,v);},removeItem:k=>storage.delete(k)},URL,URLSearchParams,crypto,Uint8Array,Map,Set,console,setTimeout:()=>1,clearTimeout(){},confirm:()=>true});
+ vm.runInNewContext(code,{ProductVariations,window:{serveYourself:{supabase:db,escapeHtml:s=>String(s??''),safeImageUrl:s=>s}},document:{getElementById:element,hidden:false,addEventListener(){}},location,history:{replaceState(){}},navigator:{clipboard:{writeText:async()=>{}}},localStorage:{getItem:k=>storage.get(k),setItem(k,v){if(storageFails)throw Error('Blocked');storage.set(k,v);},removeItem:k=>storage.delete(k)},URL,URLSearchParams,crypto,Uint8Array,Map,Set,console,setTimeout:()=>1,clearTimeout(){},confirm:()=>true});
  await tick();
  return {elements,storage,calls,redirects,release,add:()=>element('menu-content').listeners.click({target:{closest:()=>({dataset:{add:'p'}})}}),pay:()=>element('guest-checkout').listeners.submit({preventDefault(){}}),resume:()=>element('resume-payment').listeners.click()};
 }

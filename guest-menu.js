@@ -23,8 +23,9 @@
     }
     function render() {
         const canOrder = restaurant.guest_pickup_enabled && restaurant.accepting_orders && !saved;
-        const categories = [...new Set(products.map(p => (p.category || 'General').trim() || 'General'))];
-        $('menu-content').innerHTML = categories.map(category => `<section><h2 class="text-xl font-black mb-3">${esc(category)}</h2><div class="grid sm:grid-cols-2 gap-3">${products.filter(p => ((p.category || 'General').trim() || 'General') === category).map(p => `<article class="sy-guest-product"><img src="${esc(safe(p.image_url) || 'logo.png')}" alt="${esc(p.name)}"><div><h3>${esc(p.name)}</h3><p>${money(p.price)}</p>${canOrder ? `<button type="button" data-add="${p.id}" aria-label="Agregar ${esc(p.name)}">Agregar</button>` : ''}</div></article>`).join('')}</div></section>`).join('') || '<p>No hay productos disponibles por ahora.</p>';
+        const catalog=ProductVariations.catalog(products);
+        const categories = [...new Set(catalog.map(p => (p.category || 'General').trim() || 'General'))];
+        $('menu-content').innerHTML = categories.map(category => `<section><h2 class="text-xl font-black mb-3">${esc(category)}</h2><div class="grid sm:grid-cols-2 gap-3">${catalog.filter(p => ((p.category || 'General').trim() || 'General') === category).map(p => `<article class="sy-guest-product"><img src="${esc(safe(p.image_url) || 'logo.png')}" alt="${esc(p.name)}"><div><h3>${esc(p.name)}</h3><p>${p.is_available?`${p.has_variations?'Desde ':''}${money(p.price)}`:'Agotado'}</p>${canOrder&&p.is_available ? `<button type="button" data-add="${p.id}" aria-label="Agregar ${esc(p.name)}">${p.has_variations?'Elegir variación':'Agregar'}</button>` : ''}</div></article>`).join('')}</div></section>`).join('') || '<p>No hay productos disponibles por ahora.</p>';
         $('guest-cart').hidden = !canOrder;
         const methods = [];
         if (restaurant.payment_online) methods.push(['mercado_pago','Mercado Pago']);
@@ -99,7 +100,7 @@
     }
     $('menu-content').addEventListener('click', e => {
         const button = e.target.closest('[data-add]'); if (!button || saved || busy) return;
-        const id = button.dataset.add; cart.set(id, Math.min(50, (cart.get(id) || 0) + 1)); renderCart();
+        ProductVariations.choose(button.dataset.add,products,id=>{cart.set(id,Math.min(50,(cart.get(id)||0)+1));renderCart()});
     });
     $('cart-items').addEventListener('click', e => {
         const button = e.target.closest('[data-change]'); if (!button || saved || busy) return;

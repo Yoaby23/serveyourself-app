@@ -197,7 +197,7 @@
             // 2. Buscar en productos
             const { data: productos, error: productsError } = await _supabase
                 .from('products')
-                .select('restaurant_id')
+                .select('restaurant_id').eq('is_archived',false)
                 .ilike('name', `%${query}%`);
 
             if (requestVersion !== restaurantRequest) return;
