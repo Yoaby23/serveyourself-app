@@ -399,3 +399,25 @@ cabeceras defensivas configuradas en `vercel.json`.
 - En un Supabase separado con credenciales de prueba de Mercado Pago, recorre compra, confirmación tardía y reembolso. Comprueba que Caja distingue estados y conserva la referencia. En el local físico imprime un ticket y prueba las notificaciones con los equipos del turno.
 - El flujo **Salud de producción** comprueba portada, SDK y catálogo sin crear pedidos. Los fallos quedan visibles en GitHub Actions. Configura la protección de `main` para exigir los trabajos **JavaScript** y **PostgreSQL** en cada PR.
 - Si falla la nueva interfaz tras publicar, restaura en Vercel la última versión estable y vuelve a comprobar el dominio con `node scripts/check-production.mjs`. La tabla de eventos nueva es aditiva y se conserva para que el historial de caja siga disponible.
+
+### Conciliación de Mercado Pago en Caja
+
+En **Pagos en línea → Historial de Mercado Pago**, busca por folio o por fechas. Las fechas siguen la zona horaria del equipo de caja. El historial incluye reembolsos registrados fuera de un turno. **Ver detalle** del turno sigue mostrando los movimientos del intervalo del turno.
+
+El desglose guarda la comisión que Mercado Pago atribuye al vendedor, el IVA cuando el proveedor lo identifica por separado, el neto informado y la fecha de disponibilidad. Un campo sin datos se muestra como **Sin dato**. El neto informado se utiliza para comparar con los movimientos de Mercado Pago. Para cobros anteriores todavía aprobados se puede intentar **Consultar detalle en Mercado Pago**. Una devolución conserva el desglose que se alcanzó a registrar antes del reembolso. Para devoluciones históricas con desglose incompleto, consulta el estado de cuenta del proveedor.
+
+Para publicar, aplica primero la migración de conciliación, despliega `mercado-pago-webhook` con sus dependencias y publica el frontend al final.
+
+### Prueba de un turno con el equipo del restaurante
+
+1. Abre un turno en el equipo de Caja, abre Cocina en otro equipo, y anota la hora, el operador y las versiones de navegador.
+2. Pon el POS en modo de impresión correspondiente al equipo. Crea una cuenta de mesa de prueba, imprime la comanda y verifica folio, mesa, productos y variantes en papel. Confirma que Cocina muestre el mismo folio una sola vez.
+3. Escanea el QR con otro dispositivo. Completa un pedido de prueba por un método acordado con el restaurante y verifica el estado en los tres dispositivos. Si se usa una terminal física, coteja el importe y referencia antes de registrar el pago en caja.
+4. Comprueba que Caja y Cocina muestran **Pedidos sincronizados** sin recargar. Desconecta Cocina, confirma el pedido de prueba desde Caja y vuelve a conectarla. Verifica una sola comanda y que reaparezca el indicador de sincronización. Prueba también un reembolso por folio en **Pagos en línea**.
+5. Cierra las cuentas de prueba y el turno. Compara el corte con los movimientos y guarda los folios, los tiempos y el resultado de cada prueba. Marca como pendiente cualquier equipo que aún no se haya probado físicamente.
+
+### Protección de la rama y entrega de alertas
+
+Con una cuenta administradora, configura una regla para `main` que requiera pull requests y los controles **JavaScript** y **PostgreSQL** de GitHub Actions, y bloquee el borrado y el force push. Vercel Preview necesita un backend separado y queda fuera de estos controles obligatorios hasta que tenga uno configurado.
+
+**Salud de producción** abre o actualiza una incidencia de GitHub asignada al dueño del repositorio ante un fallo. Confirma con esa persona que tenga habilitadas las notificaciones de GitHub. En la versión publicada, ejecuta **Run workflow** con **Enviar una alerta de prueba al dueño del repositorio** y verifica que la persona reciba el aviso. El ejercicio crea una incidencia de prueba separada, que debe cerrarse después de confirmarla. Una ejecución programada puede retrasarse. El flujo revisa disponibilidad pública y no genera cobros.

@@ -2,11 +2,20 @@ name: Salud de producción
 
 on:
   workflow_dispatch:
+    inputs:
+      exercise_alert:
+        description: Enviar una alerta de prueba al dueño del repositorio
+        type: boolean
+        default: false
   schedule:
     - cron: '17 */4 * * *'
 
 permissions:
   contents: read
+
+concurrency:
+  group: production-health
+  cancel-in-progress: false
 
 jobs:
   public-production:
@@ -19,3 +28,24 @@ jobs:
         with:
           node-version: 22
       - run: node scripts/check-production.mjs
+
+  notify:
+    name: Avisar al responsable
+    needs: public-production
+    if: ${{ always() && (needs.public-production.result == 'failure' || inputs.exercise_alert == true) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/github-script@v7
+        env:
+          EXERCISE_ALERT: ${{ inputs.exercise_alert }}
+          HEALTH_RESULT: ${{ needs.public-production.result }}
+        with:
+          script: |
+            const { reportProductionHealth } = await import(process.cwd() + '/scripts/report-production-health.mjs');
+            if (process.env.HEALTH_RESULT === 'failure') await reportProductionHealth(github, context);
+            if (process.env.EXERCISE_ALERT === 'true') await reportProductionHealth(github, context, true);
