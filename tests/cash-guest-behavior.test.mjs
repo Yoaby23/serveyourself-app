@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { stripTypeScriptTypes } from 'node:module';
+import { settlementFields } from '../supabase/functions/_shared/mercado-pago-settlement.ts';
 import { corsHeaders } from '../supabase/functions/_shared/cors.ts';
 const cash=fs.readFileSync(new URL('../caja.html',import.meta.url),'utf8');
 const guest={id:42,order_source:'online',service_type:'pickup',payment_before_kitchen:true,payment_method:'cash',total:50,items:[{nombre:'Comida',price:25,qty:2}],pickup_name:'Ana'};
@@ -33,7 +34,7 @@ async function webhook({required=true,failRefund=false}={}){
  const admin={from(name){const q={select(){return this;},eq(){return this;},single:async()=>({data:order}),maybeSingle:async()=>({data:null})};return q;},auth:{getUser:async()=>({data:{user:{id:'owner'}}})},rpc:async()=>({data:required?{refund_required:true}:{payment_status:'approved'}})};
  globalThis.Deno={env:{get:key=>key==='APP_URL'?'https://app.test':'test'}};
  const source=fs.readFileSync(new URL('../supabase/functions/mercado-pago-webhook/index.ts',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
- vm.runInNewContext(stripTypeScriptTypes(source),{Deno:{env:globalThis.Deno.env,serve:fn=>handler=fn},URL,Request,Response,console:{log(){},error(){}},crypto,TextEncoder,Date,corsHeaders,createClient:()=>admin,getValidMercadoPagoToken:async()=> 'test',fetch:async()=>Response.json({id:789,external_reference:'42',transaction_amount:50,currency_id:'MXN',status:'approved',date_created:new Date().toISOString()}),refundOrder:async()=>{refunds++;if(failRefund)throw Error('Provider unavailable');}});
+ vm.runInNewContext(stripTypeScriptTypes(source),{Deno:{env:globalThis.Deno.env,serve:fn=>handler=fn},URL,Request,Response,console:{log(){},error(){}},crypto,TextEncoder,Date,corsHeaders,settlementFields,createClient:()=>admin,getValidMercadoPagoToken:async()=> 'test',fetch:async()=>Response.json({id:789,external_reference:'42',transaction_amount:50,currency_id:'MXN',status:'approved',date_created:new Date().toISOString()}),refundOrder:async()=>{refunds++;if(failRefund)throw Error('Provider unavailable');}});
  const response=await handler(new Request('https://edge.test/?order_id=42&payment_id=789',{headers:{Authorization:'Bearer test'}}));return {response,refunds};
 }
 test('webhook honors database cut cancellation even when its initial read was stale',async()=>{

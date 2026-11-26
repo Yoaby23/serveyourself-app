@@ -22,6 +22,13 @@ begin
 
     assert not has_table_privilege('anon','public.online_payment_events','SELECT');
     assert not has_table_privilege('authenticated','public.online_payment_events','INSERT');
+    assert not has_column_privilege('authenticated','public.online_payment_events','provider_net','UPDATE');
+    execute 'set local role service_role';
+    update public.online_payment_events set provider_fee=4.20,provider_net=80.80
+    where order_id=v_order and event_type='approved';
+    execute 'reset role';
+    assert (select provider_net=80.80 from public.online_payment_events where order_id=v_order and event_type='approved');
+    assert (select provider_net is null from public.online_payment_events where order_id=v_order and event_type='refunded');
     perform set_config('request.jwt.claim.sub',other_id::text,true);
     execute 'set local role authenticated';
     assert not exists(select from public.online_payment_events where order_id=v_order);

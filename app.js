@@ -31,10 +31,11 @@ window.serveYourself = {
         }
     },
 
-    async reconcileMercadoPagoOrder(orderId, paymentId = null) {
+    async reconcileMercadoPagoOrder(orderId, paymentId = null, settlementOnly = false) {
         const webhookUrl = new URL(`${SUPABASE_URL}/functions/v1/mercado-pago-webhook`);
         webhookUrl.searchParams.set('order_id', String(orderId));
         if (paymentId) webhookUrl.searchParams.set('payment_id', String(paymentId));
+        if (settlementOnly) webhookUrl.searchParams.set('action', 'settlement');
         const { data: { session } } = await this.supabase.auth.getSession();
         if (!session?.access_token) throw new Error('Sesión requerida para verificar el pago.');
         return fetch(webhookUrl.toString(), {

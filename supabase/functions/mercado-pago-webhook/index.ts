@@ -2,6 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { getValidMercadoPagoToken } from '../_shared/mercado-pago.ts';
 import { refundOrder } from '../_shared/refunds.ts';
+import { settlementFields } from '../_shared/mercado-pago-settlement.ts';
 
 async function validMercadoPagoSignature(request: Request, paymentId: string | null) {
   const secret = Deno.env.get('MERCADO_PAGO_WEBHOOK_SECRET');
@@ -28,6 +29,7 @@ Deno.serve(async (request) => {
   try {
     let requesterId: string | null = null;
     const url = new URL(request.url);
+    const settlementOnly = request.method === 'GET' && url.searchParams.get('action') === 'settlement';
     const body = request.method === 'POST' ? await request.json().catch(() => ({})) : {};
     let paymentId = url.searchParams.get('data.id')
       ?? url.searchParams.get('payment_id')
@@ -72,14 +74,14 @@ Deno.serve(async (request) => {
       return new Response('method not allowed', { status: 405, headers: corsHeaders(request) });
     }
     const { data: order, error: orderError } = await admin.from('orders')
-      .select('id, customer_id, restaurant_id, total, payment_method, payment_status, payment_expires_at, created_at, status, cancellation_reason, mercado_pago_preference_id')
+      .select('id, customer_id, restaurant_id, total, payment_method, payment_status, payment_expires_at, created_at, status, cancellation_reason, mercado_pago_preference_id, mercado_pago_payment_id')
       .eq('id', orderId)
       .single();
     if (orderError || !order || order.payment_method !== 'mercado_pago') {
       console.error('Mercado Pago order not found', { orderId, orderError });
       return new Response('order not found', { status: 404, headers: corsHeaders(request) });
     }
-    if (request.method === 'GET' && requesterId && requesterId !== order.customer_id && requesterId !== order.restaurant_id) {
+    if (request.method === 'GET' && requesterId && requesterId !== order.restaurant_id && (settlementOnly || requesterId !== order.customer_id)) {
       const userClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
         global: { headers: { Authorization: request.headers.get('Authorization')! } }
       });
@@ -89,6 +91,12 @@ Deno.serve(async (request) => {
       if (!allowed) return new Response('forbidden', { status: 403, headers: corsHeaders(request) });
     }
 
+    if (settlementOnly) {
+      if (order.payment_status !== 'approved' || !order.mercado_pago_payment_id) {
+        return new Response('settlement unavailable', { status: 409, headers: corsHeaders(request) });
+      }
+      paymentId = order.mercado_pago_payment_id;
+    }
     const accessToken = await getValidMercadoPagoToken(admin, order.restaurant_id);
     if (!paymentId) {
       const searchUrl = new URL('https://api.mercadopago.com/v1/payments/search');
@@ -136,6 +144,22 @@ Deno.serve(async (request) => {
     }
 
     if (payment.currency_id !== 'MXN') return new Response('currency mismatch', { status: 409, headers: corsHeaders(request) });
+    const saveSettlement = async () => {
+      if (payment.status !== 'approved' || String(payment.id) !== String(paymentId)) return false;
+      const fields = settlementFields(payment);
+      if (!Object.keys(fields).length) return false;
+      const { data, error } = await admin.from('online_payment_events').update(fields)
+        .eq('restaurant_id', order.restaurant_id).eq('order_id', order.id)
+        .eq('event_type', 'approved').eq('provider_payment_id', String(paymentId)).select('id');
+      if (error) throw error;
+      return Boolean(data?.length);
+    };
+    if (settlementOnly) {
+      const saved = await saveSettlement();
+      return new Response(saved ? 'settlement recorded' : 'settlement unavailable', {
+        status: saved ? 200 : 409, headers: corsHeaders(request)
+      });
+    }
     const { data: refundOperation, error: refundError } = await admin.from('payment_refund_operations').select('*').eq('order_id', order.id).maybeSingle();
     if (refundError) throw refundError;
     const expiresAt = new Date(order.payment_expires_at ?? new Date(order.created_at).getTime() + 5 * 60 * 1000).getTime();
@@ -156,6 +180,7 @@ Deno.serve(async (request) => {
       return new Response('closed-shift payment refunded', { status: 200, headers: corsHeaders(request) });
     }
     const paymentStatus = reconciliation?.payment_status || order.payment_status;
+    if (paymentStatus === 'approved') await saveSettlement();
 
     console.log('Mercado Pago order reconciled', { orderId, paymentId, paymentStatus });
     return new Response('ok', { status: 200, headers: corsHeaders(request) });
