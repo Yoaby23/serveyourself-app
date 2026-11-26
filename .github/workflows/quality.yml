@@ -10,14 +10,37 @@ permissions:
 
 jobs:
   tests:
+    name: JavaScript
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - run: npm ci
       - name: Pruebas de flujos y calidad
-        run: node --test tests/*.test.mjs
+        run: npm test
       - name: Validar espacios y marcadores de conflicto
-        run: git diff --check && ! git grep -nE '^(<<<<<<<|=======|>>>>>>>)'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          base="$BASE_SHA"
+          if [[ "$base" =~ ^0*$ ]]; then base="$(git mktree </dev/null)"; fi
+          git diff --check "$base" HEAD
+          ! git grep -nE '^(<<<<<<<|=======|>>>>>>>)'
+  database:
+    name: PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.1
+      - name: Reconstruir la base local
+        run: supabase start
+      - name: Ejecutar suites SQL
+        run: bash scripts/test-database.sh

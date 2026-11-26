@@ -1,12 +1,12 @@
-const SUPABASE_URL = 'https://spbgledcjwtqmlqdlpyx.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_Uf9mS1Ev7fDYIld8PVCL5g_BwenGNXY';
+const SUPABASE_URL = '__SY_SUPABASE_URL__';
+const SUPABASE_KEY = '__SY_SUPABASE_PUBLISHABLE_KEY__';
 
 window.serveYourself = {
     supabase: window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
         auth: {
             persistSession: true,
             autoRefreshToken: true,
-            detectSessionInUrl: true,
+            detectSessionInUrl: !window.SY_PASSWORD_RECOVERY_PAGE,
             storage: window.localStorage
         }
     }),

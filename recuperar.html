@@ -4,7 +4,7 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>Serveyouself</title>
+    <title>ServeYourself</title>
     <link rel="stylesheet" href="tailwind.generated.css">
     <link rel="stylesheet" href="styles.css">
     <style>
@@ -53,11 +53,37 @@
         </section>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
+    <script src="/vendor/supabase.js"></script>
     <script src="app-config.js"></script>
+    <script>window.SY_PASSWORD_RECOVERY_PAGE = true;</script>
     <script src="business-image.js"></script><script src="app.js"></script>
     <script>
-        const auth = window.serveYourself.supabase.auth;
+        const recoveryStorageKey = 'sy-password-recovery';
+        const verifierKey = recoveryStorageKey + '-code-verifier';
+        const recoverySession = new Map();
+        // The email can open another tab. Share only the PKCE verifier across tabs.
+        const recoveryStorage = {
+            getItem: key => key === verifierKey ? window.localStorage.getItem(key) : recoverySession.get(key) ?? null,
+            setItem(key, value) {
+                if (key === verifierKey) window.localStorage.setItem(key, value);
+                else recoverySession.set(key, value);
+            },
+            removeItem(key) {
+                if (key === verifierKey) window.localStorage.removeItem(key);
+                else recoverySession.delete(key);
+            }
+        };
+        const auth = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: {
+                flowType: 'pkce',
+                storageKey: recoveryStorageKey,
+                storage: recoveryStorage,
+                detectSessionInUrl: false,
+                autoRefreshToken: false,
+                persistSession: true
+            }
+        }).auth;
+        let recoveryVerified = false;
         const requestView = document.getElementById('request-view');
         const updateView = document.getElementById('update-view');
         const requestedNext=new URLSearchParams(window.location.search).get('next');
@@ -97,7 +123,7 @@
         document.getElementById('update-form').addEventListener('submit', async event => {
             event.preventDefault();
             const button=document.getElementById('update-button');
-            if(button.disabled)return;
+            if (button.disabled || !recoveryVerified) return;
             const password=document.getElementById('new-password').value;
             const confirmation=document.getElementById('confirm-password').value;
             if(password !== confirmation){alert('Las contraseñas no coinciden.');return;}
@@ -105,26 +131,36 @@
             try {
                 const { error } = await auth.updateUser({ password });
                 if(error)throw error;
-                try{await auth.signOut();}catch{}
+                recoveryVerified = false;
+                try { await auth.signOut(); } catch {}
                 alert('Contraseña actualizada. Ya puedes iniciar sesión.');window.location.replace(recoveryLogin);
             }catch(error){
                 alert('No fue posible cambiar la contraseña: '+error.message);button.disabled=false;button.textContent='GUARDAR CONTRASEÑA';
             }
         });
 
-        auth.onAuthStateChange(event => {
-            if (event === 'PASSWORD_RECOVERY') showUpdateView();
-        });
-
-        (async function initializeRecovery() {
-            if (new URLSearchParams(window.location.search).get('mode') !== 'update') return;
-            try{
-                const { data: { session },error } = await auth.getSession();
-                if(error)throw error;
-                if(session){showUpdateView();return;}
-                alert('El enlace de recuperación venció o ya fue utilizado. Solicita uno nuevo.');
-                window.history.replaceState({}, '', 'recuperar.html');
-            }catch(error){alert('No se pudo verificar el enlace. Revisa tu conexión y vuelve a intentarlo.');}
+        const recoveryReady = (async function initializeRecovery() {
+            const url = new URL(window.location.href);
+            if (url.searchParams.get('mode') !== 'update') return;
+            const code = url.searchParams.get('code');
+            try {
+                if (code) {
+                    const { data, error } = await auth.exchangeCodeForSession(code);
+                    if (!error && data.session && data.redirectType === 'recovery') {
+                        recoveryVerified = true;
+                        url.searchParams.delete('code');
+                        window.history.replaceState({}, '', url.pathname + url.search);
+                        showUpdateView();
+                        return;
+                    }
+                }
+                alert('Usa un enlace de recuperación vigente en el navegador donde lo solicitaste.');
+                const retryUrl = new URL('recuperar.html', url);
+                if (recoveryNext) retryUrl.searchParams.set('next', recoveryNext);
+                window.history.replaceState({}, '', retryUrl.pathname + retryUrl.search);
+            } catch {
+                alert('No se pudo verificar el enlace. Revisa tu conexión y vuelve a intentarlo.');
+            }
         })();
     </script>
 </body>

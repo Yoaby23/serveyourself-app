@@ -1,11 +1,14 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
 
+import { appOrigin } from '../_shared/cors.ts';
+
 function redirect(appUrl: string, status: string) {
   return Response.redirect(`${appUrl}/admin.html?mercado_pago=${encodeURIComponent(status)}`, 302);
 }
 
 Deno.serve(async (request) => {
-  const appUrl = Deno.env.get('APP_URL') ?? 'https://serveyourself-app.vercel.app';
+  const appUrl = appOrigin();
+  if (!appUrl) return new Response('Configura la URL de la aplicación.', { status: 503 });
   try {
     const url = new URL(request.url);
     const code = url.searchParams.get('code');

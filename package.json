@@ -1,0 +1,11 @@
+{
+  "name": "serveyourself",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.118.0"
+  }
+}

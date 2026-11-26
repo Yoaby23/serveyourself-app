@@ -50,7 +50,7 @@ function worker(fetcher, cached) {
     vm.runInNewContext(fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8'),{
         URL,Response,fetch:fetcher,console:{warn(){}},importScripts(){throw new Error('Push CDN unavailable');},
         self:{location:{origin:'https://app.test'},addEventListener:(name,fn)=>events[name]=fn,clients:{claim(){}},skipWaiting(){}},
-        caches:{open:async()=>({put:async(...args)=>writes.push(args),addAll:async()=>{}}),match:async()=>cached,keys:async()=>['other-app-cache','serveyourself-shell-v18'],delete:async name=>deleted.push(name)}
+        caches:{open:async()=>({put:async(...args)=>writes.push(args),addAll:async()=>{},match:async key=>typeof cached==='function'?cached(key):cached}),keys:async()=>['other-app-cache','serveyourself-shell-v18'],delete:async name=>deleted.push(name)}
     });
     return {events,writes,deleted,async request(path,mode='navigate'){
         const pending=[];let response;
@@ -71,4 +71,14 @@ test('offline missing JS never receives HTML; cached files still work; navigatio
 test('successful resources are cached and activation preserves other apps caches',async()=>{
     const sw=worker(async()=>new Response('OK'));await sw.request('/app.js','cors');assert.equal(sw.writes.length,1);
     let done;sw.events.activate({waitUntil:p=>done=p});await done;assert.deepEqual(sw.deleted,['serveyourself-shell-v18']);
+});
+
+test('offline startup URL uses the canonical shell and callback parameters stay out of cache keys', async () => {
+    const online = worker(async () => new Response('OK'));
+    await online.request('/recuperar.html?mode=update&code=fixture');
+    assert.equal(online.writes[0][0], '/recuperar.html');
+    const offline = worker(async () => { throw new Error('Offline'); },
+        key => key === '/index.html' ? new Response('inicio') : undefined);
+    assert.equal(await (await offline.request('/index.html?source=pwa')).text(), 'inicio');
+    assert.equal(await (await offline.request('/')).text(), 'inicio');
 });

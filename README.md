@@ -19,7 +19,7 @@ La operación actual de cocina y pickup se documenta en [Cocina automática](doc
 
 ## Arquitectura
 
-El frontend es HTML, Tailwind CSS y JavaScript sin proceso de compilación. Supabase proporciona autenticación, PostgreSQL, políticas RLS y Realtime. La publicación actual se realiza con Vercel.
+El frontend es HTML, Tailwind CSS y JavaScript. El build copia los archivos estáticos e inyecta la configuración pública de cada entorno. Supabase proporciona autenticación, PostgreSQL, políticas RLS y Realtime. La publicación actual se realiza con Vercel.
 
 ## Configuración de Supabase
 
@@ -226,11 +226,11 @@ del horario o aparecen productos/cantidades no representados en el historial.
 
 Para la lógica actual aplica también, después de las migraciones anteriores:
 
-`supabase/migrations/20261027004452_kitchen_priority_inventory_model.sql`
+`supabase/migrations/20261027010052_kitchen_priority_inventory_model.sql`
 
-`supabase/migrations/20261027010208_inventory_adjustment_precision.sql`
+`supabase/migrations/20261027010244_inventory_adjustment_precision.sql`
 
-Aplica finalmente `supabase/migrations/20261027212314_remove_ingredient_inventory.sql`.
+Aplica finalmente `supabase/migrations/20261027212458_remove_ingredient_inventory.sql`.
 La disponibilidad depende únicamente de `products.is_available`: el restaurante marca
 cada producto disponible o fuera de stock. No existen ingredientes, recetas ni descuentos
 automáticos. Los pedidos nuevos validan disponibilidad en el servidor y las comandas
@@ -278,7 +278,7 @@ El acceso por correo incluye recuperación mediante Supabase Auth. Agrega esta d
 https://serveyourself-app.vercel.app/recuperar.html
 ```
 
-El enlace enviado por correo abre `recuperar.html`, valida la sesión temporal y permite establecer una contraseña nueva de al menos 8 caracteres.
+El enlace de recuperación usa PKCE. Ábrelo en el mismo navegador donde solicitaste el correo. Si usas un enlace enviado antes de este cambio o abres otro navegador, solicita uno nuevo. La sesión de recuperación tiene almacenamiento separado de la sesión normal.
 
 ### Mapas
 
@@ -290,7 +290,7 @@ cambia el proveedor de mosaicos por uno con capacidad y SLA adecuados.
 ### OneSignal
 
 1. Crea una Web App en OneSignal con el dominio de producción.
-2. Coloca el App ID público en `app-config.js` como `oneSignalAppId`.
+2. Configura `ONESIGNAL_APP_ID` en el entorno de build de Vercel.
 3. Configura estos secretos en Supabase Functions:
 
 ```text
@@ -301,7 +301,7 @@ APP_URL=https://serveyourself-app.vercel.app
 
 ### Mercado Pago
 
-Cada restaurante conecta su propia cuenta mediante OAuth de Mercado Pago Marketplace.
+Cada restaurante conecta su propia cuenta mediante OAuth de Mercado Pago Marketplace. **Pausar pagos en línea** deshabilita nuevas órdenes con ese método y conserva la conexión para verificar pagos existentes y procesar devoluciones. El restaurante puede reactivar el método desde su configuración.
 Configura estos secretos en Supabase Functions:
 
 ```text
@@ -332,13 +332,42 @@ secreta en `MERCADO_PAGO_WEBHOOK_SECRET`. Las notificaciones sin firma válida s
 
 ## Ejecución local
 
-Sirve la carpeta mediante HTTP; no abras los archivos con `file://`.
+Usa Docker y la CLI de Supabase para arrancar la base, Auth, Storage y Realtime. El build de la app requiere Node 22 o posterior. Sirve `dist` mediante HTTP.
 
 ```bash
-python -m http.server 8080
+npm ci
+supabase start
+supabase status
+# Usa únicamente la clave local Publishable o anon que devuelve supabase status.
+SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_PUBLISHABLE_KEY='REEMPLAZAR_CON_CLAVE_LOCAL' node scripts/build.mjs
+python -m http.server 8080 --bind 127.0.0.1 --directory dist
 ```
 
-Después abre `http://localhost:8080`.
+Abre `http://127.0.0.1:8080`. Configura `APP_URL=http://127.0.0.1:8080` en el archivo de entorno local de las Edge Functions y arráncalas con `supabase functions serve --env-file <archivo-local>`. Para iniciar sesión por correo y probar recuperación, usa el buzón local indicado por `supabase status`.
+
+```bash
+npm test
+bash scripts/test-database.sh
+```
+
+### Entornos de Vercel y Supabase
+
+- Vercel ejecuta `node scripts/build.mjs` y sirve `dist`. Asegúrate de exponer `VERCEL_ENV` como variable de sistema. Configura `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` por entorno. Las variables `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` se admiten si ya existen. El build de Preview requiere acceso a un proyecto aislado. Una Preview sin ese proyecto falla antes de publicar.
+- Las Edge Functions usan `APP_URL` como origen y destino de retornos. Si el entorno tiene alias adicionales, configúralos explícitamente en `APP_ALLOWED_ORIGINS` separados por comas y registra las URL permitidas de Auth para ese entorno. Usa credenciales independientes para Mercado Pago y OneSignal. El build local y Preview no usan el App ID de producción.
+- Los avisos se encolan aunque el envío esté desactivado. En el SQL Editor de cada entorno, registra la URL de su función con una cuenta administradora después de aplicar la migración `isolate_integrations_and_catalog`. El cron existente reintenta los eventos pendientes. En local, el endpoint permitido dentro del entorno Docker es `http://kong:8000/functions/v1/send-order-notification`.
+
+```sql
+insert into sy_private.integration_settings(id, notification_url)
+values (true, 'https://<ref-de-este-entorno>.supabase.co/functions/v1/send-order-notification')
+on conflict (id) do update set notification_url = excluded.notification_url;
+```
+
+### Publicación de transferencias en dos etapas
+
+`main` es la rama de producción. En GitHub, configura la protección de `main` para exigir pull request y ambos trabajos del flujo `Calidad` (`JavaScript` y `PostgreSQL`). Verifica primero que las 65 migraciones históricas ya aplicadas coincidan por versión.
+
+1. Usa el commit de compatibilidad, que termina en `20261126165749_isolate_integrations_and_catalog.sql`. Revisa con `supabase db push --dry-run` que esa sea la única migración nueva antes de aplicarla. Configura el endpoint de avisos en la misma ventana, despliega las Edge Functions actualizadas y publica el frontend. Verifica en producción que los clientes puedan consultar la transferencia de su pedido desde **Mis pedidos**. Esta etapa mantiene el catálogo que usan las versiones anteriores.
+2. Tras verificar el frontend y actualizar las pestañas abiertas que aún usen la versión anterior, aplica `20261126171238_restrict_public_transfer_details.sql` como segunda migración. Comprueba que un visitante anónimo siga viendo el catálogo con los campos bancarios vacíos y que el cliente dueño del pedido pendiente siga viendo sus instrucciones privadas.
 
 ## CSS de producción
 

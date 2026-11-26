@@ -35,7 +35,7 @@ assert.match(store, /createOrderOnce/, 'El pedido delivery debe usar la ruta seg
 assert.match(store, /serviceType !== 'delivery' && res\.payment_transfer/, 'Transferencia debe quedar excluida del modo delivery');
 assert.match(dispatch, /accept_delivery_order/, 'Despacho debe aceptar o rechazar pedidos');
 const cashDispatch=read('cash-dispatch.js');
-const assignedDelivery=read('supabase/migrations/20261110060000_cashier_assigned_delivery.sql');
+const assignedDelivery=read('supabase/migrations/20261110123650_cashier_assigned_delivery.sql');
 assert.match(cashDispatch,/assign_delivery_driver/,'Caja debe asignar la entrega');
 assert.match(cashDispatch,/list_delivery_drivers/,'Caja debe consultar su equipo de reparto');
 assert.doesNotMatch(driver,/claim_delivery_order|dismiss_delivery_offer|release_delivery_order/,'El repartidor no debe aceptar, rechazar ni liberar asignaciones');

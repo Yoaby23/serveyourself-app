@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
-import { corsHeaders, jsonResponse } from '../_shared/cors.ts';
+import { appOrigin, corsHeaders, jsonResponse } from '../_shared/cors.ts';
 import { guestOrderId } from '../_shared/guest-access.ts';
 import { getValidMercadoPagoToken } from '../_shared/mercado-pago.ts';
 
@@ -57,7 +57,8 @@ Deno.serve(async (request) => {
       if (!existingResponse.ok || !existing.init_point) throw new Error('No se pudo recuperar el pago pendiente. Reintenta sin crear otro pedido.');
       return jsonResponse(request, { checkoutUrl: existing.init_point, preferenceId: existing.id });
     }
-    const appUrl = Deno.env.get('APP_URL') ?? 'https://serveyourself-app.vercel.app';
+    const appUrl = appOrigin();
+    if (!appUrl) throw new Error('Configura la URL de la aplicación para habilitar pagos.');
     const feePercent = Math.max(0, Math.min(100, Number(Deno.env.get('MERCADO_PAGO_FEE_PERCENT') ?? 0)));
     const marketplaceFee = Math.round(Number(order.total) * feePercent) / 100;
     const checkoutItems = order.items.map((item: Record<string, unknown>) => ({

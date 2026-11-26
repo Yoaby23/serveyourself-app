@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
-import { corsHeaders, jsonResponse } from '../_shared/cors.ts';
+import { appOrigin, corsHeaders, jsonResponse } from '../_shared/cors.ts';
 
 type Notice = { message: string; path: string };
 type Event = { id: string; order_id: number; ticket_id: number | null; kind: string; state: string };
@@ -83,6 +83,11 @@ Deno.serve(async request => {
     // Cached clients may still invoke the old endpoint. Only committed database events send alerts.
     if(!body.dispatchId) return jsonResponse(request,{skipped:true});
     if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(body.dispatchId)) return jsonResponse(request,{error:'Evento inválido'},400);
+    const appUrl = appOrigin();
+    const production = Deno.env.get('SUPABASE_URL') === 'https://spbgledcjwtqmlqdlpyx.supabase.co';
+    const appId = Deno.env.get('ONESIGNAL_APP_ID') || (production ? 'c77aa3bf-9fbf-4928-9441-18093c934dcd' : '');
+    const apiKey = Deno.env.get('ONESIGNAL_REST_API_KEY')?.trim();
+    if (!appUrl || !appId || !apiKey) return jsonResponse(request,{error:'Avisos sin configurar'},503);
     const db=createWorkerClient();
     const {data:events,error:claimError}=await db.rpc('claim_order_notification',{event_id:body.dispatchId});
     if(claimError) throw claimError;
@@ -93,9 +98,9 @@ Deno.serve(async request => {
     const notices=order?await buildNotices(db,event,order):new Map<string,Notice>();
     let providerFailed = false;
     for(const [recipient,notice] of notices) {
-      const response=await fetch('https://api.onesignal.com/notifications',{method:'POST',headers:{Authorization:`Key ${Deno.env.get('ONESIGNAL_REST_API_KEY')?.trim()}`,'Content-Type':'application/json'},body:JSON.stringify({
-        app_id:'c77aa3bf-9fbf-4928-9441-18093c934dcd',idempotency_key:await deliveryKey(event.id,recipient),target_channel:'push',include_aliases:{external_id:[recipient]},
-        headings:{es:order?.restaurant_name || 'ServeYourself',en:order?.restaurant_name || 'ServeYourself'},contents:{es:notice.message,en:notice.message},url:(Deno.env.get('APP_URL')||'https://serveyourself-app.vercel.app')+notice.path
+      const response=await fetch('https://api.onesignal.com/notifications',{method:'POST',headers:{Authorization:`Key ${apiKey}`,'Content-Type':'application/json'},body:JSON.stringify({
+        app_id:appId,idempotency_key:await deliveryKey(event.id,recipient),target_channel:'push',include_aliases:{external_id:[recipient]},
+        headings:{es:order?.restaurant_name || 'ServeYourself',en:order?.restaurant_name || 'ServeYourself'},contents:{es:notice.message,en:notice.message},url:appUrl+notice.path
       })});
       const outcome = await response.json();
       if(!response.ok || !outcome.id) {

@@ -18,10 +18,8 @@ create index order_notification_event_pending on public.order_notification_event
 
 create function public.dispatch_order_notification(event_id uuid) returns void language plpgsql security definer set search_path='' as $$
 begin
- perform net.http_post(url:='https://spbgledcjwtqmlqdlpyx.supabase.co/functions/v1/send-order-notification',body:=jsonb_build_object('dispatchId',event_id),timeout_milliseconds:=15000);
-exception when others then
- -- The scheduled retry can recover a network queue failure without disrupting checkout.
- raise warning 'Order notification dispatch deferred';
+ -- Dispatch is enabled by the integration migration after the environment is configured.
+ return;
 end;$$;
 revoke all on function public.dispatch_order_notification(uuid) from public,anon,authenticated;
 
