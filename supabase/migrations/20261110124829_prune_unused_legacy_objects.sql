@@ -1,3 +1,5 @@
+begin;
+
 -- Retire superseded RPCs and empty storage. Historical rows remain in their original tables.
 set local lock_timeout='5s';
 lock table public.delivery_driver_status,public.delivery_offer_responses,public.products in access exclusive mode;
@@ -44,3 +46,5 @@ alter table public.products drop column inventory_available restrict;
 
 -- delivery_marketplace_events and order_station_statuses retain historical records.
 -- Finance, kitchen prediction, notification, auth and payment-retry storage remain operational.
+
+commit;
