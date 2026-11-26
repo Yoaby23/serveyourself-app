@@ -29,7 +29,7 @@ Deno.serve(async (request) => {
     } else return respond({ error: 'Acción inválida' }, 400);
     if (!orderId) return respond({ error: 'Pedido no encontrado o acceso vencido' }, 404);
     const { data: order, error } = await admin.from('orders')
-      .select('id,restaurant_id,pickup_name,items,notes,total,status,payment_method,payment_status,payment_expires_at,created_at')
+      .select('id,restaurant_id,pickup_name,items,notes,total,status,payment_method,payment_status,payment_expires_at,payment_updated_at,created_at')
       .eq('id', orderId).single();
     if (error || !order) return respond({ error: 'No se pudo consultar el pedido' }, 500);
     // An expiry is display-only here. Payment state is changed only by reconciliation.

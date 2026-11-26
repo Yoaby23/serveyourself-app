@@ -46,6 +46,64 @@
                 return running;
             };
         },
+        orderSync(status, refresh, browser = root) {
+            let lastSuccess, live = false;
+            const show = state => {
+                status.dataset.stale = String(['offline', 'retry'].includes(state));
+                const last = lastSuccess ? ` · Última actualización ${lastSuccess.toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'})}` : '';
+                status.textContent = ({
+                    offline: 'Sin conexión. Se conservan los pedidos visibles',
+                    retry: 'No se pudo actualizar. Reintentando…',
+                    live: 'Pedidos sincronizados',
+                    polling: 'Pedidos actualizados · sincronización por consulta'
+                }[state]) + last;
+            };
+            const resume = () => {
+                if (browser.navigator.onLine !== false && !browser.document.hidden) refresh();
+            };
+            const current = () => show(browser.navigator.onLine === false ? 'offline' : live ? 'live' : 'polling');
+            browser.addEventListener('offline', () => show('offline'));
+            browser.addEventListener('online', resume);
+            browser.addEventListener('pageshow', resume);
+            browser.addEventListener('focus', resume);
+            if (browser.navigator.onLine === false) show('offline');
+            browser.document.addEventListener('visibilitychange', resume);
+            return {
+                refresh: resume,
+                success() { lastSuccess = new Date(); current(); },
+                failure() { show(browser.navigator.onLine === false ? 'offline' : 'retry'); },
+                channel(state) {
+                    if (state === 'SUBSCRIBED') {
+                        live = true;
+                        if (lastSuccess && status.dataset.stale !== 'true') current();
+                        resume();
+                    }
+                    else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(state)) {
+                        live = false;
+                        if (lastSuccess && status.dataset.stale !== 'true') current();
+                    }
+                }
+            };
+        },
+        pickupProgress(order, restaurant = {}, now = Date.now()) {
+            const status = order.status;
+            if (status === 'cancelado') return { label: 'Pedido cancelado' };
+            if (status === 'entregado') return { label: 'Pedido entregado' };
+            if (status === 'listo') return { label: 'Listo para recoger' };
+            if (['pending', 'expired', 'rejected', 'refunded'].includes(order.payment_status)) {
+                return { label: ({pending:'Por pagar', expired:'Pago vencido', rejected:'Pago rechazado', refunded:'Pago reembolsado'})[order.payment_status] };
+            }
+            const label = status === 'preparando' ? 'En preparación' : 'Pedido recibido';
+            const start = Date.parse(order.payment_updated_at);
+            const minutes = Number(restaurant.pickup_prep_minutes);
+            const estimate = Date.parse(order.scheduled_for) || (minutes > 0 ? start + minutes * 60000 : NaN);
+            if (!Number.isFinite(estimate)) return minutes > 0 ? { label, timing:`Preparación estimada · ${minutes} min tras confirmar el pago` } : { label };
+            if (estimate < now) return { label, timing:'El pedido está tardando más de lo estimado. Consulta al negocio.' };
+            return { label, timing:`${order.scheduled_for ? 'Recogida programada' : 'Recogida estimada'} · ${new Date(estimate).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',timeZone:restaurant.timezone || 'America/Mexico_City'})}` };
+        },
+        orderAttempt(storage, key) {
+            try { return JSON.parse(storage.getItem(key) || 'null'); } catch { return null; }
+        },
         async allRows(makeQuery, size = 500) {
             const rows = [];
             for (let offset = 0; ; offset += size) {
@@ -55,17 +113,20 @@
                 if (!data || data.length < size) return rows;
             }
         },
-        async createOrderOnce(db, storage, storageKey, payload, randomUUID = () => crypto.randomUUID()) {
+        async createOrderOnce(db, storage, storageKey, payload, randomUUID = () => crypto.randomUUID(), lockPayload = false) {
             const fingerprint = JSON.stringify(payload);
-            let attempt;
-            try { attempt = JSON.parse(storage.getItem(storageKey) || 'null'); } catch { /* Replace invalid state. */ }
-            if (!attempt || attempt.fingerprint !== fingerprint) {
-                attempt = { fingerprint, requestId: randomUUID() };
+            let attempt = api.orderAttempt(storage, storageKey);
+            if (lockPayload && attempt?.payload) payload = attempt.payload;
+            else if (!attempt || attempt.fingerprint !== fingerprint || lockPayload) {
+                attempt = { fingerprint, requestId: randomUUID(), ...(lockPayload ? { payload } : {}) };
                 // Persist BEFORE the request: a lost response must reuse the same server key.
                 storage.setItem(storageKey, JSON.stringify(attempt));
             }
             const { data, error } = await db.rpc('create_customer_order_once', { p_request_id: attempt.requestId, p_payload: payload });
-            if (error) throw error;
+            if (error) {
+                if (lockPayload && ['P0001','23514','22P02','42501'].includes(error.code)) storage.removeItem(storageKey);
+                throw error;
+            }
             return data;
         },
         async setFavorite(db, favorites, restaurantId, wanted) {

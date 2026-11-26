@@ -42,7 +42,7 @@ assert.match(app, /created\.error\.code === '23505'/, 'La reparación del perfil
 assert.match(index, /resumeSavedSession/, 'La portada debe reanudar una sesión existente al abrir la PWA');
 assert.match(index, /getOrCreateProfile\(user\)/, 'El acceso debe reparar un perfil inexistente antes de redirigir');
 assert.match(index, /getSession\(\)/, 'La portada debe consultar la sesión local antes de mostrar el acceso');
-assert.match(read('sw.js'), /serveyourself-shell-v73/, 'La PWA debe renovar su caché al publicar cambios de producción');
+assert.match(read('sw.js'), /serveyourself-shell-v74/, 'La PWA debe renovar su caché al publicar cambios de producción');
 for (const page of [pos, kitchen, team, read('qr.html')]) {
     assert.match(page, /id="restaurant-nav"/, 'Cada pantalla operativa debe incluir el menú común');
 }
@@ -176,7 +176,7 @@ assert.match(pos, /table:\s*'kitchen_tickets'/, 'El mesero debe recibir el estad
 assert.match(pos, /setInterval[\s\S]*5000/, 'El POS debe sincronizar comandas listas aunque Realtime se interrumpa');
 assert.match(pos, /visibilitychange/, 'El POS debe sincronizarse al volver a primer plano');
 assert.match(kitchen, /5000/, 'Cocina debe sincronizarse aunque Realtime se interrumpa en la PWA');
-assert.match(kitchen, /visibilitychange/, 'Cocina debe actualizarse al volver a primer plano');
+assert.match(read('runtime.js'), /visibilitychange.*resume/, 'Cocina debe actualizarse al volver a primer plano');
 
 assert.match(index, /signInWithProvider\('google'/, 'El inicio debe ofrecer acceso con Google');
 assert.match(registration, /registerWithProvider\('google'/, 'El registro debe ofrecer acceso con Google');

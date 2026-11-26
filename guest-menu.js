@@ -55,10 +55,12 @@
         const pending = o.payment_status === 'pending' && o.status !== 'cancelado' && !data.expired;
         const cash = o.payment_method === 'cash';
         const names = { pendiente: 'Pago confirmado. Pedido recibido', preparando: 'En preparación', listo: 'Listo para recoger', entregado: 'Entregado', cancelado: 'Cancelado' };
+        const progress = window.SYRuntime?.pickupProgress(o, restaurant);
+        const contact = String(restaurant.phone || '').replace(/[^0-9+]/g, '');
         const label = o.status === 'cancelado' ? 'Pedido cancelado' : o.payment_status === 'approved' ? names[o.status] || o.status : ({ pending: data.expired ? 'Tiempo de pago agotado' : cash ? 'Pendiente de pago en caja' : 'Esperando confirmación de pago', rejected: 'Pago rechazado', refunded: 'Pago reembolsado', expired: 'Tiempo de pago agotado' }[o.payment_status] || 'Pago pendiente');
         $('guest-receipt').hidden = false;
         $('guest-cart').hidden = true;
-        $('receipt-details').innerHTML = `<p class="sy-guest-state">${esc(label)}</p><p>Pedido <b>#${o.id}</b> · ${esc(o.pickup_name)}</p><ul>${o.items.map(i => `<li>${i.qty} × ${esc(i.nombre)} <strong>${money(i.price * i.qty)}</strong></li>`).join('')}</ul><p><b>Total: ${money(o.total)}</b></p>${pending ? `<p class="sy-guest-help">Tienes hasta ${esc(new Date(o.payment_expires_at).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}))} para completar el pago. ${cash ? 'Pasa a caja e indica tu nombre o número de pedido. Se preparará después de registrar el pago completo.' : 'Si ya pagaste, espera la confirmación. No vuelvas a pagar.'}</p>` : ''}`;
+        $('receipt-details').innerHTML = `<p class="sy-guest-state">${esc(label)}</p><p>Pedido <b>#${o.id}</b> · ${esc(o.pickup_name)}</p><ul>${o.items.map(i => `<li>${i.qty} × ${esc(i.nombre)} <strong>${money(i.price * i.qty)}</strong></li>`).join('')}</ul><p><b>Total: ${money(o.total)}</b></p>${progress?.timing ? `<p class="sy-guest-help">${esc(progress.timing)}</p>` : ''}${contact && !['entregado','cancelado'].includes(o.status) ? `<a class="sy-config-secondary" href="tel:${esc(contact)}">Llamar al restaurante</a>` : ''}${pending ? `<p class="sy-guest-help">Tienes hasta ${esc(new Date(o.payment_expires_at).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}))} para completar el pago. ${cash ? 'Pasa a caja e indica tu nombre o número de pedido. Se preparará después de registrar el pago completo.' : 'Si ya pagaste, espera la confirmación. No vuelvas a pagar.'}</p>` : ''}`;
         $('resume-payment').hidden = !pending || cash;
         $('resume-payment').textContent = 'Continuar pago';
         clearTimeout(poll);
@@ -122,6 +124,7 @@
         try { await navigator.clipboard.writeText(url.href); message('Acceso privado copiado. Guárdalo y no lo compartas.'); }
         catch { message('No se pudo copiar. Conserva este navegador para consultar el pedido.'); }
     });
+    window.addEventListener?.('online', () => refresh(false));
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(false); });
     async function init() {
         if (!restaurantId) { message('Este enlace no contiene un restaurante.'); $('restaurant-name').textContent = 'Menú no disponible'; return; }
@@ -140,6 +143,13 @@
             const [r, p] = await Promise.all([db.from('public_qr_restaurants').select('*').eq('id', restaurantId).single(), db.from('public_qr_products').select('*').eq('restaurant_id', restaurantId).order('category').order('name')]);
             if (r.error || p.error || !r.data) throw new Error('No se pudo cargar el menú. Recarga para intentarlo de nuevo.');
             restaurant = r.data; products = p.data || [];
+            // The public QR catalog is kept compatible with previous releases.
+            if (saved || restaurant.guest_pickup_enabled) {
+                Promise.resolve().then(async () => {
+                    const { data } = await db.from('public_restaurants').select('pickup_prep_minutes').eq('id',restaurantId).maybeSingle();
+                    restaurant.pickup_prep_minutes = data?.pickup_prep_minutes;
+                }).catch(() => {});
+            }
 
             $('restaurant-name').textContent = restaurant.business_name;
             $('restaurant-logo').src = safe(restaurant.avatar_url) || 'logo.png';

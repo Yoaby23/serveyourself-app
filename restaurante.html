@@ -100,6 +100,7 @@
                     <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">Total a pagar</p>
                     <p id="modal-total" class="text-3xl font-black text-slate-900">$0.00</p>
                 </div>
+                <p id="checkout-progress" role="status" class="text-sm text-slate-600"></p>
                 <button type="button" id="btn-confirmar" onclick="confirmarPedido()" class="w-full py-5 bg-orange-500 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-orange-200">CONFIRMAR PEDIDO</button>
             </div>
         </div>
@@ -128,9 +129,19 @@
         });
 
 
+        let checkoutKey;
+        let confirming = false;
+        function showCheckoutState(message = '') {
+            const pending = SYRuntime.orderAttempt(sessionStorage, checkoutKey)?.payload;
+            document.getElementById('checkout-progress').textContent = message || (pending ? 'Hay un pedido por verificar. Se conservarán los datos que enviaste inicialmente.' : '');
+            const button = document.getElementById('btn-confirmar');
+            button.innerText = pending ? 'VERIFICAR PEDIDO' : 'CONFIRMAR PEDIDO';
+            button.disabled = confirming || (!pending && !document.getElementById('payment-method').value);
+        }
         async function cargarPagina() {
             const user = await window.serveYourself.requireUser();
             if (!user) return;
+            checkoutKey = `sy-order-attempt:${user.id}:${resId}`;
             if (!resId || !/^[0-9a-f-]{36}$/i.test(resId)) { window.location.href = 'menu.html'; return; }
 
             const { data: res, error: restaurantError } = await _supabase
@@ -199,7 +210,7 @@
             if (serviceType !== 'delivery' && res.payment_transfer) options.push('<option value="transfer">Transferencia bancaria</option>');
             if (res.payment_online && res.mercado_pago_connected) options.push('<option value="mercado_pago">Mercado Pago</option>');
             document.getElementById('payment-method').innerHTML = options.join('');
-            document.getElementById('btn-confirmar').disabled = !options.length;
+            showCheckoutState();
             mostrarDatosTransferencia();
         }
 
@@ -411,46 +422,51 @@
         }
 
         async function confirmarPedido() {
-            if (carrito.length === 0) return;
-            if (restaurant?.accepting_orders === false) { alert('El restaurante no está aceptando pedidos.'); return; }
-            const btn = document.getElementById('btn-confirmar');
-            const notas = document.getElementById('order-notes').value;
-            const paymentMethod = document.getElementById('payment-method').value;
-            if (serviceType === 'delivery' && !['cash', 'mercado_pago'].includes(paymentMethod)) return alert('Delivery solo acepta efectivo o Mercado Pago.');
-            if (serviceType === 'delivery' && (!deliveryQuote || !deliveryAddressLocation.point())) return alert('Selecciona una dirección dentro de la zona de entrega.');
-            btn.disabled = true;
-            btn.innerText = "ENVIANDO...";
-
+            if (confirming || !checkoutKey) return;
+            const pending = SYRuntime.orderAttempt(sessionStorage, checkoutKey)?.payload;
+            if (!pending && !carrito.length) return;
+            if (!pending && restaurant?.accepting_orders === false) return alert('El restaurante no está aceptando pedidos.');
+            const paymentMethod = pending?.payment_method || document.getElementById('payment-method').value;
+            const orderService = pending?.service_type || serviceType;
+            if (!pending && orderService === 'delivery' && !['cash', 'mercado_pago'].includes(paymentMethod)) return alert('Delivery solo acepta efectivo o Mercado Pago.');
+            if (!pending && orderService === 'delivery' && (!deliveryQuote || !deliveryAddressLocation.point())) return alert('Selecciona una dirección dentro de la zona de entrega.');
+            confirming = true;
+            showCheckoutState(pending ? 'Verificando el pedido enviado…' : 'Registrando tu pedido…');
+            let payload = pending;
             try {
-                if (!await refreshMenuProducts()) throw new Error('No se pudo verificar la disponibilidad. Reintenta con conexión.');
-                const items = carrito.map(item => ({ id: item.id, qty: item.qty }));
                 const user = await window.serveYourself.requireUser();
-                if (!user) return;
-                const storageKey = `sy-order-attempt:${user.id}:${resId}`;
-                let payload = { restaurant_id: resId, items, notes: notas.slice(0, 500), payment_method: paymentMethod, service_type: serviceType };
-                if (serviceType === 'delivery') {
-                    const point = deliveryMarker.getLatLng();
-                    payload = { ...payload, latitude: point.lat, longitude: point.lng,
-                        contact_name: document.getElementById('delivery-name').value.trim(),
-                        contact_phone: document.getElementById('delivery-phone').value.trim(),
-                        address: document.getElementById('delivery-address').value.trim(),
-                        reference: document.getElementById('delivery-reference').value.trim() };
-                } else {
-                    const scheduled = document.getElementById('pickup-timing').value === 'scheduled';
-                    const value = document.getElementById('pickup-scheduled-for').value;
-                    if (scheduled && !value) throw new Error('Selecciona la fecha y hora de recogida.');
-                    payload.pickup_name = document.getElementById('pickup-name').value.trim();
-                    if (!payload.pickup_name || payload.pickup_name.length > 80) throw new Error('Indica el nombre de quien recoge (1 a 80 caracteres).');
-                    payload.scheduled_for = scheduled ? new Date(value).toISOString() : null;
+                if (!user || checkoutKey !== `sy-order-attempt:${user.id}:${resId}`) return;
+                if (!payload) {
+                    if (!await refreshMenuProducts()) throw new Error('No se pudo verificar la disponibilidad. Reintenta con conexión.');
+                    const items = carrito.map(item => ({ id: item.id, qty: item.qty }));
+                    const notas = document.getElementById('order-notes').value;
+                    payload = { restaurant_id: resId, items, notes: notas.slice(0, 500), payment_method: paymentMethod, service_type: serviceType };
+                    if (serviceType === 'delivery') {
+                        const point = deliveryMarker.getLatLng();
+                        payload = { ...payload, latitude: point.lat, longitude: point.lng,
+                            contact_name: document.getElementById('delivery-name').value.trim(),
+                            contact_phone: document.getElementById('delivery-phone').value.trim(),
+                            address: document.getElementById('delivery-address').value.trim(),
+                            reference: document.getElementById('delivery-reference').value.trim() };
+                    } else {
+                        const scheduled = document.getElementById('pickup-timing').value === 'scheduled';
+                        const value = document.getElementById('pickup-scheduled-for').value;
+                        if (scheduled && !value) throw new Error('Selecciona la fecha y hora de recogida.');
+                        payload.pickup_name = document.getElementById('pickup-name').value.trim();
+                        if (!payload.pickup_name || payload.pickup_name.length > 80) throw new Error('Indica el nombre de quien recoge (1 a 80 caracteres).');
+                        payload.scheduled_for = scheduled ? new Date(value).toISOString() : null;
+                    }
                 }
-                const order = await SYRuntime.createOrderOnce(_supabase, sessionStorage, storageKey, payload);
+                const storageKey = checkoutKey;
+                const order = await SYRuntime.createOrderOnce(_supabase, sessionStorage, storageKey, payload, undefined, true);
+                if (!order?.id) throw new Error('Seguimos esperando la confirmación del pedido.');
                 if (order.payment_status === 'approved' || order.status === 'cancelado') {
                     sessionStorage.removeItem(storageKey);
                     alert('Este pedido ya fue procesado. Revisa su estado en tus pedidos.');
-                    window.location.href = serviceType === 'delivery' ? `delivery-tracking.html?id=${order.id}` : 'menu.html';
+                    window.location.href = orderService === 'delivery' ? `delivery-tracking.html?id=${order.id}` : 'menu.html';
                     return;
                 }
-                if (serviceType === 'delivery' && document.getElementById('save-address').checked) {
+                if (orderService === 'delivery' && !pending && document.getElementById('save-address').checked) {
                     const addressKey = `${storageKey}:address:${order.id}`;
                     if (!sessionStorage.getItem(addressKey)) {
                         const { error: addressError } = await _supabase.from('customer_addresses').insert({ customer_id: user.id, label: 'Casa', address: payload.address, reference: payload.reference || null, latitude: payload.latitude, longitude: payload.longitude, contact_name: payload.contact_name, contact_phone: payload.contact_phone, is_default: savedAddresses.length === 0 });
@@ -471,23 +487,21 @@
                     window.location.href = `menu.html?section=pedidos&transferOrder=${Number(order.id)}`;
                     return;
                 }
-                if (serviceType === 'delivery') { window.location.href = `delivery-tracking.html?id=${order.id}`; return; }
-                alert(order.scheduled_for ? 'Tu pickup quedó programado. Te avisaremos cuando esté listo.' : 'Pedido registrado. Te esperamos en caja para completar tu pedido.');
-                carrito = [];
-                // Resetear UI de cantidades en el menú
-                document.querySelectorAll('[id^="qty-"]').forEach(el => el.innerText = '0');
-                actualizarInterfazCarrito();
-                cerrarCarrito();
+                if (orderService === 'delivery') { window.location.href = `delivery-tracking.html?id=${order.id}`; return; }
+                window.location.href = `menu.html?section=pedidos#pedido-${Number(order.id)}`;
 
             } catch (err) {
-                alert("Error: " + err.message);
+                confirming = false;
+                const unresolved = SYRuntime.orderAttempt(sessionStorage, checkoutKey)?.payload;
+                showCheckoutState(unresolved
+                    ? 'El pedido aún está por verificar. Usa «Verificar pedido» para consultar el mismo envío.'
+                    : (err.message || 'No se pudo registrar el pedido.'));
             } finally {
-                btn.disabled = false;
-                btn.innerText = "CONFIRMAR PEDIDO";
+                if (confirming) { confirming = false; showCheckoutState(); }
             }
         }
 
-        cargarPagina().then(() => { togglePickupSchedule(); setInterval(() => { if (!document.hidden) refreshMenuProducts(); },15000); });
+        cargarPagina().then(() => { if (restaurant && SYRuntime.orderAttempt(sessionStorage, checkoutKey)?.payload) abrirCarrito(); togglePickupSchedule(); setInterval(() => { if (!document.hidden) refreshMenuProducts(); },15000); });
     </script>
 </body>
 </html>
