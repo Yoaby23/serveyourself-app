@@ -366,8 +366,8 @@ on conflict (id) do update set notification_url = excluded.notification_url;
 
 `main` es la rama de producción. En GitHub, configura la protección de `main` para exigir pull request y ambos trabajos del flujo `Calidad` (`JavaScript` y `PostgreSQL`). Verifica primero que las 65 migraciones históricas ya aplicadas coincidan por versión.
 
-1. Usa el commit de compatibilidad, que termina en `20261126165749_isolate_integrations_and_catalog.sql`. Revisa con `supabase db push --dry-run` que esa sea la única migración nueva antes de aplicarla. Configura el endpoint de avisos en la misma ventana, despliega las Edge Functions actualizadas y publica el frontend. Verifica en producción que los clientes puedan consultar la transferencia de su pedido desde **Mis pedidos**. Esta etapa mantiene el catálogo que usan las versiones anteriores.
-2. Tras verificar el frontend y actualizar las pestañas abiertas que aún usen la versión anterior, aplica `20261126171238_restrict_public_transfer_details.sql` como segunda migración. Comprueba que un visitante anónimo siga viendo el catálogo con los campos bancarios vacíos y que el cliente dueño del pedido pendiente siga viendo sus instrucciones privadas.
+1. Usa el commit de compatibilidad, que termina en `20261126173042_isolate_integrations_and_catalog.sql`. Revisa con `supabase db push --dry-run` que esa sea la única migración nueva antes de aplicarla. Configura el endpoint de avisos en la misma ventana, despliega las Edge Functions actualizadas y publica el frontend. Verifica en producción que los clientes puedan consultar la transferencia de su pedido desde **Mis pedidos**. Esta etapa mantiene el catálogo que usan las versiones anteriores.
+2. Tras verificar el frontend y actualizar las pestañas abiertas que aún usen la versión anterior, aplica `restrict_public_transfer_details` como segunda migración. Comprueba que un visitante anónimo siga viendo el catálogo con los campos bancarios vacíos y que el cliente dueño del pedido pendiente siga viendo sus instrucciones privadas.
 
 ## CSS de producción
 
