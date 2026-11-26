@@ -23,7 +23,7 @@
     <script src="kitchen-mode.js"></script><script src="kitchen-batches.js"></script>
     <script>
         const db = window.serveYourself.supabase, esc = window.serveYourself.escapeHtml;
-        let access, orders = [], stations = [], products = [], tables = [], activeStation = 'all', soundEnabled = false, timer, syncTimer, refreshTimer, loadingOrders = false, refreshQueued = false, batchBusy = false, trainingMode = null, modeControl;
+        let access, orders = [], stations = [], products = [], tables = [], activeStation = 'all', soundEnabled = false, timer, syncTimer, refreshTimer, loadingOrders = false, refreshQueued = false, batchBusy = false, trainingMode = null, modeControl, sync;
         const nextStatus = { pendiente: ['preparando', 'COMENZAR'], preparando: ['listo', 'MARCAR LISTO'], listo: ['entregado', 'ENTREGAR'] };
         async function init() {
             access = await window.serveYourself.requireRestaurantPermission('can_view_kitchen'); if (!access) return;
@@ -34,11 +34,12 @@
             stations=stationData||[];products=productData||[];tables=tableData||[];document.getElementById('station-filter').innerHTML += stations.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');renderAvailability();
             modeControl=window.SYKitchenMode.create({db,restaurantId:access.restaurant_id,button:document.getElementById('kitchen-mode-toggle'),status:document.getElementById('ml-status'),onChange:value=>{trainingMode=value;render();},onRefresh:loadOrders});
             await modeControl.load();
+            sync = SYRuntime.orderSync(document.getElementById('sync-status'), loadOrders);
             await loadOrders();
             db.channel(`kitchen-${access.restaurant_id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'kitchen_tickets', filter: `restaurant_id=eq.${access.restaurant_id}` }, payload => {
                 if (soundEnabled && payload.eventType === 'INSERT') document.getElementById('new-order-sound').play().catch(() => {});
                 scheduleLoad();
-            }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${access.restaurant_id}` }, scheduleLoad).subscribe(status => { if (status === 'SUBSCRIBED') scheduleLoad(); });
+            }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${access.restaurant_id}` }, scheduleLoad).subscribe(status => sync.channel(status));
             timer = setInterval(render, 30000);
             syncTimer = setInterval(() => {
                 if (document.visibilityState === 'visible') loadOrders();
@@ -54,15 +55,9 @@
                 if (error) throw error;
                 orders = Array.isArray(data) ? data : [];
                 render();
-                const status = document.getElementById('sync-status');
-                status.textContent = `Sincronizado · ${new Date().toLocaleTimeString('es-MX')}`;
-                status.dataset.stale = 'false';
-                status.title = 'Pedidos actualizados con cocina.';
+                sync?.success();
             } catch (error) {
-                const status = document.getElementById('sync-status');
-                status.textContent = 'Sin conexión · Reintentando…';
-                status.title = 'Los pedidos pueden estar desactualizados. Se volverá a intentar automáticamente.';
-                status.dataset.stale = 'true';
+                sync?.failure();
                 console.warn('No se pudieron sincronizar los pedidos:', error.message);
             } finally {
                 loadingOrders = false;
@@ -139,10 +134,6 @@
         async function toggleAvailability(){const panel=document.getElementById('availability-panel');if(!panel.classList.contains('hidden')){panel.classList.add('hidden');return;}const{data,error}=await db.from('products').select('id,name,kitchen_station_id,is_available,is_archived').eq('restaurant_id',access.restaurant_id).order('name');if(error)return alert('No se pudo actualizar la disponibilidad. Reintenta.');products=data||[];renderAvailability();panel.classList.remove('hidden');}
         function renderAvailability(){document.getElementById('availability-list').innerHTML=products.filter(p=>!p.is_archived).map(p=>`<div class="flex justify-between items-center p-3 rounded-xl ${p.is_available ? 'bg-slate-50' : 'bg-red-50'}"><div><b>${esc(p.name)}</b></div><button type="button" onclick="setAvailability('${p.id}',${!p.is_available})" class="text-xs font-black ${p.is_available?'text-red-500':'text-green-600'}">${p.is_available?'Marcar fuera de stock':'Marcar disponible'}</button></div>`).join('');}
         async function setAvailability(id,value){const{error}=await db.rpc('set_product_availability',{p_product_id:id,p_available:value});if(error)return alert(error.message);const p=products.find(x=>x.id===id);if(p)p.is_available=value;renderAvailability();}
-        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadOrders(); });
-        window.addEventListener('pageshow', loadOrders);
-        window.addEventListener('online', loadOrders);
-        window.addEventListener('focus', loadOrders);
         init();
     </script>
 </body>

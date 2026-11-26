@@ -391,3 +391,11 @@ La clave `sb_publishable_...` del frontend es pública por diseño. No deben gua
 Las pruebas de flujos y calidad se ejecutan automáticamente en cada pull request y
 actualización de `main` mediante `.github/workflows/quality.yml`. Vercel aplica las
 cabeceras defensivas configuradas en `vercel.json`.
+
+### Prueba de operación antes de ampliar el piloto
+
+- Con caja y cocina abiertas en dispositivos distintos, corta la conexión de cocina antes del cobro. Al volver, confirma que ve exactamente una comanda y que desaparece el aviso de desconexión. Simula también una respuesta perdida al confirmar un pedido y verifica que el reintento recupera el mismo pedido.
+- Al publicar este cambio, aplica primero la migración `record_online_payment_events` y actualiza la función `guest-pickup`. El detalle de caja registra pagos y reembolsos por separado desde esa migración. Para órdenes anteriores solo se conserva el último evento disponible.
+- En un Supabase separado con credenciales de prueba de Mercado Pago, recorre compra, confirmación tardía y reembolso. Comprueba que Caja distingue estados y conserva la referencia. En el local físico imprime un ticket y prueba las notificaciones con los equipos del turno.
+- El flujo **Salud de producción** comprueba portada, SDK y catálogo sin crear pedidos. Los fallos quedan visibles en GitHub Actions. Configura la protección de `main` para exigir los trabajos **JavaScript** y **PostgreSQL** en cada PR.
+- Si falla la nueva interfaz tras publicar, restaura en Vercel la última versión estable y vuelve a comprobar el dominio con `node scripts/check-production.mjs`. La tabla de eventos nueva es aditiva y se conserva para que el historial de caja siga disponible.
