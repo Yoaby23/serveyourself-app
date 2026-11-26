@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { stripTypeScriptTypes } from 'node:module';
 import { sha256, validGuestToken, guestOrderId } from '../supabase/functions/_shared/guest-access.ts';
-import { corsHeaders, jsonResponse } from '../supabase/functions/_shared/cors.ts';
+import { appOrigin, corsHeaders, jsonResponse } from '../supabase/functions/_shared/cors.ts';
 const token='a'.repeat(64);
 const freshOrder=()=>({id:42,customer_id:null,restaurant_id:'restaurant',items:[{id:'p',nombre:'Comida',qty:2,price:25}],total:50,delivery_fee:0,service_type:'pickup',payment_method:'mercado_pago',payment_status:'pending',created_at:new Date().toISOString(),payment_expires_at:new Date(Date.now()+1200000).toISOString()});
 globalThis.Deno={env:{get:key=>key==='APP_URL'?'https://app.test':'test-value'}};
@@ -19,7 +19,7 @@ async function setup({file='create-mercado-pago-preference',order=freshOrder(),f
  const client={from:table,auth:{getUser:async()=>({data:{user},error:user?null:new Error('invalid')})},rpc:async(name,args)=>{calls.push({rpc:name,args});return {data:{id:42}};}};
  const source=fs.readFileSync(new URL(`../supabase/functions/${file}/index.ts`,import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
  const context={Deno:{serve:fn=>handler=fn,env:globalThis.Deno.env},Request,Response,URL,TextEncoder,crypto,console,Date,
-  createClient:()=>client,guestOrderId,sha256,validGuestToken,corsHeaders,jsonResponse,
+  createClient:()=>client,guestOrderId,sha256,validGuestToken,appOrigin,corsHeaders,jsonResponse,
   getValidMercadoPagoToken:async()=> 'test-provider-token',
   fetch:async(url,opts)=>{provider.push({url,opts});return Response.json({id:'pref-42',init_point:'https://www.mercadopago.com.mx/checkout/test'});}
  };

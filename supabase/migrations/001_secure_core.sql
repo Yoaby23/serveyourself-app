@@ -3,7 +3,9 @@
 
 begin;
 
-create extension if not exists pgcrypto;
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+grant usage on schema extensions to authenticated, service_role;
 
 -- Esquema base para instalaciones nuevas y ramas de vista previa de Supabase.
 -- En proyectos existentes estas sentencias no sustituyen ni borran tablas.
@@ -27,7 +29,8 @@ create table if not exists public.products (
     restaurant_id uuid not null references public.profiles(id) on delete cascade,
     name text not null,
     price numeric(12,2) not null check (price > 0),
-    category text not null,
+    category text default 'General',
+    description text,
     image_url text,
     is_available boolean not null default true,
     created_at timestamptz not null default now()

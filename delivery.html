@@ -3,7 +3,7 @@
 <head><script src="theme.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>Serveyouself</title>
+  <title>ServeYourself</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="tailwind.generated.css">
   <link rel="stylesheet" href="styles.css">
@@ -17,7 +17,7 @@
     <section class="bg-white border rounded-3xl p-5"><h2 class="font-black text-lg">Incidencias abiertas</h2><div id="incidents" class="grid md:grid-cols-2 gap-3 mt-4"></div></section>
     <section class="bg-white border rounded-3xl p-5"><div class="flex flex-wrap items-end justify-between gap-2"><div><p class="text-xs font-black text-orange-500 uppercase">Control de efectivo</p><h2 class="font-black text-lg">Liquidaciones de repartidores</h2></div><button type="button" onclick="loadAll()" class="px-4 py-2 rounded-xl bg-slate-100 text-xs font-black">ACTUALIZAR SALDOS</button></div><div id="settlements" class="grid md:grid-cols-2 gap-3 mt-4"></div></section>
   </main>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script><script src="app-config.js"></script><script src="business-image.js"></script><script src="app.js"></script><script src="runtime.js"></script>
+  <script src="/vendor/supabase.js"></script><script src="app-config.js"></script><script src="business-image.js"></script><script src="app.js"></script><script src="runtime.js"></script>
   <script>
 const db=window.serveYourself.supabase,esc=window.serveYourself.escapeHtml,money=n=>`$${Number(n||0).toFixed(2)}`;
 let access,orders=[],balances=[];

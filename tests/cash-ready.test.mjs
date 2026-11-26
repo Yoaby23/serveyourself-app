@@ -32,7 +32,7 @@ async function push({kind='ticket',status='listo',claim=true,paid=true,customer=
  const order={id:42,restaurant_id:'owner',restaurant_name:'Restaurante',order_source:'pos',created_by:'cashier',customer_id:customer,pickup_name:'Ana',service_type:'pickup',payment_before_kitchen:true,payment_status:paid?'approved':'pending',status};
  const db={rpc:async()=>({data:claim?[event]:[]}),from(table){const q={select(){return this;},update(){return this;},eq(k,v){filters.push([table,k,v]);return this;},maybeSingle:async()=>({data:table==='orders'?order:{id:7,status}}),then(resolve){resolve({data:[{user_id:'cashier'}]});}};return q;}};
  const code=fs.readFileSync(new URL('../supabase/functions/send-order-notification/index.ts',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
- vm.runInNewContext(stripTypeScriptTypes(code),{Deno:{env:{get:()=> 'test'},serve:fn=>handler=fn},createClient:()=>db,corsHeaders:()=>({}),jsonResponse:(req,body,status=200)=>Response.json(body,{status}),Response,crypto,TextEncoder,fetch:async(url,options)=>{sent.push(JSON.parse(options.body));return new Response('{"id":"accepted"}');}});
+ vm.runInNewContext(stripTypeScriptTypes(code),{Deno:{env:{get:()=> 'test'},serve:fn=>handler=fn},createClient:()=>db,appOrigin:()=> 'https://app.test',corsHeaders:()=>({}),jsonResponse:(req,body,status=200)=>Response.json(body,{status}),Response,crypto,TextEncoder,fetch:async(url,options)=>{sent.push(JSON.parse(options.body));return new Response('{"id":"accepted"}');}});
  const response=await handler(new Request('https://edge.test',{method:'POST',body:JSON.stringify({dispatchId:event.id})}));return{response,sent,filters};
 }
 test('ready pickup alerts owner and active cashiers, with one handoff per recipient',async()=>{

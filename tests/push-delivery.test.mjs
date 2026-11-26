@@ -13,8 +13,8 @@ for(const errors of [['All included players are not subscribed'],{invalid_aliase
   const chain={select(){return chain;},eq(){return chain;},maybeSingle:async()=>({data:order}),update(){completed=true;return chain;},then(resolve){resolve({data:table==='restaurant_staff'?[{user_id:'staff'}]:null});}};
   return chain;
  }};
- vm.runInNewContext(stripTypeScriptTypes(source),{createClient:()=>db,Deno:{env:{get:()=>''},serve:fn=>handler=fn},console,crypto:webcrypto,TextEncoder,Response,Map,
- corsHeaders:()=>({}),jsonResponse:(_req,data,status=200)=>new Response(JSON.stringify(data),{status}),fetch:async(_url,options)=>{
+ vm.runInNewContext(stripTypeScriptTypes(source),{createClient:()=>db,Deno:{env:{get:key=>({ONESIGNAL_APP_ID:'qa-notification-application',ONESIGNAL_REST_API_KEY:'qa-api-key'})[key]},serve:fn=>handler=fn},console,crypto:webcrypto,TextEncoder,Response,Map,
+ appOrigin:()=> 'https://app.test',corsHeaders:()=>({}),jsonResponse:(_req,data,status=200)=>new Response(JSON.stringify(data),{status}),fetch:async(_url,options)=>{
   requests.push(JSON.parse(options.body));
   return new Response(JSON.stringify(requests.length===1?{errors}:{id:'notice'}),{status:200});
  }});
@@ -23,7 +23,7 @@ for(const errors of [['All included players are not subscribed'],{invalid_aliase
  assert.equal(completed,true);
  assert.ok(requests.length>1);
  assert.ok(requests.some(r=>r.include_aliases.external_id.includes('staff')));
- for(const request of requests)assert.equal(request.app_id,'c77aa3bf-9fbf-4928-9441-18093c934dcd');
+ for(const request of requests)assert.equal(request.app_id,'qa-notification-application');
 });
 test('assignment notice targets the selected driver and ignores a superseded assignment',async()=>{
  const context=vm.createContext({createClient(){},Deno:{serve(){},env:{get(){}}}});

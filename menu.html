@@ -4,7 +4,7 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>Serveyouself</title>
+    <title>ServeYourself</title>
     <link rel="stylesheet" href="tailwind.generated.css">
     <link rel="stylesheet" href="styles.css">
     <style>
@@ -103,7 +103,19 @@
         <button type="button" data-customer-tab="perfil" onclick="mostrarSeccion('perfil')"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg><b>Cuenta</b></button>
     </nav>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
+    <dialog id="transfer-dialog" class="sy-order-dialog" aria-labelledby="transfer-title">
+        <form method="dialog">
+            <header><h2 id="transfer-title">Datos de transferencia</h2><button type="submit" aria-label="Cerrar">×</button></header>
+            <p id="transfer-message" role="status"></p>
+            <dl id="transfer-bank-details" hidden>
+                <dt>Banco</dt><dd id="transfer-bank"></dd>
+                <dt>Titular</dt><dd id="transfer-holder"></dd>
+                <dt>CLABE</dt><dd id="transfer-clabe"></dd>
+            </dl>
+            <a id="transfer-whatsapp" class="sy-config-secondary" target="_blank" rel="noopener noreferrer" hidden>Enviar comprobante por WhatsApp</a>
+        </form>
+    </dialog>
+    <script src="/vendor/supabase.js"></script>
     <script src="app-config.js"></script>
     <script src="runtime.js"></script><script src="business-image.js"></script><script src="app.js"></script>
     <script src="order-tools.js"></script><script src="pickup-arrival.js"></script>
@@ -169,8 +181,15 @@
             window.serveYourself.initPushNotifications(user);
             await cargarFavoritos();
             await cargarRestaurantes();
-            const requestedSection = new URLSearchParams(window.location.search).get('section');
+            const params = new URLSearchParams(window.location.search);
+            const requestedSection = params.get('section');
             mostrarSeccion(['explorar','favoritos','perfil','pedidos'].includes(requestedSection) ? requestedSection : (document.body.dataset.activeView || 'explorar'));
+            const transferId = Number(params.get('transferOrder'));
+            if (requestedSection === 'pedidos' && Number.isSafeInteger(transferId) && transferId > 0) {
+                params.delete('transferOrder');
+                history.replaceState({}, '', `menu.html?${params}`);
+                verDatosTransferencia(transferId);
+            }
             activarPedidosRealtime();
             setInterval(() => {
                 if (!document.getElementById('sec-pedidos').classList.contains('hidden')) cargarHistorialPedidos();
@@ -304,13 +323,46 @@
             }).join('');
         }
 
-        async function enviarComprobante(id){
-            const {data:order,error}=await _supabase.from('orders').select('id,restaurant_id,pickup_name,total,payment_method,payment_status').eq('id',id).eq('customer_id',currentUser.id).single();
-            if(error||!order||order.payment_method!=='transfer'||order.payment_status!=='pending')return alert('Este pedido ya no espera comprobante. Actualiza el historial.');
-            const {data:business}=await _supabase.from('public_restaurants').select('phone').eq('id',order.restaurant_id).single();
-            const url=SYRuntime.transferReceiptUrl(business?.phone,order);
-            if(!url)return alert('El negocio no tiene un número válido. Contacta a caja.');
-            if(confirm('Se abrirá WhatsApp del negocio. Adjunta tu comprobante y pulsa Enviar; caja deberá validar el pago.'))window.location.href=url;
+        let transferDetailsRequest = 0;
+        async function verDatosTransferencia(id) {
+            const request = ++transferDetailsRequest;
+            const dialog = document.getElementById('transfer-dialog');
+            const message = document.getElementById('transfer-message');
+            const details = document.getElementById('transfer-bank-details');
+            const link = document.getElementById('transfer-whatsapp');
+            details.hidden = true;
+            link.hidden = true;
+            link.removeAttribute('href');
+            message.textContent = 'Consultando los datos del pedido…';
+            if (!dialog.open) dialog.showModal();
+            try {
+                const [{ data: bank, error }, { data: order, error: orderError }] = await Promise.all([
+                    _supabase.rpc('get_order_transfer_details', { p_order_id: id }),
+                    _supabase.from('orders').select('id,pickup_name,total').eq('id', id).single()
+                ]);
+                if (request !== transferDetailsRequest || !dialog.open) return;
+                if (error || orderError) throw error || orderError;
+                if (!bank || !order) {
+                    message.textContent = 'Este pedido ya no está pendiente de transferencia.';
+                    return;
+                }
+                document.getElementById('transfer-bank').textContent = bank.bank_name || 'Consulta al negocio';
+                document.getElementById('transfer-holder').textContent = bank.bank_account_holder || 'Consulta al negocio';
+                document.getElementById('transfer-clabe').textContent = bank.bank_clabe || 'Consulta al negocio';
+                details.hidden = false;
+                const url = SYRuntime.transferReceiptUrl(bank.phone, order);
+                if (url) {
+                    link.href = url;
+                    link.hidden = false;
+                }
+                message.textContent = url
+                    ? 'Realiza el depósito y adjunta el comprobante en WhatsApp. Caja debe confirmar el pago.'
+                    : 'Realiza el depósito y contacta a caja para confirmar el pago.';
+            } catch {
+                if (request === transferDetailsRequest && dialog.open) {
+                    message.textContent = 'No se pudieron consultar los datos. Cierra esta ventana y vuelve a intentarlo desde el pedido.';
+                }
+            }
         }
         let historyLoadVersion=0;
         async function cargarHistorialPedidos() {
@@ -349,7 +401,7 @@
                     <p class="text-[10px] font-black uppercase ${pagoVencido ? 'text-red-500' : 'text-slate-400'} mt-3">${pagoEnCaja ? (p.payment_method==='transfer'?'Pendiente de confirmar transferencia en caja':'Te esperamos en caja para completar tu pedido') : pagoVencido ? 'Pago vencido · haz un pedido nuevo' : pagoProcesando ? 'Mercado Pago está procesando el cobro' : `Pago: ${escapeHtml(p.payment_method || 'cash')} · ${escapeHtml(p.payment_status || 'not_required')}${pagoPendiente ? ` · quedan ${tiempoRestantePago(p)}` : ''}`}</p>
                     ${window.SYPickupArrival?.eligible(p)?`<div class="sy-pickup-arrival" data-pickup-arrival="${Number(p.id)}"><label>¿Cómo vienes?<select data-pickup-transport aria-label="Medio de transporte para pickup ${Number(p.id)}"><option value="car">En auto</option><option value="walking">Caminando</option><option value="bicycle">En bicicleta</option></select></label><button type="button" data-share-pickup="${Number(p.id)}" aria-pressed="false">Voy en camino</button><p data-pickup-arrival-status role="status" aria-live="polite"></p></div>`:''}
                     ${p.service_type === 'delivery' && !['cancelled'].includes(p.delivery_status) ? `<a href="delivery-tracking.html?id=${escapeHtml(p.id)}" class="block text-center w-full mt-3 py-3 bg-orange-500 text-white rounded-2xl text-xs font-black"> SEGUIR ENTREGA</a>` : ''}
-                    ${pagoEnCaja&&p.payment_method==='transfer'?`<button type="button" onclick="enviarComprobante(${Number(p.id)})" class="w-full mt-3 py-3 rounded-2xl bg-blue-50 text-blue-700 font-bold">ENVIAR COMPROBANTE</button>`:''}
+                    ${pagoEnCaja&&p.payment_method==='transfer'?`<button type="button" onclick="verDatosTransferencia(${Number(p.id)})" class="w-full mt-3 py-3 rounded-2xl bg-blue-50 text-blue-700 font-bold">VER DATOS DE TRANSFERENCIA</button>`:''}
                     ${pagoPendiente && !pagoProcesando ? `<button type="button" onclick="continuarPago(${Number(p.id)},this)" class="w-full mt-3 py-3 bg-orange-500 text-white rounded-2xl font-bold">Continuar pago · ${tiempoRestantePago(p)}</button>` : ''}
                     ${pagoEnCaja ? `<p class="text-xs text-slate-500 mt-2">Puedes completar el pago en los próximos ${tiempoRestantePago(p)}.</p>` : ''}
                     ${pagoPendiente ? `<button type="button" onclick="verificarPago('${escapeHtml(p.id)}', this)" class="w-full mt-3 py-3 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-2xl text-[10px] font-black uppercase transition-colors">Verificar pago</button>` : ''}

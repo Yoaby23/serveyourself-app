@@ -14,11 +14,14 @@ Deno.serve(async (request) => {
   const { data: { user } } = await client.auth.getUser();
   if (!user) return jsonResponse(request, { error: 'Sesión inválida' }, 401);
   const admin = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-  const { error: accountError } = await admin.from('restaurant_payment_accounts').delete().eq('restaurant_id', user.id);
-  if (accountError) return jsonResponse(request, { error: 'No se pudo desconectar Mercado Pago' }, 500);
-  const { error: profileError } = await admin.from('profiles')
-    .update({ mercado_pago_connected: false, payment_online: false })
-    .eq('id', user.id);
-  if (profileError) return jsonResponse(request, { error: 'No se pudo actualizar el restaurante' }, 500);
-  return jsonResponse(request, { disconnected: true });
+  // Stop new checkout while existing payments and refunds still use this connection.
+  const { data: restaurant, error } = await admin.from('profiles')
+    .update({ payment_online: false })
+    .eq('id', user.id)
+    .eq('role', 'negocio')
+    .select('id')
+    .maybeSingle();
+  if (error) return jsonResponse(request, { error: 'No se pudieron pausar los pagos en línea' }, 500);
+  if (!restaurant) return jsonResponse(request, { error: 'Cuenta de negocio requerida' }, 403);
+  return jsonResponse(request, { paused: true });
 });
