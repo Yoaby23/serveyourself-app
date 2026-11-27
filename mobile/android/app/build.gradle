@@ -1,0 +1,73 @@
+apply plugin: 'com.android.application'
+
+final def appVersionCode = 1
+final def qaVersionCode = providers.gradleProperty('syQaVersionCode').map { it.toInteger() }
+final def uploadVariables = ['SY_ANDROID_UPLOAD_STORE', 'SY_ANDROID_UPLOAD_PASSWORD', 'SY_ANDROID_UPLOAD_ALIAS', 'SY_ANDROID_UPLOAD_KEY_PASSWORD']
+final def uploadValues = uploadVariables.collectEntries { [(it): providers.environmentVariable(it).orNull] }
+final def hasUploadKey = uploadValues.values().every { it }
+if (uploadValues.values().any { it } && !hasUploadKey) {
+    throw new GradleException('Configura las cuatro variables de la clave de carga de Android.')
+}
+
+android {
+    namespace = "mx.serveyourself.app"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "mx.serveyourself.app"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode appVersionCode
+        versionName "0.1.0"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        if (hasUploadKey) {
+            upload {
+                storeFile file(uploadValues.SY_ANDROID_UPLOAD_STORE)
+                storePassword uploadValues.SY_ANDROID_UPLOAD_PASSWORD
+                keyAlias uploadValues.SY_ANDROID_UPLOAD_ALIAS
+                keyPassword uploadValues.SY_ANDROID_UPLOAD_KEY_PASSWORD
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            applicationIdSuffix ".qa"
+            versionNameSuffix "-qa"
+            manifestPlaceholders = [syAppLabel: "ServeYourself QA", syAuthScheme: "mx.serveyourself.app.qa"]
+        }
+        release {
+            if (hasUploadKey) signingConfig signingConfigs.upload
+            manifestPlaceholders = [syAppLabel: "ServeYourself", syAuthScheme: "mx.serveyourself.app"]
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType('debug')) { variant ->
+        variant.outputs.each { output -> output.versionCode.set(qaVersionCode.orElse(appVersionCode)) }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'

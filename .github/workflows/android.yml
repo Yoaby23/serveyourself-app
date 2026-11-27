@@ -1,0 +1,52 @@
+name: Android
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    name: Compilar y verificar actualización de Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Habilitar aceleración del emulador
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - run: npm ci
+      - run: npm ci --prefix mobile
+      - run: npm run sync --prefix mobile
+      - name: Compilar dos versiones QA y el paquete de Play
+        working-directory: mobile/android
+        run: |
+          ./gradlew :app:assembleDebug :app:bundleRelease -PsyQaVersionCode=1
+          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/serve-v1.apk"
+          ./gradlew :app:assembleDebug -PsyQaVersionCode=2
+          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/serve-v2.apk"
+      - name: Verificar actualización sin desinstalar
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          script: bash mobile/test-update.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ServeYourself-Android-QA
+          path: |
+            ${{ runner.temp }}/serve-v1.apk
+            ${{ runner.temp }}/serve-v2.apk
+          if-no-files-found: error

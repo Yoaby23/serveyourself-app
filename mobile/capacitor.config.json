@@ -1,0 +1,9 @@
+{
+  "appId": "mx.serveyourself.app",
+  "appName": "ServeYourself",
+  "webDir": "web",
+  "server": {
+    "hostname": "serveyourself-app.vercel.app",
+    "androidScheme": "https"
+  }
+}

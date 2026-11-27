@@ -1,10 +1,12 @@
+window.serveYourselfNative = window.serveYourselfDesktop || window.serveYourselfAndroid;
+
 const SUPABASE_URL = '__SY_SUPABASE_URL__';
 const SUPABASE_KEY = '__SY_SUPABASE_PUBLISHABLE_KEY__';
 
 window.serveYourself = {
     supabase: window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
         auth: {
-            ...(window.serveYourselfDesktop ? { flowType: 'pkce' } : {}),
+            ...(window.serveYourselfNative ? { flowType: 'pkce' } : {}),
             persistSession: true,
             autoRefreshToken: true,
             detectSessionInUrl: !window.SY_PASSWORD_RECOVERY_PAGE,
@@ -478,7 +480,7 @@ if (!document.querySelector('link[rel="apple-touch-icon"]')) {
     appleIcon.href = 'logo.png';
     document.head.appendChild(appleIcon);
 }
-if (!window.serveYourselfDesktop && 'serviceWorker' in navigator && location.protocol === 'https:') {
+if (!window.serveYourselfNative && 'serviceWorker' in navigator && location.protocol === 'https:') {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 window.addEventListener('beforeinstallprompt', event => {
@@ -487,6 +489,7 @@ window.addEventListener('beforeinstallprompt', event => {
 });
 // A browser permission prompt needs its own tap, including on an installed PWA.
 async function showInstalledPermissions(afterInstall = false) {
+    if (window.serveYourselfAndroid) return;
     const installed=afterInstall||window.navigator?.standalone||window.matchMedia?.('(display-mode: standalone)').matches;
     if(!installed)return;
     const existing=document.getElementById('installed-permissions');

@@ -1,0 +1,16 @@
+{
+  "name": "serveyourself-android",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "sync": "node prepare.mjs && cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.3",
+    "@capacitor/app": "8.1.0",
+    "@capacitor/core": "8.6.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.3"
+  }
+}
