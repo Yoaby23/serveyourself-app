@@ -6,8 +6,8 @@ recipes, ingredient requirements or automatic inventory deductions are used.
 
 New POS and customer orders validate current product availability on the server.
 Already accepted kitchen tickets continue even if a product is subsequently unavailable.
-Kitchen stations, strict manual priority, target ready time and historical preparation
-estimates remain active. Station assignment is managed from Funciones → Estaciones.
+Las estaciones, los horarios de entrega y las estimaciones de preparación siguen vigentes.
+La asignación se administra en **Funciones → Estaciones**. Consulta la [cola automática](kitchen-training.md) para el orden de las comandas.
 
 The removal migration drops ingredient/recipe/movement tables and their functions and
 triggers. Historical migrations are retained for reproducible database upgrades.
