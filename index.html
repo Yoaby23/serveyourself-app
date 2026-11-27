@@ -242,13 +242,22 @@
             redirectUrl.searchParams.set('oauth', '1');
             if (requestedNextPage) redirectUrl.searchParams.set('next', requestedNextPage);
 
-            const { error } = await window.serveYourself.supabase.auth.signInWithOAuth({
-                provider,
-                options: { redirectTo: redirectUrl.toString() }
-            });
+            let error;
+            try {
+                const desktop = window.serveYourselfDesktop;
+                const result = await window.serveYourself.supabase.auth.signInWithOAuth({
+                    provider,
+                    options: desktop ? { redirectTo: await desktop.authStart(redirectUrl.href), skipBrowserRedirect: true }
+                        : { redirectTo: redirectUrl.toString() }
+                });
+                error = result.error;
+                if (desktop && !error) await desktop.openGoogle(result.data.url);
+            } catch (failure) { error = failure; }
 
             if (error) {
                 alert('No fue posible iniciar sesión: ' + error.message);
+                setSocialButtonsDisabled(false, button);
+            } else if (window.serveYourselfDesktop) {
                 setSocialButtonsDisabled(false, button);
             }
         }

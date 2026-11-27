@@ -1,0 +1,24 @@
+{
+  "name": "serveyourself-desktop",
+  "productName": "ServeYourself",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ServeYourself para Windows",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "node prepare.mjs && electron .",
+    "package:windows": "node prepare.mjs && electron-builder --win nsis --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "45.5.0",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "mx.serveyourself.desktop",
+    "artifactName": "ServeYourself-${version}-Windows-x64.exe",
+    "files": ["main.cjs", "preload.cjs", "auth.cjs", "web/**/*"],
+    "directories": { "output": "out" },
+    "win": { "icon": "web/app-icon-512.png" },
+    "nsis": { "oneClick": false, "perMachine": false, "createDesktopShortcut": true }
+  }
+}

@@ -51,5 +51,6 @@ npx tailwindcss@3.4.17 -i tailwind-source.css -o tailwind.generated.css --minify
 
 ## Configuración y publicación
 
+- [Instalador de ServeYourself para Windows](docs/WINDOWS.md).
 - [Integraciones con Supabase, Google, Mercado Pago y OneSignal](docs/INTEGRACIONES.md).
 - [Publicación, validación del turno, alertas y recuperación](docs/OPERACION.md).

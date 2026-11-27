@@ -1,0 +1,44 @@
+name: Instalador de Windows
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/windows.yml'
+      - 'desktop/**'
+
+permissions:
+  contents: read
+
+jobs:
+  installer:
+    name: Instalar y empaquetar Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm ci --prefix desktop
+      - run: npm run package:windows --prefix desktop
+      - name: Verificar instalador y arranque sin acceso directo
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem desktop/out/ServeYourself-*-Windows-x64.exe | Select-Object -First 1
+          if (!$installer) { throw 'No se generó el instalador' }
+          $target = Join-Path $env:RUNNER_TEMP 'ServeYourself'
+          $installed = Start-Process -FilePath $installer.FullName -ArgumentList "/S /D=$target" -Wait -PassThru
+          if ($installed.ExitCode -ne 0) { throw 'Falló la instalación silenciosa' }
+          $result = Join-Path $env:RUNNER_TEMP 'serveyourself-smoke.txt'
+          $app = Start-Process -FilePath (Join-Path $target 'ServeYourself.exe') -ArgumentList "--desktop-smoke=$result" -PassThru
+          if (!$app.WaitForExit(45000)) { Stop-Process -Id $app.Id -Force; throw 'ServeYourself no terminó la verificación' }
+          if ($app.ExitCode -ne 0 -or !(Test-Path $result) -or (Get-Content $result) -ne 'OK') {
+            throw 'Falló el arranque, la apertura de pantallas o la lectura del catálogo'
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ServeYourself-Windows-x64
+          path: desktop/out/ServeYourself-*-Windows-x64.exe
+          if-no-files-found: error
