@@ -43,7 +43,7 @@ begin
  queue:=public.list_kitchen_priority_queue(owner_id);
  assert queue->0->>'pickup_name'='QA Cliente','Kitchen missing pickup name';
  assert jsonb_array_length(queue)=1,'Queue lost pending ticket';
- assert (queue->0->>'priority_override')::integer=2,'Manual priority lost';
+ assert (queue->0->>'priority_override')::integer=0,'Legacy priority must not change the automatic queue';
  assert not ((queue->0) ? 'missing_ingredients'),'Queue still exposes ingredients';
  next_round:=public.create_pos_table_order(owner_id,jsonb_build_array(jsonb_build_object('id',product_id,'qty',2)),null,'pickup',null,'cash',null,'Nombre dividido');
  queue:=public.split_pos_order((next_round->>'id')::bigint,items);

@@ -8,22 +8,21 @@
 <body class="bg-slate-950 text-white min-h-screen kitchen-screen">
     <header class="kitchen-header sticky top-0 z-30 bg-slate-950/95 border-b border-slate-800 px-4 py-3">
         <div class="kitchen-identity"><p class="text-xs font-black text-orange-400 uppercase tracking-widest">Pantalla de cocina</p><h1 id="restaurant-name" class="text-xl font-black">ServeYourself</h1></div>
-        <div class="kitchen-toolbar"><select id="station-filter" class="px-3 py-3 rounded-xl bg-slate-800 text-white font-black text-sm" aria-label="Estación de cocina"><option value="all">Todas las estaciones</option><option value="general">General</option></select><button type="button" onclick="toggleAvailability()" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">Disponibilidad</button><button type="button" id="sound-button" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm"> Activar sonido</button><button type="button" id="kitchen-mode-toggle" class="kitchen-mode-toggle" role="switch" aria-checked="false" aria-label="Entrenamiento" aria-describedby="ml-status"><span class="kitchen-mode-copy"><b>Entrenamiento</b><small data-mode-state>Comprobar</small></span><span class="kitchen-mode-track" aria-hidden="true"><span></span></span></button></div>
+        <div class="kitchen-toolbar"><select id="station-filter" class="px-3 py-3 rounded-xl bg-slate-800 text-white font-black text-sm" aria-label="Estación de cocina"><option value="all">Todas las estaciones</option><option value="general">General</option></select><button type="button" onclick="toggleAvailability()" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm">Disponibilidad</button><button type="button" id="sound-button" class="px-3 py-3 rounded-xl bg-slate-800 font-black text-sm"> Activar sonido</button></div>
         <div id="restaurant-nav" class="sy-restaurant-nav kitchen-navigation"></div>
     </header>
-    <p id="ml-status" class="sr-only" role="status" aria-live="polite"></p>
     <main class="p-3 grid lg:grid-cols-2 gap-3 min-h-[calc(100vh-76px)]">
-        <section class="kitchen-column"><div class="kitchen-heading bg-orange-500"><span>Nuevos</span><b id="count-pendiente">0</b></div><div id="orders-pendiente" class="kitchen-list"></div></section>
+        <section class="kitchen-column"><div class="kitchen-heading bg-orange-500"><span>Nuevos · orden automático</span><b id="count-pendiente">0</b></div><div id="orders-pendiente" class="kitchen-list"></div></section>
         <section class="kitchen-column"><div class="kitchen-heading bg-blue-600"><span>Preparando</span><b id="count-preparando">0</b></div><div id="orders-preparando" class="kitchen-list"></div></section>
     </main>
     <footer class="kitchen-sync-footer"><span id="sync-status" role="status" aria-live="polite" class="kitchen-sync-status">Conectando…</span></footer>
     <audio id="new-order-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
     <aside id="availability-panel" class="hidden fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-white text-slate-950 shadow-2xl p-5 overflow-y-auto"><div class="flex justify-between"><div><p class="text-xs font-black uppercase text-orange-500">Menú del turno</p><h2 class="text-xl font-black">Disponibilidad</h2></div><button type="button" onclick="toggleAvailability()" class="w-10 h-10 rounded-xl bg-slate-100 font-black">×</button></div><div id="availability-list" class="mt-5 space-y-2"></div></aside>
     <script src="/vendor/supabase.js"></script><script src="app-config.js"></script><script src="runtime.js"></script><script src="business-image.js"></script><script src="app.js"></script>
-    <script src="kitchen-mode.js"></script><script src="kitchen-batches.js"></script>
+    <script src="kitchen-batches.js"></script>
     <script>
         const db = window.serveYourself.supabase, esc = window.serveYourself.escapeHtml;
-        let access, orders = [], stations = [], products = [], tables = [], activeStation = 'all', soundEnabled = false, timer, syncTimer, refreshTimer, loadingOrders = false, refreshQueued = false, batchBusy = false, trainingMode = null, modeControl, sync;
+        let access, orders = [], stations = [], products = [], tables = [], activeStation = 'all', soundEnabled = false, timer, syncTimer, refreshTimer, loadingOrders = false, refreshQueued = false, batchBusy = false, sync;
         const nextStatus = { pendiente: ['preparando', 'COMENZAR'], preparando: ['listo', 'MARCAR LISTO'], listo: ['entregado', 'ENTREGAR'] };
         async function init() {
             access = await window.serveYourself.requireRestaurantPermission('can_view_kitchen'); if (!access) return;
@@ -32,8 +31,6 @@
             window.serveYourself.initPushNotifications(access.user);
             const [{ data: stationData }, { data: productData }, { data: tableData }] = await Promise.all([db.from('kitchen_stations').select('*').eq('restaurant_id',access.restaurant_id).eq('is_active',true).order('name'),db.from('products').select('id,name,kitchen_station_id,is_available,is_archived').eq('restaurant_id',access.restaurant_id).order('name'),db.from('restaurant_tables').select('id,name').eq('restaurant_id',access.restaurant_id)]);
             stations=stationData||[];products=productData||[];tables=tableData||[];document.getElementById('station-filter').innerHTML += stations.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');renderAvailability();
-            modeControl=window.SYKitchenMode.create({db,restaurantId:access.restaurant_id,button:document.getElementById('kitchen-mode-toggle'),status:document.getElementById('ml-status'),onChange:value=>{trainingMode=value;render();},onRefresh:loadOrders});
-            await modeControl.load();
             sync = SYRuntime.orderSync(document.getElementById('sync-status'), loadOrders);
             await loadOrders();
             db.channel(`kitchen-${access.restaurant_id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'kitchen_tickets', filter: `restaurant_id=eq.${access.restaurant_id}` }, payload => {
@@ -51,7 +48,7 @@
             if (loadingOrders) { refreshQueued = true; return; }
             loadingOrders = true;
             try {
-                const [{ data, error }] = await Promise.all([db.rpc('list_kitchen_priority_queue', { p_restaurant_id: access.restaurant_id }),modeControl?.load()]);
+                const { data, error } = await db.rpc('list_kitchen_priority_queue', { p_restaurant_id: access.restaurant_id });
                 if (error) throw error;
                 orders = Array.isArray(data) ? data : [];
                 render();
@@ -77,13 +74,15 @@
             const location = order.service_type === 'dine_in' ? (tables.find(table=>Number(table.id)===Number(order.table_id))?.name || 'Mesa') : order.service_type === 'delivery' ? ' Delivery' : 'Para llevar' + (order.pickup_name ? ' · '+order.pickup_name : '');
             const roundItems = order.items;
             const visibleItems = activeStation === 'all' ? roundItems : roundItems.filter(item => String(item.station_id || products.find(p=>p.id===item.id)?.kitchen_station_id || 'general') === activeStation);
-            const startIn = minutesUntil(order.recommended_start_at), urgent = order.priority_override > 0 || startIn <= 0;
+            const startIn = minutesUntil(order.queue_start_at || order.recommended_start_at);
+            const overdue = order.service_type === 'dine_in' && Date.parse(order.target_ready_at) <= Date.now();
+            const urgent = overdue || startIn <= 0;
             const startLabel = stationState === 'preparando' ? 'EN PREPARACIÓN' : startIn > 1 ? `INICIAR EN ${startIn} MIN` : 'INICIAR AHORA';
-            const modelLabel = trainingMode === true ? 'Entrenamiento activo · midiendo esta preparación' : order.model_ready ? `Tiempos reales · error de validación ${Number(order.mean_absolute_error || 0).toFixed(1)} min` : Number(order.sample_count || 0) < Number(order.minimum_samples || 10) ? `Calibrando tiempos · ${Number(order.sample_count || 0)}/${Number(order.minimum_samples || 10)} · usando tiempo configurado` : 'Usando tiempo configurado para esta comanda';
-            return `<article class="kitchen-card ${urgent ? 'kitchen-due' : ''} ${order.priority_override === 2 ? 'kitchen-urgent' : ''}">
-                <div class="kitchen-card-priority"><span>#${position + 1} · ${esc(startLabel)}</span><select aria-label="Prioridad de comanda ${order.id}" onchange="setPriority(${order.id},this.value)" class="kitchen-priority-select"><option value="-1" ${order.priority_override===-1?'selected':''}>Posponer</option><option value="0" ${order.priority_override===0?'selected':''}>Normal</option><option value="1" ${order.priority_override===1?'selected':''}>Alta</option><option value="2" ${order.priority_override===2?'selected':''}>Urgente</option></select></div>
+            const modelLabel = order.model_ready ? `Tiempos reales · error de validación ${Number(order.mean_absolute_error || 0).toFixed(1)} min` : Number(order.sample_count || 0) < Number(order.minimum_samples || 10) ? `Calibrando tiempos · ${Number(order.sample_count || 0)}/${Number(order.minimum_samples || 10)} · usando tiempo configurado` : 'Usando tiempo configurado para esta comanda';
+            return `<article class="kitchen-card ${urgent ? 'kitchen-due' : ''}">
+                <div class="kitchen-card-priority"><span>#${position + 1} · ${esc(startLabel)}</span></div>
                 <div class="flex items-start justify-between gap-3"><div><p class="text-2xl font-black">Comanda #${order.id}</p><p class="text-xs text-slate-400">Cuenta #${order.order_id}</p><p class="text-sm font-black text-orange-400 mt-1">${esc(location)}</p></div><div class="text-right"><p class="kitchen-clock">${elapsed(order.created_at)}</p><p class="text-xs text-slate-400 mt-1">${timeLabel(order.created_at)}</p></div></div>
-                <div class="kitchen-timing-grid"><span><small>LISTO A LAS</small><b>${timeLabel(order.target_ready_at)}</b></span><span><small>PREPARACIÓN</small><b>≈ ${Math.round(Number(order.predicted_prep_minutes || 0))} min</b></span></div>
+                <div class="kitchen-timing-grid"><span><small>${order.service_type === 'dine_in' ? (overdue ? 'LÍMITE REBASADO' : 'LÍMITE DE SALÓN') : 'LISTO A LAS'}</small><b>${timeLabel(order.target_ready_at)}</b></span><span><small>PREPARACIÓN</small><b>≈ ${Math.round(Number(order.predicted_prep_minutes || 0))} min</b></span></div>
                 <p class="kitchen-priority-reason">${esc(order.priority_reason)} <small>${esc(modelLabel)}</small></p>
                 <div class="my-4 space-y-2">${visibleItems.map(item => `<div class="flex gap-3 text-lg font-extrabold"><span class="text-orange-400 min-w-8">${Number(item.qty)}×</span><span>${esc(item.nombre)}</span></div>`).join('')}</div>
                 ${order.notes ? `<div class="bg-amber-300 text-slate-950 p-3 rounded-xl font-black"> ${esc(order.notes)}</div>` : ''}
@@ -92,7 +91,7 @@
             </article>`;
         }
         function renderKitchenList(list) {
-            if (trainingMode !== false || !window.SYKitchenBatches) return list.map((o,i)=>orderCard(o,i)).join('');
+            if (!window.SYKitchenBatches) return list.map((o,i)=>orderCard(o,i)).join('');
             const batches=window.SYKitchenBatches.build(list,{stationKey:activeStation,products});
             return batches.map(group=>{
                 if(group.tickets.length===1)return orderCard(group.tickets[0],group.startIndex);
@@ -115,13 +114,6 @@
                 document.getElementById(`count-${status}`).textContent = list.length;
                 document.getElementById(`orders-${status}`).innerHTML = list.length ? renderKitchenList(list) : '<p class="text-center text-slate-600 py-12 font-bold">Sin pedidos</p>';
             });
-            modeControl?.updateOrders(orders);
-        }
-        async function setPriority(id, value) {
-            const priority = Number(value);
-            const { error } = await db.rpc('set_kitchen_ticket_priority', { p_ticket_id:id, p_priority:priority, p_note:null });
-            if (error) return alert(error.message);
-            await loadOrders();
         }
         async function moveOrder(id, status) {
             const { error } = activeStation === 'all' ? await db.rpc('update_kitchen_ticket_status', { p_ticket_id: id, p_status: status }) : await db.rpc('update_kitchen_ticket_station_status',{p_ticket_id:id,p_station_key:activeStation,p_status:status});
