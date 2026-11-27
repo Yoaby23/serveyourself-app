@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
-function kitchen(){
+function kitchen({setInterval=()=>{},setTimeout=globalThis.setTimeout,clearTimeout=globalThis.clearTimeout}={}){
  const elements=new Map();const get=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',textContent:'',classList:{add(){},remove(){},toggle(){}},addEventListener(){}});return elements.get(id);};
- const context=vm.createContext({console,Date,Number,setTimeout,clearTimeout,SYRuntime:{},document:{getElementById:get,addEventListener(){},visibilityState:'visible'},window:{serveYourself:{supabase:{},escapeHtml:v=>String(v)},addEventListener(){}}});
+ const context=vm.createContext({console,Date,Number,setInterval,setTimeout,clearTimeout,SYRuntime:{},document:{getElementById:get,addEventListener(){},visibilityState:'visible'},window:{serveYourself:{supabase:{},escapeHtml:v=>String(v)},addEventListener(){}}});
  vm.runInContext(read('kitchen-batches.js'),context);
  const scripts=[...read('cocina.html').matchAll(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/g)];
  vm.runInContext(scripts.at(-1)[1].replace(/init\(\);\s*$/,''),context);
@@ -37,4 +37,49 @@ test('joint preparation renders common totals without merging ticket identities 
  const ui=kitchen();ui.context.ordered=[{...base,id:2},{...base,id:3}];
  vm.runInContext('orders=ordered;render()',ui.context);const html=ui.elements.get('orders-pendiente').innerHTML;
  assert.match(html,/2 comandas · preparación conjunta/);assert.match(html,/2 × Plato/);assert.match(html,/#2: 1 · #3: 1/);assert.match(html,/Comanda #2/);assert.match(html,/Comanda #3/);assert.equal((html.match(/Comenzar juntas/g)||[]).length,1);assert.doesNotMatch(html,/onclick="moveOrder/);
+});
+
+
+test('an open kitchen screen reorders cards on a Realtime event and on the polling fallback',async()=>{
+ const intervals=new Map(), changes=new Map();
+ const ui=kitchen({
+  setInterval:(callback,ms)=>intervals.set(ms,callback),
+  setTimeout:callback=>callback(),
+  clearTimeout:()=>{}
+ });
+ const first={...base,id:1,items:[{id:'p',nombre:'Plato',qty:1}]};
+ const second={...base,id:2,items:[{id:'q',nombre:'Sopa',qty:1}]};
+ let queue=[first,second];
+ const app=ui.context.window.serveYourself;
+ const query={select(){return this;},eq(){return this;},order(){return this;},then(resolve){resolve({data:[]});}};
+ const channel={on(_event,filter,callback){changes.set(filter.table,callback);return this;},subscribe(){}};
+ Object.assign(app,{
+  requireRestaurantPermission:async()=>({restaurant_id:'restaurant',business_name:'Cocina'}),
+  renderRestaurantNavigation(){},
+  initPushNotifications(){}
+ });
+ Object.assign(app.supabase,{
+  from:()=>query,
+  channel:()=>channel,
+  async rpc(name,args){
+   assert.equal(name,'list_kitchen_priority_queue');
+   assert.equal(args.p_restaurant_id,'restaurant');
+   return {data:queue};
+  }
+ });
+ ui.context.SYRuntime.orderSync=()=>({success(){},failure(){assert.fail('Queue refresh failed');}});
+ await vm.runInContext('init()',ui.context);
+ const visibleIds=()=>Array.from(ui.elements.get('orders-pendiente').innerHTML.matchAll(/Comanda #(\d+)/g),m=>Number(m[1]));
+ assert.deepEqual(visibleIds(),[1,2]);
+
+ queue=[second,first];
+ changes.get('orders')();
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual(visibleIds(),[2,1]);
+
+ queue=[first,second];
+ intervals.get(5000)();
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual(visibleIds(),[1,2]);
+ assert.equal(ui.elements.get('count-pendiente').textContent,2);
 });
