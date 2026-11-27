@@ -3,6 +3,30 @@ begin;
 -- Resume automatic predictions for kitchens left in the former calibration mode.
 update public.profiles set kitchen_training_mode=false where kitchen_training_mode;
 
+alter table public.kitchen_tickets add column dine_in_due_at timestamptz;
+
+-- Existing active tickets use the configured time at deployment.
+update public.kitchen_tickets t
+set dine_in_due_at=t.created_at+make_interval(mins=>p.dine_in_prep_minutes)
+from public.profiles p
+where p.id=t.restaurant_id and t.service_type='dine_in' and t.status in ('pendiente','preparando');
+
+create function sy_private.store_dine_in_deadline()
+returns trigger language plpgsql security definer set search_path='' as $$
+begin
+ if new.service_type='dine_in' then
+  select new.created_at+make_interval(mins=>p.dine_in_prep_minutes)
+  into new.dine_in_due_at from public.profiles p where p.id=new.restaurant_id;
+ end if;
+ return new;
+end;
+$$;
+revoke all on function sy_private.store_dine_in_deadline() from public,anon,authenticated;
+
+create trigger kitchen_dine_in_initial_deadline
+before insert on public.kitchen_tickets
+for each row execute function sy_private.store_dine_in_deadline();
+
 CREATE OR REPLACE FUNCTION public.retrain_kitchen_model(p_restaurant_id uuid, p_service_type text)
  RETURNS void
  LANGUAGE plpgsql
@@ -85,9 +109,9 @@ begin
             case
                 when service_type='pickup' and pickup_eta_minutes is not null then greatest(now(),pickup_arrival_at)
                 when service_type='delivery' and driver_eta_minutes is not null then now()+make_interval(mins=>driver_eta_minutes)
+                when service_type='dine_in' then coalesce(dine_in_due_at,created_at+make_interval(mins=>dine_in_prep_minutes))
                 when scheduled_for is not null then scheduled_for
                 when service_type='delivery' then created_at+make_interval(mins=>delivery_prep_minutes)
-                when service_type='dine_in' then created_at+make_interval(mins=>dine_in_prep_minutes)
                 else created_at+make_interval(mins=>pickup_prep_minutes)
             end as target_ready_at
         from eta e
@@ -97,6 +121,15 @@ begin
             extract(epoch from (now()-(x.target_ready_at-make_interval(secs=>round(x.predicted_minutes*60)::integer))))/60*10
                 + extract(epoch from (now()-x.created_at))/60*0.5 as priority_score
         from targets x
+    ), ordered as (
+        select r.*,
+            case when service_type='dine_in' and status='pendiente' then
+                min(recommended_start_at) over (
+                    partition by service_type,status order by created_at,id
+                    rows between current row and unbounded following
+                ) - interval '3 minutes'
+            else recommended_start_at end as queue_start_at
+        from ranked r
     )
     select coalesce(jsonb_agg(
         to_jsonb(r)-'restaurant_latitude'-'restaurant_longitude'-'pickup_prep_minutes'-'dine_in_prep_minutes'-'delivery_prep_minutes'-'vehicle_type'-'driver_latitude'-'driver_longitude'-'driver_location_at'
@@ -116,9 +149,9 @@ begin
             'can_start',true,
             'minimum_samples',10,
             'prediction_source',case when r.usable_model then 'validated_model' else 'configured_time' end
-        ) order by case r.status when 'preparando' then 0 else 1 end,r.recommended_start_at,r.created_at,r.id
+        ) order by case r.status when 'preparando' then 0 else 1 end,r.queue_start_at,r.created_at,r.id
     ),'[]'::jsonb) into v_result
-    from ranked r;
+    from ordered r;
     return v_result;
 end;
 $function$;
