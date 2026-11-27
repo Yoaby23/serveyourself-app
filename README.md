@@ -428,3 +428,22 @@ Con una cuenta administradora, configura una regla para `main` que requiera pull
 - Ensaya la restauración en un entorno separado siguiendo [la guía de restauración local de Supabase](https://supabase.com/docs/guides/local-development/restoring-downloaded-backup). Aísla la base y sus integraciones antes de arrancarla. Verifica acceso, configuración de un restaurante, turnos, pedidos, cobros y devoluciones. Anota el intervalo cubierto y el tiempo hasta que la aplicación vuelve a consultar los datos. Los objetos de Storage requieren una copia separada. Guarda también la referencia de las versiones del frontend y de las funciones.
 - En GitHub, después de activar la protección de `main`, verifica que exija los controles **JavaScript** y **PostgreSQL** de **Calidad** y que bloquee force push y borrado. Para comprobar la entrega de avisos, ejecuta **Actions → Salud de producción → Run workflow** con la opción de alerta de prueba y pide confirmación desde la cuenta destinataria.
 - En Supabase Auth revisa la protección contra contraseñas filtradas. Supabase la ofrece desde el plan Pro. El control se verifica desde el panel de Auth. Las suites SQL comprueban que las integraciones internas y las credenciales de proveedores sigan fuera del alcance de usuarios de la app.
+
+#### Exportación cifrada con Supabase Free
+
+En un equipo autorizado con **Bash**, **age** y el cliente **PostgreSQL 17 o compatible**, genera una identidad con `age-keygen -o /ruta/privada/identidad.age` o usa la clave pública de tu custodio de respaldos. Conserva el archivo de identidad en un lugar protegido y distinto al de los respaldos.
+
+En **Supabase → Connect**, usa una conexión directa o el *Session pooler*. Define `PGHOST`, `PGPORT`, `PGUSER`, `PGDATABASE` y `PGSSLMODE=verify-full` con los datos del proyecto. Configura la CA de Supabase con `PGSSLROOTCERT` y la contraseña con un archivo `.pgpass` fuera del repositorio, con permisos `0600`. El script requiere la clave pública age y crea el archivo cifrado en la carpeta que indiques. El volcado se cifra al vuelo y el archivo final aparece solo si ambos pasos terminaron bien.
+
+```bash
+scripts/backup-database.sh /ruta/privada/de/respaldos CLAVE_PUBLICA_AGE
+```
+
+Comprueba que el archivo se descifra y tiene un índice PostgreSQL legible.
+
+```bash
+set -o pipefail
+age --decrypt --identity /ruta/privada/identidad.age /ruta/privada/respaldo.dump.age | pg_restore --list > /dev/null
+```
+
+Para el ensayo completo, usa una copia aislada con versiones, roles y extensiones compatibles. Coteja pedidos, turnos, cobros y devoluciones después de restaurar. Conserva una copia cifrada fuera del equipo y fija la frecuencia según cuántos cambios puedes permitirte perder. El archivo contiene la base PostgreSQL. Los archivos de Storage, las Edge Functions, sus secretos y la configuración del proyecto necesitan su propio respaldo.

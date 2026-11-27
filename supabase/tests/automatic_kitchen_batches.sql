@@ -21,9 +21,11 @@ begin
  execute 'reset role';update public.kitchen_tickets set notes='Sin azúcar' where id=ids[2];execute 'set local role authenticated';
  blocked:=false;begin perform public.start_kitchen_batch(owner_id,ids[1:2],null);exception when others then blocked:=true;end;assert blocked,'Special request was grouped';
  execute 'reset role';update public.kitchen_tickets set notes=null where id=ids[2];execute 'set local role authenticated';
+ -- A legacy manual priority cannot reorder the automatic queue or split its batches.
  perform public.set_kitchen_ticket_priority(ids[2],1,null);
- blocked:=false;begin perform public.start_kitchen_batch(owner_id,ids[1:2],null);exception when others then blocked:=true;end;assert blocked,'Different priorities were grouped';
- perform public.set_kitchen_ticket_priority(ids[2],0,null);
+ q:=public.list_kitchen_priority_queue(owner_id);
+ assert (q->0->>'id')::bigint=ids[1] and (q->1->>'id')::bigint=ids[2],'Legacy priority reordered the automatic queue';
+ assert (q->1->>'priority_override')::integer=0,'Legacy priority leaked into grouping';
  execute 'reset role';update public.orders set scheduled_for=now()+interval '1 hour' where id=(select order_id from public.kitchen_tickets where id=ids[2]);execute 'set local role authenticated';
  blocked:=false;begin perform public.start_kitchen_batch(owner_id,ids[1:2],null);exception when others then blocked:=true;end;assert blocked,'Future pickup was started too early';
  execute 'reset role';update public.orders set scheduled_for=null where id=(select order_id from public.kitchen_tickets where id=ids[2]);execute 'set local role authenticated';
@@ -60,6 +62,29 @@ begin
  end loop;
  assert (select sample_count from public.kitchen_ml_models where restaurant_id=owner_id and service_type='pickup')=15,'Automatic observations were not used to retrain';
  assert (select model_ready from public.kitchen_ml_models where restaurant_id=owner_id and service_type='pickup'),'Automatic model never became usable';
+ -- Equal promised times must put the larger, slower preparation first.
+ ids:='{}';
+ for i in 1..2 loop
+  v_qty:=case when i=1 then 1 else 3 end;
+  items:=jsonb_build_array(jsonb_build_object('id',product_id,'qty',v_qty));
+  o:=public.create_pos_table_order(owner_id,items,null,'pickup',null,'cash',null,'Learned queue QA');
+  perform public.register_pos_payment_v2((o->>'id')::bigint,'cash',v_qty*10,0,v_qty*10);
+  select id into v_id from public.kitchen_tickets where order_id=(o->>'id')::bigint;
+  ids:=array_append(ids,v_id);
+ end loop;
+ execute 'reset role';
+ update public.orders set scheduled_for=now()+interval '30 minutes'
+ where id in(select order_id from public.kitchen_tickets where id=any(ids));
+ execute 'set local role authenticated';
+ q:=public.list_kitchen_priority_queue(owner_id);
+ assert (q->0->>'id')::bigint=ids[2] and (q->1->>'id')::bigint=ids[1],'Learned duration did not reorder equal deadlines';
+ assert q->0->>'prediction_source'='validated_model' and q->1->>'prediction_source'='validated_model','Eligible queue tickets ignored verified estimates';
+ assert q=public.list_kitchen_priority_queue(owner_id),'A second read changed the deterministic queue';
+ perform public.update_kitchen_ticket_status(ids[2],'preparando');
+ assert (public.list_kitchen_priority_queue(owner_id)->0->>'id')::bigint=ids[2],'Starting a ticket lost it from the queue';
+ perform public.update_kitchen_ticket_status(ids[2],'listo');
+ perform public.update_kitchen_ticket_status(ids[1],'preparando');
+ perform public.update_kitchen_ticket_status(ids[1],'listo');
  -- Batch start must also work in a station-filtered view once its recommended start is due.
  execute 'reset role';update public.profiles set pickup_prep_minutes=10 where id=owner_id;execute 'set local role authenticated';
  ids:='{}';

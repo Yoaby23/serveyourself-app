@@ -22,7 +22,7 @@ assert.match(migration, /create_scheduled_pickup_order/, 'Pickup programado debe
 assert.match(migration, /delivery_status in\('accepted','preparing','ready_for_dispatch','picked_up','on_the_way','arrived'\)/, 'El ETA debe recibir ubicación antes de la recogida');
 
 assert.match(kitchen, /rpc\('list_kitchen_priority_queue'/, 'Cocina debe usar la cola inteligente');
-assert.match(kitchen, /set_kitchen_ticket_priority/, 'Cocina debe poder corregir la prioridad');
+assert.doesNotMatch(kitchen, /set_kitchen_ticket_priority/, 'La cola no tiene controles de prioridad manual');
 assert.match(kitchen, /table: 'orders'/, 'Los cambios del repartidor deben refrescar cocina en tiempo real');
 assert.match(kitchen, /Calibrando tiempos/, 'La interfaz debe explicar la fase de calibración');
 assert.match(customer, /pickup-scheduled-for/, 'El cliente debe poder programar pickup');
@@ -30,6 +30,6 @@ assert.match(customer, /createOrderOnce/, 'El horario debe guardarse junto al pe
 assert.match(driver, /\['accepted','preparing','ready_for_dispatch','picked_up','on_the_way','arrived'\]/, 'El repartidor debe compartir ubicación durante toda la asignación');
 assert.match(admin, /cfg-pickup-prep/, 'El restaurante debe configurar el tiempo inicial de pickup');
 assert.match(admin, /cfg-dine-in-prep/, 'El restaurante debe configurar el tiempo inicial de mesa');
-assert.match(worker, /serveyourself-shell-v75/, 'La PWA debe invalidar la caché anterior');
+assert.match(worker, /serveyourself-shell-v76/, 'La PWA debe invalidar la caché anterior');
 
 console.log('OK: priorización ML, ETA y pickup programado validados.');

@@ -1,10 +1,10 @@
 # Cocina automática
 
-La cocina viene preconfigurada en automático. El único interruptor **Entrenamiento** permite cambiar temporalmente a calibración, sin abrir formularios ni registrar ejemplos manualmente. Activado, usa los tiempos configurados y recopila duraciones reales. Al desactivarlo aplica los modelos validados y vuelve a agrupar comandas compatibles. El ajuste se guarda por restaurante y se sincroniza entre sus dispositivos.
+Cocina aprende y se ordena automáticamente. El equipo sigue marcando Comenzar y Listo para medir la preparación y conservar el control de cuándo se ejecuta cada comanda.
 
 Cada comanda con un inicio medido alimenta el modelo al marcarse Lista, también cuando la última estación termina. No incluye espera en cola, pedidos cancelados ni duraciones fuera de 1–240 minutos. El aprendizaje continúa en automático. No se crean datos ficticios para preentrenar.
 
-El modelo de cada servicio requiere 10 mediciones y una validación temporal del error antes de usarse. También exige productos conocidos, cantidades dentro del rango observado y 3 muestras del horario correspondiente. Si aún no hay datos suficientes, se usan los tiempos configurados. Las comandas ya en preparación conservan la predicción capturada al comenzar.
+El modelo de cada servicio requiere 10 mediciones. En sus pedidos más recientes debe igualar o mejorar el error del tiempo configurado antes de usarse. La cola se ordena automáticamente por la hora recomendada para empezar. Los empates conservan el orden de llegada y folio. También exige productos conocidos, cantidades dentro del rango observado y 3 muestras del horario correspondiente. Si aún no hay datos suficientes, se usan los tiempos configurados. Las comandas ya en preparación conservan la predicción capturada al comenzar.
 
 La agrupación automática conserva el orden de prioridad. Reúne de 2 a 5 comandas consecutivas con un producto común de la misma estación, el mismo estado y prioridad, y horas de inicio/entrega dentro de cinco minutos. Excluye notas, modificaciones especiales y trabajo pospuesto. Muestra cantidades por comanda, permite Comenzar juntas y mantiene cuentas, pagos, notificaciones y finalización separados.
 
