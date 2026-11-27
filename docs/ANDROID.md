@@ -2,28 +2,35 @@
 
 El proyecto de Capacitor empaqueta todas las pantallas de ServeYourself y usa el Supabase existente. El identificador de producción es `mx.serveyourself.app`. Conserva el identificador, el origen local configurado y el certificado de firma de cada actualización. Incrementa `versionCode` en `mobile/android/app/build.gradle` en cada publicación y usa un solo contador para los canales de distribución. Así Android conserva la instalación y sus datos locales.
 
-## Publicar en Play y ofrecer un APK directo
+## Distribuir el APK desde la web
 
-1. Crea la aplicación en Google Play Console con el identificador `mx.serveyourself.app`. Usa **Play App Signing** y deja que Play administre la clave de firma si vas a descargar desde ahí los APK para tu web. Genera y guarda una clave de carga separada para entregar los AAB. Conserva la clave y su contraseña fuera de Git y de cualquier archivo distribuido.
-2. Carga el AAB firmado con tu clave de carga en la pista de **pruebas internas**. Usa una pista de Play con Play App Signing. **Uso compartido interno de aplicaciones** usa otro certificado y no sirve para instalar la primera versión de producción.
-3. En **Explorador de app bundles**, selecciona esa versión y descarga el **APK universal firmado**. Ese APK lleva la clave de firma de la misma aplicación en Play. Publica ese archivo en tu dominio HTTPS para ofrecer descarga directa.
-4. Para la siguiente versión, incrementa `versionCode`, repite el proceso y prueba la instalación encima de la anterior. Comprueba el certificado de ambos APK con `apksigner verify --print-certs` y verifica que sobrevivan los datos locales.
+1. Si es tu primera publicación, crea un almacén de claves para ServeYourself en Android Studio. Guarda el archivo y una copia cifrada fuera del repositorio. Guarda la contraseña por separado. Usa esa misma clave para todas las versiones públicas.
+2. Genera un **APK de release firmado** con el identificador `mx.serveyourself.app`. Antes de distribuirlo, comprueba su firma con `apksigner verify --print-certs` y conserva la huella SHA-256 del certificado.
+3. Publica ese APK en un enlace HTTPS, por ejemplo en la web de ServeYourself. Cada usuario abre el archivo en Android y confirma la instalación. El sistema puede pedir autorización a la aplicación desde la que se abrió la descarga.
+4. En la siguiente publicación, sube `versionCode`, firma con la misma clave y coteja la huella SHA-256 con la anterior. Instala la actualización encima de la versión anterior en un teléfono de prueba y comprueba que conserva los datos locales. El usuario abre el nuevo APK y confirma **Actualizar**.
 
-## Compilar
+La descarga directa prescinde de la inscripción en Google Play Console. Google anunció una ampliación gradual de la verificación de desarrolladores a instalaciones externas en dispositivos certificados durante 2027. Consulta los [requisitos vigentes de distribución externa](https://developer.android.com/developer-verification) antes de ampliar la publicación.
 
-Usa Node.js 22 o posterior, Java 21 y Android SDK 36. Ejecuta desde la raíz:
+## Generar el APK firmado
+
+Usa Node.js 22 o posterior, Java 21 y Android SDK 36. Desde la raíz sincroniza la app:
 
 ```bash
 npm ci
 npm ci --prefix mobile
 npm run sync --prefix mobile
-cd mobile/android
-./gradlew :app:bundleRelease
 ```
 
-El AAB queda en `mobile/android/app/build/outputs/bundle/release/`. Para firmarlo para Play, define las variables `SY_ANDROID_UPLOAD_STORE` (ruta absoluta), `SY_ANDROID_UPLOAD_PASSWORD`, `SY_ANDROID_UPLOAD_ALIAS` y `SY_ANDROID_UPLOAD_KEY_PASSWORD` antes de compilar. Al compilar sin las cuatro variables, el AAB se genera sin firma. En Windows usa `gradlew.bat` en lugar de `./gradlew`.
+Abre `mobile/android` en Android Studio. En **Build → Generate Signed Bundle / APK** elige **APK**, el módulo `app` y la variante `release`. En la primera compilación selecciona **Create new** para crear el almacén. En las siguientes selecciona ese mismo archivo y alias. El asistente indica la ruta del APK al terminar.
 
-El flujo **Android** de GitHub verifica dos versiones del paquete aislado `mx.serveyourself.app.qa` en un emulador. Estos APK son para QA. Usa el APK universal con la firma de Play para cualquier instalación que deba actualizarse a producción sin reinstalar.
+Para un build por comando, define `SY_ANDROID_UPLOAD_STORE` con la ruta absoluta al almacén de firma y las variables `SY_ANDROID_UPLOAD_PASSWORD`, `SY_ANDROID_UPLOAD_ALIAS` y `SY_ANDROID_UPLOAD_KEY_PASSWORD` fuera de Git. Después ejecuta dentro de `mobile/android`:
+
+```bash
+./gradlew :app:assembleRelease
+apksigner verify --print-certs app/build/outputs/apk/release/app-release.apk
+```
+
+En Windows usa `gradlew.bat`. `apksigner` viene con Android SDK Build Tools. Con las cuatro variables presentes, Gradle firma el APK de release. Los APK de **Android QA** en GitHub usan un identificador distinto y están destinados a pruebas.
 
 ## Validación de la app móvil
 
