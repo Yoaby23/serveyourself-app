@@ -244,20 +244,20 @@
 
             let error;
             try {
-                const desktop = window.serveYourselfDesktop;
+                const installedApp = window.serveYourselfNative;
                 const result = await window.serveYourself.supabase.auth.signInWithOAuth({
                     provider,
-                    options: desktop ? { redirectTo: await desktop.authStart(redirectUrl.href), skipBrowserRedirect: true }
+                    options: installedApp ? { redirectTo: await installedApp.authStart(redirectUrl.href), skipBrowserRedirect: true }
                         : { redirectTo: redirectUrl.toString() }
                 });
                 error = result.error;
-                if (desktop && !error) await desktop.openGoogle(result.data.url);
+                if (installedApp && !error) await installedApp.openGoogle(result.data.url);
             } catch (failure) { error = failure; }
 
             if (error) {
                 alert('No fue posible iniciar sesión: ' + error.message);
                 setSocialButtonsDisabled(false, button);
-            } else if (window.serveYourselfDesktop) {
+            } else if (window.serveYourselfNative) {
                 setSocialButtonsDisabled(false, button);
             }
         }
