@@ -4,6 +4,7 @@ const SUPABASE_KEY = '__SY_SUPABASE_PUBLISHABLE_KEY__';
 window.serveYourself = {
     supabase: window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
         auth: {
+            ...(window.serveYourselfDesktop ? { flowType: 'pkce' } : {}),
             persistSession: true,
             autoRefreshToken: true,
             detectSessionInUrl: !window.SY_PASSWORD_RECOVERY_PAGE,
@@ -477,7 +478,7 @@ if (!document.querySelector('link[rel="apple-touch-icon"]')) {
     appleIcon.href = 'logo.png';
     document.head.appendChild(appleIcon);
 }
-if ('serviceWorker' in navigator && location.protocol === 'https:') {
+if (!window.serveYourselfDesktop && 'serviceWorker' in navigator && location.protocol === 'https:') {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 window.addEventListener('beforeinstallprompt', event => {

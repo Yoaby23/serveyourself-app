@@ -110,7 +110,11 @@
             const email = document.getElementById('recovery-email').value.trim();
             button.disabled = true;button.textContent = 'ENVIANDO...';
             try {
-                const { error } = await auth.resetPasswordForEmail(email, { redirectTo: resetRedirectUrl() });
+                const webRedirect = resetRedirectUrl();
+                const redirectTo = window.serveYourselfDesktop
+                    ? await window.serveYourselfDesktop.authStart(webRedirect)
+                    : webRedirect;
+                const { error } = await auth.resetPasswordForEmail(email, { redirectTo });
                 if(error)throw error;
                 const message=document.getElementById('sent-message');
                 message.textContent='Si existe una cuenta con ese correo, recibirás un enlace para cambiar la contraseña. Revisa también spam.';
