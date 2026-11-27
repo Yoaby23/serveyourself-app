@@ -26,3 +26,9 @@ npm run package:windows --prefix desktop
 ```
 
 El `.exe` queda en `desktop/out/`. La compilación obtiene la configuración pública del Supabase de producción y verifica el origen antes de empaquetar. Mantén los secretos de los servicios fuera del instalador. El instalador de escritorio y el sitio de Vercel se publican de manera independiente.
+
+## Avisos de actualización
+
+Desde la versión `0.2.0`, la app avisa cuando hay una versión disponible. También puedes pulsar **Buscar actualizaciones** en Cuenta. Guarda los cambios del turno antes de ejecutar el instalador de la nueva versión.
+
+Actualiza `native-releases.json` en `main` después de comprobar que el archivo de esa versión ya se descarga desde GitHub Releases. La portada usa ese registro para ofrecer la misma versión.

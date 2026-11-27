@@ -1525,3 +1525,7 @@ html.sy-cart-open,html.sy-cart-open body{overflow:hidden;overscroll-behavior:non
 .sy-shift-detail details { border-bottom: 1px solid currentColor; padding: .65rem 0; }
 .sy-shift-detail summary { cursor: pointer; font-weight: 700; }
 .sy-shift-detail li { display: flex; gap: 1rem; justify-content: space-between; padding: .35rem 0; }
+
+.sy-native-update { position: fixed; z-index: 60; top: calc(env(safe-area-inset-top, 0px) + .75rem); right: .75rem; width: min(calc(100% - 1.5rem), 22rem); padding: 1rem; border: 1px solid var(--theme-border); border-radius: 1rem; background: var(--theme-surface); color: var(--theme-text); box-shadow: 0 8px 24px rgb(15 23 42 / 20%); }
+.sy-native-update p { font-weight: 700; margin: 0 0 .75rem; }
+.sy-native-update div { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }

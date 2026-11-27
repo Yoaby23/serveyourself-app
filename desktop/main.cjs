@@ -79,7 +79,7 @@ async function start() {
                 '/menu-publico.html', '/admin.html', '/reportes.html', '/repartidor.html', '/vendor/supabase.js'];
             const responses = await Promise.all(routes.map(route => fetch(route)));
             const ready = window.serveYourselfDesktop && window.serveYourself?.supabase && responses.every(response => response.ok);
-            if (!ready) return false;
+            if (!ready || (await window.serveYourselfDesktop.getAppInfo()).platform !== 'windows') return false;
             const catalog = await window.serveYourself.supabase.from('public_restaurants').select('id').limit(1);
             return !catalog.error && location.origin === ${JSON.stringify(SITE)} &&
                 window.serveYourself.supabase.supabaseUrl === ${JSON.stringify(BACKEND)};
@@ -90,6 +90,7 @@ async function start() {
     }
 }
 
+ipcMain.handle('desktop:app-info', event => { trusted(event); return { platform: 'windows', version: app.getVersion() }; });
 ipcMain.handle('desktop:auth-start', (event, destination) => { trusted(event); return auth.begin(destination); });
 ipcMain.handle('desktop:auth-open', (event, url) => {
     trusted(event);

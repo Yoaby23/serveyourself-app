@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/apk-directo.yml'
+      - 'mobile/android/app/build.gradle'
 
 permissions:
   contents: read

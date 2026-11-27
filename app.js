@@ -358,6 +358,69 @@ window.serveYourself = {
         }
     },
 
+    nativeReleaseDownload(platform, version) {
+        if (typeof version !== 'string' || !/^(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})$/.test(version)) return null;
+        const releases = 'https://github.com/Yoaby23/serveyourself-app/releases/download/';
+        if (platform === 'android') return `${releases}android-v${version}/ServeYourself-Android-${version}.apk`;
+        if (platform === 'windows') return `${releases}windows-v${version}/ServeYourself-${version}-Windows-x64.exe`;
+        return null;
+    },
+
+    isNewerNativeRelease(installed, release) {
+        if (!this.nativeReleaseDownload(installed.platform, installed.version) ||
+            !this.nativeReleaseDownload(installed.platform, release?.version)) throw new Error('Versión no válida');
+        if (installed.platform === 'android') {
+            const build = Number(installed.build);
+            if (!Number.isSafeInteger(build) || build < 1 || !Number.isSafeInteger(release.build) ||
+                release.build < 1 || release.build > 2100000000) throw new Error('Número de versión no válido');
+            return release.build > build;
+        }
+        const current = installed.version.split('.').map(Number);
+        const next = release.version.split('.').map(Number);
+        const difference = next.findIndex((part, index) => part !== current[index]);
+        return difference !== -1 && next[difference] > current[difference];
+    },
+
+    async checkNativeUpdate(manual = false) {
+        if (!window.serveYourselfNative?.getAppInfo) return;
+        const now = Date.now();
+        const checkKey = 'sy-native-update-check';
+        const bannerId = 'sy-native-update';
+        if (document.getElementById(bannerId)) return;
+        if (!manual && now - Number(window.sessionStorage.getItem(checkKey) || 0) < 15 * 60 * 1000) return;
+        window.sessionStorage.setItem(checkKey, String(now));
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8000);
+        try {
+            const installed = await window.serveYourselfNative.getAppInfo();
+            if (!installed) throw new Error('Versión de prueba');
+            const response = await fetch('https://raw.githubusercontent.com/Yoaby23/serveyourself-app/main/native-releases.json', {
+                cache: 'no-store', credentials: 'omit', signal: controller.signal, redirect: 'error'
+            });
+            if (!response.ok) throw new Error('No se pudo consultar la versión');
+            const release = (await response.json())[installed.platform];
+            if (!this.isNewerNativeRelease(installed, release)) {
+                if (manual) alert('Ya tienes la versión más reciente de ServeYourself.');
+                return;
+            }
+            if (document.getElementById(bannerId)) return;
+            const url = this.nativeReleaseDownload(installed.platform, release.version);
+            const banner = document.createElement('aside');
+            banner.id = bannerId;
+            banner.className = 'sy-native-update';
+            banner.setAttribute('aria-label', 'Actualización de ServeYourself');
+            banner.innerHTML = `<p role="status">ServeYourself ${release.version} está disponible.</p>
+                <div><a href="${url}" class="sy-config-primary">Descargar actualización</a>
+                <button type="button" class="sy-config-secondary">Más tarde</button></div>`;
+            banner.querySelector('button').addEventListener('click', () => banner.remove());
+            document.body.appendChild(banner);
+        } catch {
+            if (manual) alert('No se pudo buscar una actualización. Revisa tu conexión e intenta de nuevo.');
+        } finally {
+            clearTimeout(timer);
+        }
+    },
+
     async installApp() {
         const { userAgent = '', platform = '', maxTouchPoints = 0, userAgentData } = window.navigator;
         const platforms = `${userAgentData?.platform || ''} ${platform}`;
@@ -366,6 +429,7 @@ window.serveYourself = {
         const android = !isiOS && /Android/i.test(`${platforms} ${userAgent}`);
         const windows = !isiOS && !android && /Windows|Win32|Win64/i.test(`${platforms} ${userAgent}`);
         const standalone = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        if (window.serveYourselfNative?.getAppInfo) return this.checkNativeUpdate(true);
         if (window.serveYourselfNative || (standalone && !android && !windows)) {
             alert('ServeYourself ya está instalada en este dispositivo.');
             return;
@@ -376,10 +440,12 @@ window.serveYourself = {
         }
         if (android || windows) {
             const platformName = android ? 'Android' : 'Windows';
-            const releases = 'https://github.com/Yoaby23/serveyourself-app/releases/download/';
-            const url = releases + (android
-                ? 'android-v0.1.0/ServeYourself-Android-0.1.0.apk'
-                : 'windows-v0.1.0/ServeYourself-0.1.0-Windows-x64.exe');
+            const release = window.APP_CONFIG?.nativeReleases?.[platformName.toLowerCase()];
+            const url = this.nativeReleaseDownload(platformName.toLowerCase(), release?.version);
+            if (!url) {
+                alert('La descarga no está disponible en este momento.');
+                return;
+            }
             const steps = android
                 ? 'Abre el APK desde Descargas. Si Android te pide permiso para instalar desde el navegador o la app de archivos, autoriza esa fuente y toca Instalar. Si ya tienes el APK anterior de ServeYourself, toca Actualizar.'
                 : 'En tu PC con Windows de 64 bits, abre el archivo .exe desde Descargas y sigue el asistente. Después abre ServeYourself desde el menú Inicio.';
@@ -617,6 +683,15 @@ async function showInstalledPermissions(afterInstall = false) {
 }
 window.addEventListener('load', () => showInstalledPermissions());
 window.addEventListener('appinstalled', () => { window.serveYourself._installPrompt = null; showInstalledPermissions(true); });
+if (window.serveYourselfNative?.getAppInfo) {
+    window.addEventListener('load', () => {
+        document.querySelectorAll('[data-sy-install]').forEach(button => { button.textContent = 'Buscar actualizaciones'; });
+        window.serveYourself.checkNativeUpdate();
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) window.serveYourself.checkNativeUpdate();
+    });
+}
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         window.serveYourself.ensureGlobalBackButton();
