@@ -8,8 +8,9 @@ adb shell am start -W -n "$activity"
 adb shell "run-as $app sh -c 'echo conserva-datos > sy-qa-update.txt'"
 adb install -r "$RUNNER_TEMP/serve-v2.apk"
 adb shell am start -W -n "$activity"
-adb shell dumpsys package "$app" | rg 'versionCode=2\b'
+adb shell dumpsys package "$app" | grep -E 'versionCode=2([[:space:]]|$)'
 [[ "$(adb shell run-as "$app" cat sy-qa-update.txt | tr -d '\r')" == 'conserva-datos' ]]
+printf 'Los datos de la versión anterior siguen disponibles.\n'
 
 python3 - "$RUNNER_TEMP/serve-v2.apk" <<'PY'
 from pathlib import Path
