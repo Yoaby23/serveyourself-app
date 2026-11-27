@@ -110,5 +110,3 @@ html[data-theme] .kitchen-toolbar .sy-select-button {
  background:var(--theme-subtle);color:var(--theme-text);border:1px solid var(--theme-border);
 }
 html[data-theme] .kitchen-toolbar > button:hover:not(:disabled) { background:var(--theme-elevated);border-color:var(--theme-muted); }
-html[data-theme] .kitchen-toolbar #kitchen-mode-toggle[aria-checked=true] { background:var(--theme-accent-bg);color:var(--theme-accent);border-color:var(--theme-accent); }
-html[data-theme] .kitchen-toolbar .kitchen-mode-copy small { color:inherit; }

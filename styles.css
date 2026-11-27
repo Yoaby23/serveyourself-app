@@ -238,9 +238,7 @@ input[type='radio'] {
     font-size: .78125rem;
     line-height: 1.25;
 }
-.kitchen-toolbar > button:not(.kitchen-mode-toggle) { display:flex;align-items:center;justify-content:center; }
-.kitchen-toolbar .kitchen-mode-toggle { gap:6px; }
-.kitchen-toolbar .kitchen-mode-copy b { font-size:inherit; }
+.kitchen-toolbar > button { display:flex;align-items:center;justify-content:center; }
 .kitchen-toolbar .sy-select-button > span:first-child { max-height:40px;overflow:hidden; }
 @media (min-width:768px) and (max-width:1100px) {
     .kitchen-header { grid-template-columns:minmax(0,1fr) auto; }
@@ -1491,12 +1489,6 @@ img[src="app-icon.svg"], img[src="/app-icon.svg"],
 .kitchen-batch-heading button:disabled { opacity:.5;cursor:wait; }
 .kitchen-batch-members { display:grid;gap:12px;padding:12px; }.kitchen-batch-members .kitchen-card { margin:0; }
 
-.kitchen-mode-toggle { display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:10px 14px;border:1px solid transparent;border-radius:12px;background:var(--theme-primary);color:var(--theme-on-primary);text-align:left; }
-.kitchen-mode-copy { display:grid;gap:3px; }.kitchen-mode-copy b { font-size:.9rem; }.kitchen-mode-copy small { font-size:.7rem;color:inherit;opacity:.8; }
-.kitchen-mode-track { display:flex;align-items:center;width:30px;height:18px;border-radius:20px;padding:3px;background:var(--theme-muted);flex-shrink:0;transition:background .2s; }
-.kitchen-mode-track>span { width:12px;height:12px;border-radius:50%;background:white;transition:transform .2s;box-shadow:0 1px 3px rgb(0 0 0 / .15); }
-.kitchen-mode-toggle[aria-checked=true] { border-color:var(--theme-accent);background:var(--theme-accent-bg);color:var(--theme-accent); }.kitchen-mode-toggle[aria-checked=true] .kitchen-mode-track { background:#ea580c; }.kitchen-mode-toggle[aria-checked=true] .kitchen-mode-track>span { transform:translateX(12px); }
-.kitchen-mode-toggle:disabled { opacity:.6;cursor:wait; }.kitchen-mode-toggle:focus-visible { outline:3px solid var(--theme-accent);outline-offset:3px; }
 @media(max-width:339px) { .kitchen-toolbar { grid-template-columns:minmax(0,160px); } }
 
 .sy-pickup-arrival { display:grid;gap:12px;margin-top:16px;padding:16px;border:1px solid var(--theme-border);border-radius:16px;background:var(--theme-subtle); }
