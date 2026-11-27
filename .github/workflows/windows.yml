@@ -2,6 +2,8 @@ name: Instalador de Windows
 
 on:
   workflow_dispatch:
+  release:
+    types: [published]
   pull_request:
     paths:
       - '.github/workflows/windows.yml'
@@ -12,6 +14,7 @@ permissions:
 
 jobs:
   installer:
+    if: github.event_name != 'release' || startsWith(github.event.release.tag_name, 'windows-v')
     name: Instalar y empaquetar Windows x64
     runs-on: windows-latest
     timeout-minutes: 20
@@ -42,3 +45,26 @@ jobs:
           name: ServeYourself-Windows-x64
           path: desktop/out/ServeYourself-*-Windows-x64.exe
           if-no-files-found: error
+
+  publish:
+    if: github.event_name == 'release' && startsWith(github.event.release.tag_name, 'windows-v')
+    needs: installer
+    name: Adjuntar el instalador a la versión pública
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ServeYourself-Windows-x64
+          path: installer
+      - name: Publicar el instalador comprobado
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version="${RELEASE_TAG#windows-v}"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          installer="installer/ServeYourself-$version-Windows-x64.exe"
+          test -f "$installer"
+          gh release upload "$RELEASE_TAG" "$installer" --repo "$GITHUB_REPOSITORY"
