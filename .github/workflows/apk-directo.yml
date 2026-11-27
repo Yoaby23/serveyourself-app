@@ -1,0 +1,43 @@
+name: Preparar APK directo
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/apk-directo.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    name: Empaquetar el APK para firma local
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm ci --prefix mobile
+      - run: npm run sync --prefix mobile
+      - run: mobile/android/gradlew -p mobile/android :app:assembleRelease
+      - name: Comprobar el paquete y preparar las herramientas de firma
+        run: |
+          tools="$ANDROID_HOME/build-tools/36.0.0"
+          mkdir android-signing-input
+          "$tools/zipalign" -P 16 -f 4 mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk android-signing-input/ServeYourself-unsigned.apk
+          "$tools/zipalign" -c -P 16 4 android-signing-input/ServeYourself-unsigned.apk
+          "$tools/aapt" dump badging android-signing-input/ServeYourself-unsigned.apk | sed -n '1p' > android-signing-input/package.txt
+          grep -F "name='mx.serveyourself.app'" android-signing-input/package.txt
+          cp "$tools/lib/apksigner.jar" android-signing-input/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ServeYourself-APK-para-firmar
+          path: android-signing-input/
+          if-no-files-found: error
