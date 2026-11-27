@@ -359,16 +359,54 @@ window.serveYourself = {
     },
 
     async installApp() {
+        const { userAgent = '', platform = '', maxTouchPoints = 0, userAgentData } = window.navigator;
+        const platforms = `${userAgentData?.platform || ''} ${platform}`;
+        const isiOS = /iPhone|iPad|iPod/i.test(userAgent) ||
+            (/Mac/i.test(platforms) && maxTouchPoints > 1);
+        const android = !isiOS && /Android/i.test(`${platforms} ${userAgent}`);
+        const windows = !isiOS && !android && /Windows|Win32|Win64/i.test(`${platforms} ${userAgent}`);
         const standalone = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
-        if (standalone) {
+        if (window.serveYourselfNative || (standalone && !android && !windows)) {
             alert('ServeYourself ya está instalada en este dispositivo.');
             return;
         }
+        if (isiOS) {
+            alert('En Safari toca Compartir → Agregar a pantalla de inicio.');
+            return;
+        }
+        if (android || windows) {
+            const platformName = android ? 'Android' : 'Windows';
+            const releases = 'https://github.com/Yoaby23/serveyourself-app/releases/download/';
+            const url = releases + (android
+                ? 'android-v0.1.0/ServeYourself-Android-0.1.0.apk'
+                : 'windows-v0.1.0/ServeYourself-0.1.0-Windows-x64.exe');
+            const steps = android
+                ? 'Abre el APK desde Descargas. Si Android te pide permiso para instalar desde el navegador o la app de archivos, autoriza esa fuente y toca Instalar. Si ya tienes el APK anterior de ServeYourself, toca Actualizar.'
+                : 'En tu PC con Windows de 64 bits, abre el archivo .exe desde Descargas y sigue el asistente. Después abre ServeYourself desde el menú Inicio.';
+            if (document.getElementById('sy-install-download')) return;
+            const dialog = document.createElement('dialog');
+            if (typeof dialog.showModal !== 'function') {
+                alert(steps);
+                window.location.assign(url);
+                return;
+            }
+            dialog.id = 'sy-install-download';
+            dialog.className = 'sy-order-dialog';
+            dialog.setAttribute('aria-labelledby', 'sy-install-title');
+            dialog.innerHTML = `<h2 id="sy-install-title">Instalar en ${platformName}</h2>
+                <p>${steps}</p>
+                <form method="dialog" class="flex flex-wrap items-center justify-end gap-3">
+                    <button type="submit" class="sy-config-secondary" autofocus>Cerrar</button>
+                    <a href="${url}" target="_blank" rel="noopener" download class="sy-config-primary">Descargar de nuevo</a>
+                </form>`;
+            dialog.addEventListener('close', () => dialog.remove(), { once: true });
+            document.body.appendChild(dialog);
+            dialog.showModal();
+            dialog.querySelector('a').click();
+            return;
+        }
         if (!this._installPrompt) {
-            const isiOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent || '');
-            alert(isiOS
-                ? 'En Safari toca Compartir → Agregar a pantalla de inicio.'
-                : 'En Chrome o Edge abre el menú del navegador y elige Instalar aplicación.');
+            alert('En un navegador compatible, abre el menú y elige Instalar aplicación. En Safari para Mac, usa Archivo → Agregar al Dock.');
             return;
         }
         this._installPrompt.prompt();

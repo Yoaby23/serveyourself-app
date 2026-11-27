@@ -30,7 +30,7 @@ assert.match(customer, /createOrderOnce/, 'El horario debe guardarse junto al pe
 assert.match(driver, /\['accepted','preparing','ready_for_dispatch','picked_up','on_the_way','arrived'\]/, 'El repartidor debe compartir ubicación durante toda la asignación');
 assert.match(admin, /cfg-pickup-prep/, 'El restaurante debe configurar el tiempo inicial de pickup');
 assert.match(admin, /cfg-dine-in-prep/, 'El restaurante debe configurar el tiempo inicial de mesa');
-assert.match(worker, /serveyourself-shell-v78/, 'La PWA debe invalidar la caché anterior');
+assert.match(worker, /serveyourself-shell-v79/, 'La PWA debe invalidar la caché anterior');
 
 assert.doesNotMatch(kitchen, /kitchen-training-dialog|training-minutes|Guardar y entrenar|kitchen-training\.js|kitchen-mode\.js|role="switch"/);
 assert.doesNotMatch(worker, /kitchen-mode\.js/);
