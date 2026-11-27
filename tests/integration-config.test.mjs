@@ -10,7 +10,7 @@ test('build emits only public configuration and refuses to point Preview at prod
     const workspace = await mkdtemp(join(tmpdir(), 'sy-build-'));
     t.after(() => rm(workspace, { recursive: true, force: true }));
     await mkdir(join(workspace, 'scripts'));
-    for (const file of ['scripts/build.mjs', 'app.js', 'app-config.js', 'index.html', 'README.md']) {
+    for (const file of ['scripts/build.mjs', 'app.js', 'app-config.js', 'index.html', 'README.md', 'native-releases.json']) {
         await cp(new URL('../' + file, import.meta.url), join(workspace, file));
     }
 

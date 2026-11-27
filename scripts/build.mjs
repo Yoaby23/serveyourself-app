@@ -57,4 +57,7 @@ await writeFile(appPath, appSource
     .replace("'__SY_SUPABASE_PUBLISHABLE_KEY__'", () => JSON.stringify(key)));
 const configPath = resolve(output, 'app-config.js');
 const configSource = await readFile(configPath, 'utf8');
-await writeFile(configPath, configSource.replace("'__SY_ONESIGNAL_APP_ID__'", () => JSON.stringify(oneSignalAppId)));
+const releases = JSON.parse(await readFile(resolve(root, 'native-releases.json'), 'utf8'));
+await writeFile(configPath, configSource
+    .replace("'__SY_ONESIGNAL_APP_ID__'", () => JSON.stringify(oneSignalAppId))
+    .replace("'__SY_NATIVE_RELEASES__'", () => JSON.stringify(releases)));

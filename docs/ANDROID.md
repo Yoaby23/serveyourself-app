@@ -37,3 +37,9 @@ En Windows usa `gradlew.bat`. `apksigner` viene con Android SDK Build Tools. Con
 Para el inicio con Google y la recuperación en Android agrega `mx.serveyourself.app://auth/*` a las URL permitidas de Supabase Auth. El retorno contiene un código PKCE que se procesa en la pantalla de origen. Mantén las URL vigentes para la web y Windows.
 
 Antes de publicar comprueba en un teléfono el acceso con cuentas de prueba y el regreso desde Google y Mercado Pago. Verifica también la sincronización, la ubicación cuando se solicite y la impresión con el servicio instalado en el teléfono. Este paquete aún no configura el envío de notificaciones push nativas de Android.
+
+## Avisos de actualización
+
+Desde la versión `0.2.0`, la app avisa cuando hay una versión disponible. También puedes pulsar **Buscar actualizaciones** en Cuenta. Guarda los cambios del turno antes de ejecutar el instalador de la nueva versión.
+
+Actualiza `native-releases.json` en `main` después de comprobar que el archivo de esa versión ya se descarga desde GitHub Releases. La portada usa ese registro para ofrecer la misma versión.

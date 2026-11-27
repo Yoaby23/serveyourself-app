@@ -30,6 +30,10 @@
     }
 
     window.serveYourselfAndroid = {
+        async getAppInfo() {
+            const { id, version, build } = await plugins.App.getInfo();
+            return id === 'mx.serveyourself.app' ? { platform: 'android', version, build } : null;
+        },
         async authStart(value) {
             const destination = destinationFor(value);
             const path = '/' + crypto.randomUUID();
