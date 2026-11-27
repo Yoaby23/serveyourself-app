@@ -1,10 +1,14 @@
 do $$
-declare owner_id uuid:=gen_random_uuid();outsider uuid:=gen_random_uuid();product_id uuid;other_product uuid;items jsonb;o jsonb;q jsonb;ids bigint[]:='{}';v_id bigint;blocked boolean;result jsonb;before_count integer;v_qty integer;v_time numeric;
+declare owner_id uuid:=gen_random_uuid();outsider uuid:=gen_random_uuid();product_id uuid;other_product uuid;items jsonb;o jsonb;q jsonb;ids bigint[]:='{}';v_id bigint;blocked boolean;result jsonb;before_count integer;v_qty integer;v_time numeric;test_timezone text;
 begin
  insert into auth.users(id,email,raw_user_meta_data) values
  (owner_id,'qa-auto-ml-'||owner_id||'@example.invalid',jsonb_build_object('role','negocio','business_name','Auto batch QA','full_name','QA')),
  (outsider,'qa-auto-ml-'||outsider||'@example.invalid','{"full_name":"Stranger"}');
- update public.profiles set open_time=null,close_time=null,accepting_orders=true where id=owner_id;
+ -- Keep the test clock and all measured starts well inside the same off-peak window.
+ select name into strict test_timezone from pg_timezone_names
+ where name like 'Etc/GMT%' and extract(hour from now() at time zone name)=8
+ order by name limit 1;
+ update public.profiles set open_time=null,close_time=null,accepting_orders=true,timezone=test_timezone where id=owner_id;
  insert into public.products(restaurant_id,name,price) values(owner_id,'Compartido',10) returning id into product_id;
  insert into public.products(restaurant_id,name,price) values(owner_id,'Otro',10) returning id into other_product;
  perform set_config('request.jwt.claim.sub',owner_id::text,true);
@@ -105,5 +109,16 @@ begin
  update public.kitchen_tickets set status='listo' where id=v_id;
  assert (select started_at from public.kitchen_tickets where id=v_id) is null,'Queue waiting was used as preparation start';
  assert (select count(*) from public.kitchen_prep_samples where restaurant_id=owner_id)=before_count,'Unmeasured legacy ticket contaminated training';
+ -- A model trained off-peak must fall back immediately before the boundary
+ -- and be eligible immediately after it, using the restaurant's local time.
+ update public.kitchen_tickets
+ set started_at=timestamp '2026-01-15 22:59:59' at time zone test_timezone
+ where id=ids[1];
+ assert not public.kitchen_model_usable(ids[1]),'Peak prediction used a model without peak samples';
+ assert public.predict_kitchen_minutes(ids[1])=10,'Peak prediction did not use the configured time';
+ update public.kitchen_tickets
+ set started_at=timestamp '2026-01-15 23:00:00' at time zone test_timezone
+ where id=ids[1];
+ assert public.kitchen_model_usable(ids[1]),'Off-peak prediction did not resume at 23:00';
  assert not has_function_privilege('anon','public.start_kitchen_batch(uuid,bigint[],text)','execute'),'Anonymous batch execution allowed';
 end;$$;
