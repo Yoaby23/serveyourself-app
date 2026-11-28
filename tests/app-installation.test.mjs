@@ -6,6 +6,14 @@ import vm from 'node:vm';
 const source = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const method = source.slice(source.indexOf('    async installApp()'), source.indexOf('    async signOut()'));
 
+test('la descarga se ofrece desde Cuenta y no aparece en la portada', () => {
+    const readPage = name => readFileSync(new URL(`../${name}.html`, import.meta.url), 'utf8');
+    assert.doesNotMatch(readPage('index'), /installApp\(|data-sy-install/);
+    for (const page of ['cuenta', 'repartidor']) {
+        assert.match(readPage(page), /<button[^>]*onclick="window\.serveYourself\.installApp\(\)"[^>]*>Descargar aplicación/);
+    }
+});
+
 async function install({ navigator = {}, native = false, standalone = false, dialogSupported = true } = {}) {
     const alerts = [];
     const events = [];
@@ -44,7 +52,7 @@ test('Android descarga el APK y muestra los pasos aun con agente de escritorio',
 test('Windows descarga el ejecutable y muestra cómo iniciar el programa', async () => {
     const result = await install({ navigator: { platform: 'Win32' } });
     assert.deepEqual(result.events, ['instructions', 'download']);
-    assert.match(result.html, /windows-v0\.1\.0\/ServeYourself-0\.1\.0-Windows-x64\.exe/);
+    assert.match(result.html, /windows-v0\.2\.0\/ServeYourself-0\.2\.0-Windows-x64\.exe/);
     assert.match(result.html, /menú Inicio/);
 });
 
