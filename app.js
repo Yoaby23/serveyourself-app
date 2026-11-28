@@ -379,7 +379,7 @@ window.serveYourself = {
             const releases = 'https://github.com/Yoaby23/serveyourself-app/releases/download/';
             const url = releases + (android
                 ? 'android-v0.1.0/ServeYourself-Android-0.1.0.apk'
-                : 'windows-v0.1.0/ServeYourself-0.1.0-Windows-x64.exe');
+                : 'windows-v0.2.0/ServeYourself-0.2.0-Windows-x64.exe');
             const steps = android
                 ? 'Abre el APK desde Descargas. Si Android te pide permiso para instalar desde el navegador o la app de archivos, autoriza esa fuente y toca Instalar. Si ya tienes el APK anterior de ServeYourself, toca Actualizar.'
                 : 'En tu PC con Windows de 64 bits, abre el archivo .exe desde Descargas y sigue el asistente. Después abre ServeYourself desde el menú Inicio.';
